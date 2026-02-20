@@ -572,25 +572,53 @@ function InvestmentsStep({ items, setItems }: { items: Holding[]; setItems: (h: 
   );
 }
 
+const CADENCE_OPTIONS: { label: string; value: 'monthly' | 'quarterly' | 'yearly' }[] = [
+  { label: 'Monthly', value: 'monthly' },
+  { label: 'Quarterly', value: 'quarterly' },
+  { label: 'Yearly', value: 'yearly' },
+];
+
+function cadenceLabel(f: string) {
+  return f === 'monthly' ? 'mo' : f === 'quarterly' ? 'qtr' : 'yr';
+}
+
 function RSUStep({ items, setItems }: { items: RSUGrant[]; setItems: (r: RSUGrant[]) => void }) {
   const [symbol, setSymbol] = useState('');
-  const [total, setTotal] = useState('');
-  const [vested, setVested] = useState('0');
-  const [duration, setDuration] = useState('48');
+  const [sharesPerVest, setSharesPerVest] = useState('');
+  const [cadence, setCadence] = useState<'monthly' | 'quarterly' | 'yearly'>('quarterly');
+  const [vestCount, setVestCount] = useState('');
+  const [nextVestDate, setNextVestDate] = useState(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + 1);
+    return d.toISOString().split('T')[0];
+  });
 
   const handleAdd = () => {
-    if (!symbol.trim() || !total.trim()) return;
-    const t = parseFloat(total);
-    const v = parseFloat(vested) || 0;
-    if (isNaN(t) || t <= 0) return;
+    if (!symbol.trim() || !sharesPerVest.trim() || !vestCount.trim()) return;
+    const spv = parseFloat(sharesPerVest);
+    const vc = parseInt(vestCount);
+    if (isNaN(spv) || spv <= 0 || isNaN(vc) || vc <= 0) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const now = new Date();
+
+    const intervalMonths = cadence === 'monthly' ? 1 : cadence === 'quarterly' ? 3 : 12;
+    const totalShares = spv * vc;
+    const durationMonths = intervalMonths * vc;
+
     setItems([...items, {
-      id: Crypto.randomUUID(), symbol: symbol.toUpperCase().trim(),
-      totalShares: t, alreadyVestedShares: v,
-      vest: { startDate: now.toISOString().split('T')[0], cliffMonths: 12, durationMonths: parseInt(duration) || 48, frequency: 'quarterly' },
+      id: Crypto.randomUUID(),
+      symbol: symbol.toUpperCase().trim(),
+      totalShares,
+      alreadyVestedShares: 0,
+      vest: {
+        startDate: nextVestDate,
+        cliffMonths: 0,
+        durationMonths,
+        frequency: cadence,
+      },
     }]);
-    setSymbol(''); setTotal(''); setVested('0');
+    setSymbol('');
+    setSharesPerVest('');
+    setVestCount('');
   };
 
   const handleRemove = (id: string) => setItems(items.filter(r => r.id !== id));
@@ -600,37 +628,83 @@ function RSUStep({ items, setItems }: { items: RSUGrant[]; setItems: (r: RSUGran
       <Text style={formStyles.title}>Add RSUs</Text>
       <Text style={formStyles.desc}>Enter your RSU grants with vesting details</Text>
 
+      <Text style={formStyles.fieldLabel}>Ticker</Text>
       <TickerInput
         value={symbol}
         onChangeText={setSymbol}
         onSelect={setSymbol}
         type="stock"
-        placeholder="Ticker (e.g. GOOGL)"
+        placeholder="Search company (e.g. GOOGL)"
       />
-      <View style={formStyles.inputRow}>
-        <TextInput style={[formStyles.input, { flex: 1 }]} placeholder="Total shares" value={total} onChangeText={setTotal} keyboardType="numeric" placeholderTextColor={Colors.textTertiary} />
-        <TextInput style={[formStyles.input, { flex: 1 }]} placeholder="Already vested" value={vested} onChangeText={setVested} keyboardType="numeric" placeholderTextColor={Colors.textTertiary} />
+
+      <Text style={formStyles.fieldLabel}>Shares per vest</Text>
+      <TextInput
+        style={formStyles.input}
+        placeholder="e.g. 250"
+        value={sharesPerVest}
+        onChangeText={setSharesPerVest}
+        keyboardType="numeric"
+        placeholderTextColor={Colors.textTertiary}
+      />
+
+      <Text style={formStyles.fieldLabel}>Vesting cadence</Text>
+      <View style={formStyles.toggleRow}>
+        {CADENCE_OPTIONS.map((opt) => (
+          <Pressable
+            key={opt.value}
+            style={[formStyles.toggleBtn, cadence === opt.value && formStyles.toggleBtnActive]}
+            onPress={() => setCadence(opt.value)}
+          >
+            <Text style={[formStyles.toggleBtnText, cadence === opt.value && formStyles.toggleBtnTextActive]}>
+              {opt.label}
+            </Text>
+          </Pressable>
+        ))}
       </View>
-      <TextInput style={formStyles.input} placeholder="Duration (months)" value={duration} onChangeText={setDuration} keyboardType="numeric" placeholderTextColor={Colors.textTertiary} />
+
+      <Text style={formStyles.fieldLabel}>How many vests remaining?</Text>
+      <TextInput
+        style={formStyles.input}
+        placeholder="e.g. 16"
+        value={vestCount}
+        onChangeText={setVestCount}
+        keyboardType="numeric"
+        placeholderTextColor={Colors.textTertiary}
+      />
+
+      <Text style={formStyles.fieldLabel}>Next vest date</Text>
+      <TextInput
+        style={formStyles.input}
+        placeholder="YYYY-MM-DD"
+        value={nextVestDate}
+        onChangeText={setNextVestDate}
+        placeholderTextColor={Colors.textTertiary}
+      />
+
       <Pressable style={formStyles.addBtn} onPress={handleAdd}>
         <Ionicons name="add-circle-outline" size={20} color={Colors.white} />
         <Text style={formStyles.addBtnText}>Add RSU Grant</Text>
       </Pressable>
 
-      {items.map((r) => (
-        <View key={r.id} style={formStyles.itemRow}>
-          <View style={[formStyles.itemBadge, { backgroundColor: Colors.categoryRSU + '20' }]}>
-            <Text style={[formStyles.itemBadgeText, { color: Colors.categoryRSU }]}>R</Text>
+      {items.map((r) => {
+        const intervalMonths = r.vest.frequency === 'monthly' ? 1 : r.vest.frequency === 'quarterly' ? 3 : 12;
+        const numVests = Math.round(r.vest.durationMonths / intervalMonths);
+        const spv = numVests > 0 ? Math.round(r.totalShares / numVests) : r.totalShares;
+        return (
+          <View key={r.id} style={formStyles.itemRow}>
+            <View style={[formStyles.itemBadge, { backgroundColor: Colors.categoryRSU + '20' }]}>
+              <Text style={[formStyles.itemBadgeText, { color: Colors.categoryRSU }]}>R</Text>
+            </View>
+            <View style={formStyles.itemInfo}>
+              <Text style={formStyles.itemName}>{r.symbol} RSU</Text>
+              <Text style={formStyles.itemSub}>{spv} shares/{cadenceLabel(r.vest.frequency)} \u00d7 {numVests} vests</Text>
+            </View>
+            <Pressable onPress={() => handleRemove(r.id)} hitSlop={8}>
+              <Ionicons name="close-circle" size={20} color={Colors.textTertiary} />
+            </Pressable>
           </View>
-          <View style={formStyles.itemInfo}>
-            <Text style={formStyles.itemName}>{r.symbol} RSU</Text>
-            <Text style={formStyles.itemSub}>{r.totalShares} total, {r.alreadyVestedShares} vested</Text>
-          </View>
-          <Pressable onPress={() => handleRemove(r.id)} hitSlop={8}>
-            <Ionicons name="close-circle" size={20} color={Colors.textTertiary} />
-          </Pressable>
-        </View>
-      ))}
+        );
+      })}
     </View>
   );
 }
@@ -938,6 +1012,31 @@ const formStyles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: Colors.textTertiary,
     marginTop: 2,
+  },
+  fieldLabel: {
+    fontFamily: fontFamily.semibold,
+    fontSize: fontSize.sm,
+    color: Colors.textSecondary,
+    marginBottom: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  toggleBtn: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    alignItems: 'center' as const,
+    borderRadius: borderRadius.sm - 2,
+  },
+  toggleBtnActive: {
+    backgroundColor: Colors.surface,
+  },
+  toggleBtnText: {
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.sm,
+    color: Colors.textTertiary,
+  },
+  toggleBtnTextActive: {
+    color: Colors.primary,
+    fontFamily: fontFamily.semibold,
   },
 });
 

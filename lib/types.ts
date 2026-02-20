@@ -17,7 +17,7 @@ export interface RSUGrant {
     startDate: string;
     cliffMonths: number;
     durationMonths: number;
-    frequency: 'monthly' | 'quarterly';
+    frequency: 'monthly' | 'quarterly' | 'yearly';
   };
   growthOverride?: number;
 }

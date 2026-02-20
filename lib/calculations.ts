@@ -23,7 +23,7 @@ export function computeRSUVesting(grant: RSUGrant, atDate: Date): { vested: numb
   }
 
   const vestableShares = grant.totalShares - grant.alreadyVestedShares;
-  const vestIntervalMonths = grant.vest.frequency === 'monthly' ? 1 : 3;
+  const vestIntervalMonths = grant.vest.frequency === 'monthly' ? 1 : grant.vest.frequency === 'quarterly' ? 3 : 12;
   const totalVestPeriods = Math.floor(
     (grant.vest.durationMonths - grant.vest.cliffMonths) / vestIntervalMonths
   );

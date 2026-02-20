@@ -139,26 +139,44 @@ function HoldingForm({ existing, isEditing, store, saveAndSnapshot }: any) {
 
 function RSUForm({ existing, isEditing, store, saveAndSnapshot }: any) {
   const [symbol, setSymbol] = useState(existing?.symbol ?? '');
-  const [totalShares, setTotalShares] = useState(existing?.totalShares?.toString() ?? '');
-  const [vested, setVested] = useState(existing?.alreadyVestedShares?.toString() ?? '0');
-  const [cliff, setCliff] = useState(existing?.vest?.cliffMonths?.toString() ?? '12');
-  const [duration, setDuration] = useState(existing?.vest?.durationMonths?.toString() ?? '48');
-  const [freq, setFreq] = useState<'monthly' | 'quarterly'>(existing?.vest?.frequency ?? 'quarterly');
+  const [freq, setFreq] = useState<'monthly' | 'quarterly' | 'yearly'>(existing?.vest?.frequency ?? 'quarterly');
+
+  const existingInterval = existing?.vest?.frequency === 'monthly' ? 1 : existing?.vest?.frequency === 'yearly' ? 12 : 3;
+  const existingVests = existing ? Math.round((existing.vest?.durationMonths ?? 0) / existingInterval) : 0;
+  const existingSpv = existingVests > 0 ? Math.round((existing.totalShares - (existing.alreadyVestedShares ?? 0)) / existingVests) : 0;
+
+  const [sharesPerVest, setSharesPerVest] = useState(existing ? existingSpv.toString() : '');
+  const [vestCount, setVestCount] = useState(existing ? existingVests.toString() : '');
+  const [nextVestDate, setNextVestDate] = useState(() => {
+    if (existing?.vest?.startDate) return existing.vest.startDate;
+    const d = new Date();
+    d.setMonth(d.getMonth() + 1);
+    return d.toISOString().split('T')[0];
+  });
 
   const handleSave = () => {
-    if (!symbol.trim() || !totalShares.trim()) {
-      Alert.alert('Required', 'Symbol and total shares are required');
+    if (!symbol.trim() || !sharesPerVest.trim() || !vestCount.trim()) {
+      Alert.alert('Required', 'Ticker, shares per vest, and vest count are required');
+      return;
+    }
+    const spv = parseFloat(sharesPerVest);
+    const vc = parseInt(vestCount);
+    if (isNaN(spv) || spv <= 0 || isNaN(vc) || vc <= 0) {
+      Alert.alert('Invalid', 'Please enter valid numbers');
       return;
     }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const intervalMonths = freq === 'monthly' ? 1 : freq === 'quarterly' ? 3 : 12;
+    const totalShares = spv * vc + (existing?.alreadyVestedShares ?? 0);
+    const durationMonths = intervalMonths * vc;
     const data = {
       symbol: symbol.toUpperCase().trim(),
-      totalShares: parseFloat(totalShares),
-      alreadyVestedShares: parseFloat(vested) || 0,
+      totalShares,
+      alreadyVestedShares: existing?.alreadyVestedShares ?? 0,
       vest: {
-        startDate: existing?.vest?.startDate ?? new Date().toISOString().split('T')[0],
-        cliffMonths: parseInt(cliff) || 12,
-        durationMonths: parseInt(duration) || 48,
+        startDate: nextVestDate,
+        cliffMonths: 0,
+        durationMonths,
         frequency: freq,
       },
     };
@@ -181,22 +199,20 @@ function RSUForm({ existing, isEditing, store, saveAndSnapshot }: any) {
         type="stock"
         placeholder="e.g. GOOGL"
       />
-      <FieldLabel label="Total Shares" />
-      <TextInput style={styles.input} value={totalShares} onChangeText={setTotalShares} keyboardType="numeric" placeholder="0" placeholderTextColor={Colors.textTertiary} />
-      <FieldLabel label="Already Vested" />
-      <TextInput style={styles.input} value={vested} onChangeText={setVested} keyboardType="numeric" placeholder="0" placeholderTextColor={Colors.textTertiary} />
-      <FieldLabel label="Cliff (months)" />
-      <TextInput style={styles.input} value={cliff} onChangeText={setCliff} keyboardType="numeric" placeholder="12" placeholderTextColor={Colors.textTertiary} />
-      <FieldLabel label="Duration (months)" />
-      <TextInput style={styles.input} value={duration} onChangeText={setDuration} keyboardType="numeric" placeholder="48" placeholderTextColor={Colors.textTertiary} />
-      <FieldLabel label="Vest Frequency" />
+      <FieldLabel label="Shares per vest" />
+      <TextInput style={styles.input} value={sharesPerVest} onChangeText={setSharesPerVest} keyboardType="numeric" placeholder="e.g. 250" placeholderTextColor={Colors.textTertiary} />
+      <FieldLabel label="Vesting cadence" />
       <View style={styles.toggleRow}>
-        {(['monthly', 'quarterly'] as const).map((f) => (
+        {(['monthly', 'quarterly', 'yearly'] as const).map((f) => (
           <Pressable key={f} style={[styles.toggle, freq === f && styles.toggleActive]} onPress={() => setFreq(f)}>
             <Text style={[styles.toggleText, freq === f && styles.toggleTextActive]}>{f}</Text>
           </Pressable>
         ))}
       </View>
+      <FieldLabel label="Remaining vests" />
+      <TextInput style={styles.input} value={vestCount} onChangeText={setVestCount} keyboardType="numeric" placeholder="e.g. 16" placeholderTextColor={Colors.textTertiary} />
+      <FieldLabel label="Next vest date" />
+      <TextInput style={styles.input} value={nextVestDate} onChangeText={setNextVestDate} placeholder="YYYY-MM-DD" placeholderTextColor={Colors.textTertiary} />
       <SaveButton onPress={handleSave} isEditing={isEditing} />
     </View>
   );
