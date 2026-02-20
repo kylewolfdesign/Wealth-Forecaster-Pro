@@ -229,12 +229,11 @@ function InvestmentsStep({ items, setItems }: { items: Holding[]; setItems: (h: 
         type={type}
         placeholder={type === 'stock' ? 'Symbol (e.g. AAPL)' : 'Symbol (e.g. BTC)'}
       />
-      <View style={formStyles.inputRow}>
-        <TextInput style={[formStyles.input, { flex: 1 }]} placeholder="Shares" value={shares} onChangeText={setShares} keyboardType="numeric" placeholderTextColor={Colors.textTertiary} />
-        <Pressable style={formStyles.addBtn} onPress={handleAdd}>
-          <Ionicons name="add" size={22} color={Colors.white} />
-        </Pressable>
-      </View>
+      <TextInput style={formStyles.input} placeholder="Shares" value={shares} onChangeText={setShares} keyboardType="numeric" placeholderTextColor={Colors.textTertiary} />
+      <Pressable style={formStyles.addBtn} onPress={handleAdd}>
+        <Ionicons name="add-circle-outline" size={20} color={Colors.white} />
+        <Text style={formStyles.addBtnText}>Add Investment</Text>
+      </Pressable>
 
       {items.map((h) => (
         <View key={h.id} style={formStyles.itemRow}>
@@ -293,12 +292,11 @@ function RSUStep({ items, setItems }: { items: RSUGrant[]; setItems: (r: RSUGran
         <TextInput style={[formStyles.input, { flex: 1 }]} placeholder="Total shares" value={total} onChangeText={setTotal} keyboardType="numeric" placeholderTextColor={Colors.textTertiary} />
         <TextInput style={[formStyles.input, { flex: 1 }]} placeholder="Already vested" value={vested} onChangeText={setVested} keyboardType="numeric" placeholderTextColor={Colors.textTertiary} />
       </View>
-      <View style={formStyles.inputRow}>
-        <TextInput style={[formStyles.input, { flex: 1 }]} placeholder="Duration (months)" value={duration} onChangeText={setDuration} keyboardType="numeric" placeholderTextColor={Colors.textTertiary} />
-        <Pressable style={formStyles.addBtn} onPress={handleAdd}>
-          <Ionicons name="add" size={22} color={Colors.white} />
-        </Pressable>
-      </View>
+      <TextInput style={formStyles.input} placeholder="Duration (months)" value={duration} onChangeText={setDuration} keyboardType="numeric" placeholderTextColor={Colors.textTertiary} />
+      <Pressable style={formStyles.addBtn} onPress={handleAdd}>
+        <Ionicons name="add-circle-outline" size={20} color={Colors.white} />
+        <Text style={formStyles.addBtnText}>Add RSU Grant</Text>
+      </Pressable>
 
       {items.map((r) => (
         <View key={r.id} style={formStyles.itemRow}>
@@ -350,12 +348,11 @@ function CashStep({ type, items, setItems }: { type: 'savings' | 'offset'; items
         <TextInput style={[formStyles.input, { flex: 1 }]} placeholder="Balance ($)" value={balance} onChangeText={setBalance} keyboardType="numeric" placeholderTextColor={Colors.textTertiary} />
         <TextInput style={[formStyles.input, { flex: 1 }]} placeholder="Monthly +/-" value={monthly} onChangeText={setMonthly} keyboardType="numeric" placeholderTextColor={Colors.textTertiary} />
       </View>
-      <View style={formStyles.inputRow}>
-        <TextInput style={[formStyles.input, { flex: 1 }]} placeholder="Interest rate (%)" value={rate} onChangeText={setRate} keyboardType="numeric" placeholderTextColor={Colors.textTertiary} />
-        <Pressable style={formStyles.addBtn} onPress={handleAdd}>
-          <Ionicons name="add" size={22} color={Colors.white} />
-        </Pressable>
-      </View>
+      <TextInput style={formStyles.input} placeholder="Interest rate (%)" value={rate} onChangeText={setRate} keyboardType="numeric" placeholderTextColor={Colors.textTertiary} />
+      <Pressable style={formStyles.addBtn} onPress={handleAdd}>
+        <Ionicons name="add-circle-outline" size={20} color={Colors.white} />
+        <Text style={formStyles.addBtnText}>Add Account</Text>
+      </Pressable>
 
       {items.map((c) => (
         <View key={c.id} style={formStyles.itemRow}>
@@ -408,9 +405,9 @@ function MortgageStep({ items, setItems }: { items: Mortgage[]; setItems: (m: Mo
         <TextInput style={[formStyles.input, { flex: 1 }]} placeholder="Rate (%)" value={rate} onChangeText={setRate} keyboardType="numeric" placeholderTextColor={Colors.textTertiary} />
         <TextInput style={[formStyles.input, { flex: 1 }]} placeholder="Monthly payment" value={payment} onChangeText={setPayment} keyboardType="numeric" placeholderTextColor={Colors.textTertiary} />
       </View>
-      <Pressable style={[formStyles.addBtn, { alignSelf: 'flex-start', paddingHorizontal: spacing.xl }]} onPress={handleAdd}>
-        <Ionicons name="add" size={18} color={Colors.white} />
-        <Text style={{ fontFamily: fontFamily.semibold, fontSize: fontSize.sm, color: Colors.white, marginLeft: 4 }}>Add</Text>
+      <Pressable style={formStyles.addBtn} onPress={handleAdd}>
+        <Ionicons name="add-circle-outline" size={20} color={Colors.white} />
+        <Text style={formStyles.addBtnText}>Add Mortgage</Text>
       </Pressable>
 
       {items.map((m) => (
@@ -460,9 +457,9 @@ function OtherStep({ items, setItems }: { items: OtherAsset[]; setItems: (a: Oth
         <TextInput style={[formStyles.input, { flex: 1 }]} placeholder="Value ($)" value={value} onChangeText={setValue} keyboardType="numeric" placeholderTextColor={Colors.textTertiary} />
         <TextInput style={[formStyles.input, { flex: 1 }]} placeholder="Growth %/yr" value={growth} onChangeText={setGrowth} keyboardType="numeric" placeholderTextColor={Colors.textTertiary} />
       </View>
-      <Pressable style={[formStyles.addBtn, { alignSelf: 'flex-start', paddingHorizontal: spacing.xl }]} onPress={handleAdd}>
-        <Ionicons name="add" size={18} color={Colors.white} />
-        <Text style={{ fontFamily: fontFamily.semibold, fontSize: fontSize.sm, color: Colors.white, marginLeft: 4 }}>Add</Text>
+      <Pressable style={formStyles.addBtn} onPress={handleAdd}>
+        <Ionicons name="add-circle-outline" size={20} color={Colors.white} />
+        <Text style={formStyles.addBtnText}>Add Asset</Text>
       </Pressable>
 
       {items.map((a) => (
@@ -577,12 +574,18 @@ const formStyles = StyleSheet.create({
   addBtn: {
     backgroundColor: Colors.primary,
     borderRadius: borderRadius.md,
-    width: 48,
-    height: 48,
+    paddingVertical: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
+    gap: spacing.sm,
     marginBottom: spacing.md,
+    width: '100%',
+  },
+  addBtnText: {
+    fontFamily: fontFamily.semibold,
+    fontSize: fontSize.md,
+    color: Colors.white,
   },
   itemRow: {
     flexDirection: 'row',
