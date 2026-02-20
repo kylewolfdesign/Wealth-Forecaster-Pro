@@ -18,10 +18,10 @@ A local-first net worth and wealth forecasting app built with React Native (Expo
 app/
   _layout.tsx            - Root layout with providers, font loading
   (tabs)/
-    _layout.tsx          - Tab bar (Home, Breakdown, Forecast, History, Settings)
-    index.tsx            - Home dashboard with net worth, category tiles, trend chart
+    _layout.tsx          - Tab bar (Home, Breakdown, History, Settings)
+    index.tsx            - Home dashboard with net worth, category tiles, forecast chart with time-range tabs (Today, 1Y, 5Y, 10Y, 20Y, 50Y)
     breakdown.tsx        - Category breakdown with drill-down, edit/delete
-    forecast.tsx         - Projection chart, milestone table, assumption tweaking
+    forecast.tsx         - (Hidden tab, functionality merged into Home)
     history.tsx          - Net worth history chart and snapshot list
     settings.tsx         - Growth rates, inflation, demo data, pro upgrade CTA
   onboarding.tsx         - Multi-step wizard (investments, RSUs, savings, offset, mortgage, other)
@@ -68,4 +68,6 @@ constants/
 - **CSV export**: Pro feature, export snapshots/holdings
 
 ## Recent Changes
+- 2026-02-20: Merged Forecast tab into Home screen with time-range chart tabs (Today, 1Y, 5Y, 10Y, 20Y, 50Y). Removed Forecast from bottom tab bar.
+- 2026-02-20: Paychain design system overhaul (indigo primary, bordered cards, Inter font)
 - 2026-02-20: Initial v1 build with all core features
