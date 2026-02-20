@@ -1,14 +1,14 @@
-import React, { useEffect, useMemo, useCallback } from 'react';
+import React, { useEffect, useMemo, useCallback, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Platform,
-  Pressable, useWindowDimensions, RefreshControl,
+  Pressable, useWindowDimensions,
 } from 'react-native';
 import { Redirect, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useAppStore } from '@/lib/store';
-import { computeCurrentTotals } from '@/lib/calculations';
+import { computeCurrentTotals, computeForecast } from '@/lib/calculations';
 import { createSnapshot, shouldTakeSnapshot } from '@/lib/snapshot';
 import { formatCurrency, formatPercent } from '@/lib/format';
 import Card from '@/components/Card';
@@ -26,13 +26,26 @@ const CATEGORY_CONFIG = [
   { key: 'mortgage', label: 'Mortgage', color: Colors.categoryMortgage, icon: 'home' as const, isLiability: true },
 ];
 
+type TimeRange = 'today' | '1y' | '5y' | '10y' | '20y' | '50y';
+
+const TIME_TABS: { key: TimeRange; label: string; years: number }[] = [
+  { key: 'today', label: 'Today', years: 0 },
+  { key: '1y', label: '1 Yr', years: 1 },
+  { key: '5y', label: '5 Yrs', years: 5 },
+  { key: '10y', label: '10 Yrs', years: 10 },
+  { key: '20y', label: '20 Yrs', years: 20 },
+  { key: '50y', label: '50 Yrs', years: 50 },
+];
+
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
   const {
     onboardingComplete, holdings, rsuGrants, cashAccounts,
-    mortgages, otherAssets, snapshots, addSnapshot,
+    mortgages, otherAssets, snapshots, addSnapshot, settings, isPro,
   } = useAppStore();
+
+  const [selectedRange, setSelectedRange] = useState<TimeRange>('today');
 
   const totals = useMemo(
     () => computeCurrentTotals(holdings, rsuGrants, cashAccounts, mortgages, otherAssets),
@@ -45,9 +58,37 @@ export default function HomeScreen() {
     }
   }, [onboardingComplete]);
 
+  const selectedTab = TIME_TABS.find((t) => t.key === selectedRange)!;
+
+  const forecast = useMemo(
+    () => computeForecast(
+      holdings, rsuGrants, cashAccounts, mortgages, otherAssets,
+      settings, 50,
+    ),
+    [holdings, rsuGrants, cashAccounts, mortgages, otherAssets, settings]
+  );
+
   const chartData = useMemo(() => {
-    return snapshots.map((s, i) => ({ x: i, y: s.totals.netWorth }));
-  }, [snapshots]);
+    if (selectedRange === 'today') {
+      if (snapshots.length < 2) {
+        return forecast
+          .filter((p) => p.monthsFromNow <= 12)
+          .map((p) => ({ x: p.monthsFromNow, y: p.netWorth }));
+      }
+      return snapshots.map((s, i) => ({ x: i, y: s.totals.netWorth }));
+    }
+    const maxMonths = selectedTab.years * 12;
+    return forecast
+      .filter((p) => p.monthsFromNow <= maxMonths)
+      .map((p) => ({ x: p.monthsFromNow, y: p.netWorth }));
+  }, [selectedRange, snapshots, forecast, selectedTab]);
+
+  const projectedValue = useMemo(() => {
+    if (selectedRange === 'today') return null;
+    const targetMonths = selectedTab.years * 12;
+    const point = forecast.find((p) => p.monthsFromNow >= targetMonths);
+    return point?.netWorth ?? null;
+  }, [selectedRange, forecast, selectedTab]);
 
   const delta = useMemo(() => {
     if (snapshots.length < 2) return null;
@@ -73,12 +114,18 @@ export default function HomeScreen() {
     router.push('/edit-item?type=holding');
   }, []);
 
+  const handleTabPress = useCallback((key: TimeRange) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedRange(key);
+  }, []);
+
   if (!onboardingComplete) {
     return <Redirect href="/onboarding" />;
   }
 
   const topInset = Platform.OS === 'web' ? 67 : insets.top;
   const tileWidth = (screenWidth - spacing.xl * 2 - spacing.md) / 2;
+  const chartWidth = screenWidth - spacing.xl * 2 - spacing.lg * 2;
 
   return (
     <ScrollView
@@ -89,7 +136,7 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <Text style={styles.headerLabel}>Total Net Worth</Text>
         <Text style={styles.netWorthValue}>{formatCurrency(totals.netWorth)}</Text>
-        {delta && (
+        {delta && selectedRange === 'today' && (
           <View style={styles.deltaRow}>
             <View style={[styles.deltaBadge, { backgroundColor: delta.change >= 0 ? Colors.positiveLight : Colors.negativeLight }]}>
               <Ionicons
@@ -104,20 +151,51 @@ export default function HomeScreen() {
             <Text style={styles.deltaPeriod}>vs last snapshot</Text>
           </View>
         )}
+        {projectedValue !== null && selectedRange !== 'today' && (
+          <View style={styles.projectedRow}>
+            <Text style={styles.projectedLabel}>Projected in {selectedTab.years}yr</Text>
+            <Text style={styles.projectedValue}>{formatCurrency(projectedValue)}</Text>
+          </View>
+        )}
       </View>
 
-      {chartData.length >= 2 && (
-        <Card style={styles.chartCard}>
-          <Text style={styles.sectionTitle}>Net Worth Trend</Text>
+      <Card style={styles.chartCard}>
+        <View style={styles.tabBar}>
+          {TIME_TABS.map((tab) => {
+            const active = tab.key === selectedRange;
+            return (
+              <Pressable
+                key={tab.key}
+                style={[styles.tab, active && styles.tabActive]}
+                onPress={() => handleTabPress(tab.key)}
+              >
+                <Text style={[styles.tabText, active && styles.tabTextActive]}>
+                  {tab.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        {chartData.length >= 2 ? (
           <LineChart
             data={chartData}
-            width={screenWidth - spacing.xl * 2 - spacing.lg * 2}
-            height={160}
-            color={totals.netWorth >= 0 ? Colors.positive : Colors.negative}
-            compact
+            width={chartWidth}
+            height={180}
+            color={selectedRange === 'today' ? (totals.netWorth >= 0 ? Colors.positive : Colors.negative) : Colors.primary}
+            showGrid={selectedRange !== 'today'}
+            showLabels={selectedRange !== 'today'}
+            formatY={(v) => formatCurrency(v)}
           />
-        </Card>
-      )}
+        ) : (
+          <View style={[styles.chartPlaceholder, { width: chartWidth, height: 180 }]}>
+            <Ionicons name="analytics-outline" size={32} color={Colors.textTertiary} />
+            <Text style={styles.chartPlaceholderText}>
+              {selectedRange === 'today' ? 'Add assets to see your trend' : 'Add assets to see projections'}
+            </Text>
+          </View>
+        )}
+      </Card>
 
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Categories</Text>
@@ -161,7 +239,7 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: spacing.xxl,
+    marginBottom: spacing.xl,
     paddingTop: spacing.lg,
   },
   headerLabel: {
@@ -200,8 +278,64 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: Colors.textTertiary,
   },
+  projectedRow: {
+    alignItems: 'center',
+    gap: 2,
+  },
+  projectedLabel: {
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.xs,
+    color: Colors.textTertiary,
+  },
+  projectedValue: {
+    fontFamily: fontFamily.bold,
+    fontSize: fontSize.lg,
+    color: Colors.primary,
+  },
   chartCard: {
     marginBottom: spacing.xl,
+    paddingBottom: spacing.md,
+  },
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: Colors.surfaceSecondary,
+    borderRadius: borderRadius.sm,
+    padding: 3,
+    marginBottom: spacing.lg,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderRadius: borderRadius.xs,
+  },
+  tabActive: {
+    backgroundColor: Colors.card,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  tabText: {
+    fontFamily: fontFamily.medium,
+    fontSize: 11,
+    color: Colors.textTertiary,
+  },
+  tabTextActive: {
+    fontFamily: fontFamily.semibold,
+    color: Colors.text,
+  },
+  chartPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  chartPlaceholderText: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.sm,
+    color: Colors.textTertiary,
+    textAlign: 'center',
   },
   sectionHeader: {
     flexDirection: 'row',

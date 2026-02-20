@@ -16,10 +16,6 @@ function NativeTabLayout() {
         <Icon sf={{ default: 'chart.pie', selected: 'chart.pie.fill' }} />
         <Label>Breakdown</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="forecast">
-        <Icon sf={{ default: 'chart.line.uptrend.xyaxis', selected: 'chart.line.uptrend.xyaxis' }} />
-        <Label>Forecast</Label>
-      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="history">
         <Icon sf={{ default: 'clock', selected: 'clock.fill' }} />
         <Label>History</Label>
@@ -78,10 +74,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="forecast"
         options={{
-          title: 'Forecast',
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? 'trending-up' : 'trending-up-outline'} size={size} color={color} />
-          ),
+          href: null,
         }}
       />
       <Tabs.Screen
