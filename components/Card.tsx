@@ -1,11 +1,11 @@
 import React from 'react';
 import { View, StyleSheet, ViewStyle, Pressable } from 'react-native';
 import Colors from '@/constants/colors';
-import { borderRadius, shadow, spacing } from '@/constants/theme';
+import { borderRadius, spacing } from '@/constants/theme';
 
 interface CardProps {
   children: React.ReactNode;
-  style?: ViewStyle;
+  style?: ViewStyle | ViewStyle[];
   onPress?: () => void;
   noPadding?: boolean;
 }
@@ -19,7 +19,7 @@ export default function Card({ children, style, onPress, noPadding }: CardProps)
 
   if (onPress) {
     return (
-      <Pressable onPress={onPress} style={({ pressed }) => [{ opacity: pressed ? 0.95 : 1 }]}>
+      <Pressable onPress={onPress} style={({ pressed }) => [{ opacity: pressed ? 0.97 : 1 }]}>
         {content}
       </Pressable>
     );
@@ -32,8 +32,9 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.surface,
     borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
     padding: spacing.lg,
-    ...shadow.sm,
   },
   noPadding: {
     padding: 0,
