@@ -2,6 +2,7 @@ import React, { useState, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, Pressable, TextInput, FlatList,
   KeyboardAvoidingView, Platform, ScrollView, Alert,
+  Image, useWindowDimensions, Animated,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,6 +18,24 @@ import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
 import type { Holding, RSUGrant, CashAccount, Mortgage, OtherAsset } from '@/lib/types';
 
+const VALUE_PROP_PAGES = [
+  {
+    image: require('@/assets/images/onboarding-networth.png'),
+    title: 'Know Your\nNet Worth',
+    subtitle: 'See all your assets and liabilities in one place — stocks, crypto, RSUs, savings, property and more.',
+  },
+  {
+    image: require('@/assets/images/onboarding-forecast.png'),
+    title: 'Watch It\nGrow Over Time',
+    subtitle: 'Project how your portfolio will compound over 1, 5, 10 or even 50 years with personalised growth assumptions.',
+  },
+  {
+    image: require('@/assets/images/onboarding-private.png'),
+    title: '100% Private\n& On-Device',
+    subtitle: 'Your financial data never leaves your phone. No accounts, no cloud — just you and your numbers.',
+  },
+];
+
 const STEPS = [
   { key: 'welcome', title: 'Welcome', icon: 'rocket' as const },
   { key: 'investments', title: 'Investments', icon: 'trending-up' as const },
@@ -30,8 +49,12 @@ const STEPS = [
 
 export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
+  const { width: screenWidth } = useWindowDimensions();
+  const [phase, setPhase] = useState<'intro' | 'setup'>('intro');
+  const [introPage, setIntroPage] = useState(0);
   const [step, setStep] = useState(0);
   const store = useAppStore();
+  const scrollRef = useRef<FlatList>(null);
 
   const [holdings, setHoldings] = useState<Holding[]>([]);
   const [rsuGrants, setRsuGrants] = useState<RSUGrant[]>([]);
@@ -42,6 +65,22 @@ export default function OnboardingScreen() {
   const topInset = Platform.OS === 'web' ? 67 : insets.top;
   const bottomInset = Platform.OS === 'web' ? 34 : insets.bottom;
 
+  const handleIntroNext = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (introPage < VALUE_PROP_PAGES.length - 1) {
+      const next = introPage + 1;
+      setIntroPage(next);
+      scrollRef.current?.scrollToIndex({ index: next, animated: true });
+    } else {
+      setPhase('setup');
+    }
+  };
+
+  const handleIntroSkip = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setPhase('setup');
+  };
+
   const handleNext = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (step < STEPS.length - 1) {
@@ -51,6 +90,7 @@ export default function OnboardingScreen() {
 
   const handleBack = () => {
     if (step > 0) setStep(step - 1);
+    else setPhase('intro');
   };
 
   const handleFinish = () => {
@@ -80,7 +120,7 @@ export default function OnboardingScreen() {
 
   const renderStep = () => {
     switch (STEPS[step].key) {
-      case 'welcome': return <WelcomeStep onSkip={handleSkipAll} />;
+      case 'welcome': return <WelcomeStep onGetStarted={handleNext} onSkip={handleSkipAll} />;
       case 'investments': return <InvestmentsStep items={holdings} setItems={setHoldings} />;
       case 'rsus': return <RSUStep items={rsuGrants} setItems={setRsuGrants} />;
       case 'savings': return <CashStep type="savings" items={cashAccounts.filter(c => c.type === 'savings')} setItems={(items) => setCashAccounts([...cashAccounts.filter(c => c.type !== 'savings'), ...items])} />;
@@ -100,8 +140,72 @@ export default function OnboardingScreen() {
     }
   };
 
-  const isLast = step === STEPS.length - 1;
+  if (phase === 'intro') {
+    const imageSize = screenWidth * 0.55;
+    return (
+      <View style={[styles.container, { paddingTop: topInset }]}>
+        <View style={introStyles.skipRow}>
+          <Pressable onPress={handleIntroSkip} hitSlop={16}>
+            <Text style={introStyles.skipText}>Skip</Text>
+          </Pressable>
+        </View>
 
+        <FlatList
+          ref={scrollRef}
+          data={VALUE_PROP_PAGES}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          scrollEnabled={true}
+          onMomentumScrollEnd={(e) => {
+            const idx = Math.round(e.nativeEvent.contentOffset.x / screenWidth);
+            setIntroPage(idx);
+          }}
+          keyExtractor={(_, i) => i.toString()}
+          renderItem={({ item }) => (
+            <View style={[introStyles.page, { width: screenWidth }]}>
+              <View style={introStyles.imageSection}>
+                <View style={introStyles.imageCard}>
+                  <Image
+                    source={item.image}
+                    style={{ width: imageSize, height: imageSize }}
+                    resizeMode="contain"
+                  />
+                </View>
+              </View>
+              <View style={introStyles.textSection}>
+                <Text style={introStyles.title}>{item.title}</Text>
+                <Text style={introStyles.subtitle}>{item.subtitle}</Text>
+              </View>
+            </View>
+          )}
+        />
+
+        <View style={[introStyles.footer, { paddingBottom: bottomInset + spacing.lg }]}>
+          <View style={introStyles.dots}>
+            {VALUE_PROP_PAGES.map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  introStyles.dot,
+                  i === introPage && introStyles.dotActive,
+                ]}
+              />
+            ))}
+          </View>
+
+          <Pressable style={introStyles.continueBtn} onPress={handleIntroNext}>
+            <Text style={introStyles.continueBtnText}>
+              {introPage === VALUE_PROP_PAGES.length - 1 ? 'Get Started' : 'Continue'}
+            </Text>
+            <Ionicons name="arrow-forward" size={18} color={Colors.white} />
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
+
+  const isLast = step === STEPS.length - 1;
   const isWelcome = step === 0;
 
   if (isWelcome) {
@@ -155,6 +259,87 @@ export default function OnboardingScreen() {
     </KeyboardAvoidingView>
   );
 }
+
+const introStyles = StyleSheet.create({
+  skipRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+  },
+  skipText: {
+    fontFamily: fontFamily.semibold,
+    fontSize: fontSize.md,
+    color: Colors.primary,
+  },
+  page: {
+    flex: 1,
+    paddingHorizontal: spacing.xxl,
+    justifyContent: 'center',
+  },
+  imageSection: {
+    alignItems: 'center',
+    marginBottom: spacing.xxxl,
+  },
+  imageCard: {
+    backgroundColor: Colors.primaryLight,
+    borderRadius: borderRadius.xl,
+    padding: spacing.xxl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  textSection: {
+    gap: spacing.lg,
+    paddingHorizontal: spacing.sm,
+  },
+  title: {
+    fontFamily: fontFamily.bold,
+    fontSize: 32,
+    lineHeight: 40,
+    color: Colors.text,
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontFamily: fontFamily.regular,
+    fontSize: 17,
+    lineHeight: 26,
+    color: Colors.textSecondary,
+  },
+  footer: {
+    paddingHorizontal: spacing.xxl,
+    gap: spacing.xl,
+  },
+  dots: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.borderLight,
+  },
+  dotActive: {
+    width: 24,
+    backgroundColor: Colors.primary,
+    borderRadius: 4,
+  },
+  continueBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: Colors.primary,
+    paddingVertical: 16,
+    borderRadius: borderRadius.lg,
+    width: '100%',
+  },
+  continueBtnText: {
+    fontFamily: fontFamily.semibold,
+    fontSize: fontSize.lg,
+    color: Colors.white,
+  },
+});
 
 const FEATURES = [
   { icon: 'pie-chart' as const, text: 'Real-time net worth tracking' },
