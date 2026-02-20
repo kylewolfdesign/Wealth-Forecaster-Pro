@@ -6,6 +6,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { router } from 'expo-router';
 import { useAppStore } from '@/lib/store';
 import Card from '@/components/Card';
 import Colors from '@/constants/colors';
@@ -30,6 +31,12 @@ export default function SettingsScreen() {
         },
       ]
     );
+  };
+
+  const handleResetOnboarding = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    useAppStore.setState({ onboardingComplete: false });
+    router.replace('/onboarding');
   };
 
   const handleClearAll = () => {
@@ -131,6 +138,11 @@ export default function SettingsScreen() {
         <Pressable style={styles.actionRow} onPress={handleLoadDemo}>
           <Ionicons name="flask" size={20} color={Colors.primary} />
           <Text style={styles.actionText}>Load Demo Data</Text>
+        </Pressable>
+        <View style={styles.rowDivider} />
+        <Pressable style={styles.actionRow} onPress={handleResetOnboarding}>
+          <Ionicons name="refresh" size={20} color={Colors.primary} />
+          <Text style={styles.actionText}>Replay Onboarding</Text>
         </Pressable>
         <View style={styles.rowDivider} />
         <Pressable style={styles.actionRow} onPress={handleClearAll}>
