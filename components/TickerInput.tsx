@@ -225,6 +225,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.regular,
     fontSize: fontSize.md,
     color: Colors.text,
+    outlineStyle: 'none' as any,
   },
   dropdown: {
     position: 'absolute',
