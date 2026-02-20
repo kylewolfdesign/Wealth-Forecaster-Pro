@@ -102,6 +102,16 @@ export default function OnboardingScreen() {
 
   const isLast = step === STEPS.length - 1;
 
+  const isWelcome = step === 0;
+
+  if (isWelcome) {
+    return (
+      <View style={[styles.container, { paddingTop: topInset }]}>
+        <WelcomeStep onGetStarted={handleNext} onSkip={handleSkipAll} />
+      </View>
+    );
+  }
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -109,10 +119,10 @@ export default function OnboardingScreen() {
     >
       <View style={[styles.topBar, { paddingTop: topInset + spacing.md }]}>
         <View style={styles.stepIndicator}>
-          {STEPS.map((_, i) => (
+          {STEPS.slice(1).map((_, i) => (
             <View
               key={i}
-              style={[styles.dot, i <= step && styles.dotActive, i === step && styles.dotCurrent]}
+              style={[styles.dot, i <= step - 1 && styles.dotActive, i === step - 1 && styles.dotCurrent]}
             />
           ))}
         </View>
@@ -128,20 +138,16 @@ export default function OnboardingScreen() {
       </ScrollView>
 
       <View style={[styles.bottomBar, { paddingBottom: bottomInset + spacing.md }]}>
-        {step > 0 ? (
-          <Pressable style={styles.backBtn} onPress={handleBack}>
-            <Ionicons name="arrow-back" size={20} color={Colors.textSecondary} />
-          </Pressable>
-        ) : (
-          <View style={styles.backBtn} />
-        )}
+        <Pressable style={styles.backBtn} onPress={handleBack}>
+          <Ionicons name="arrow-back" size={20} color={Colors.textSecondary} />
+        </Pressable>
 
         <Pressable
           style={[styles.nextBtn, isLast && styles.finishBtn]}
           onPress={isLast ? handleFinish : handleNext}
         >
           <Text style={[styles.nextBtnText, isLast && styles.finishBtnText]}>
-            {isLast ? 'Finish' : step === 0 ? 'Get Started' : 'Next'}
+            {isLast ? 'Finish' : 'Next'}
           </Text>
           {!isLast && <Ionicons name="arrow-forward" size={18} color={Colors.white} />}
         </Pressable>
@@ -150,44 +156,168 @@ export default function OnboardingScreen() {
   );
 }
 
-function WelcomeStep({ onSkip }: { onSkip: () => void }) {
+const FEATURES = [
+  { icon: 'pie-chart' as const, text: 'Real-time net worth tracking' },
+  { icon: 'trending-up' as const, text: 'Smart growth forecasting' },
+  { icon: 'time' as const, text: 'Historical snapshot timeline' },
+  { icon: 'layers' as const, text: 'Stocks, crypto, RSUs & more' },
+  { icon: 'shield-checkmark' as const, text: '100% local & private' },
+];
+
+function WelcomeStep({ onGetStarted, onSkip }: { onGetStarted: () => void; onSkip: () => void }) {
   return (
     <View style={wStyles.container}>
-      <View style={wStyles.iconWrap}>
-        <Ionicons name="bar-chart" size={48} color={Colors.primary} />
-      </View>
-      <Text style={wStyles.title}>Track Your Wealth</Text>
-      <Text style={wStyles.desc}>
-        Add your assets and liabilities to see your net worth, track changes over time, and forecast your financial future.
-      </Text>
-      <View style={wStyles.features}>
-        {['Real-time net worth', 'Growth forecasting', 'History tracking'].map((f) => (
-          <View key={f} style={wStyles.featureRow}>
-            <Ionicons name="checkmark-circle" size={20} color={Colors.positive} />
-            <Text style={wStyles.featureText}>{f}</Text>
+      <View style={wStyles.content}>
+        <View style={wStyles.logoSection}>
+          <View style={wStyles.logoWrap}>
+            <Ionicons name="stats-chart" size={32} color={Colors.white} />
           </View>
-        ))}
+          <Text style={wStyles.brandLabel}>NETWORTH</Text>
+        </View>
+
+        <View style={wStyles.textSection}>
+          <Text style={wStyles.title}>Your Complete{'\n'}Wealth Dashboard</Text>
+          <Text style={wStyles.subtitle}>
+            Track every asset, forecast your future, and watch your wealth grow over time.
+          </Text>
+        </View>
+
+        <View style={wStyles.divider} />
+
+        <View style={wStyles.features}>
+          {FEATURES.map((f) => (
+            <View key={f.text} style={wStyles.featureRow}>
+              <View style={wStyles.checkCircle}>
+                <Ionicons name="checkmark" size={12} color={Colors.white} />
+              </View>
+              <Text style={wStyles.featureText}>{f.text}</Text>
+            </View>
+          ))}
+        </View>
       </View>
-      <Pressable onPress={onSkip}>
-        <Text style={wStyles.skipText}>Skip setup, I'll add later</Text>
-      </Pressable>
+
+      <View style={wStyles.actions}>
+        <Pressable style={wStyles.getStartedBtn} onPress={onGetStarted}>
+          <Text style={wStyles.getStartedText}>Get Started</Text>
+          <Ionicons name="arrow-forward" size={18} color={Colors.white} />
+        </Pressable>
+        <Pressable style={wStyles.skipBtn} onPress={onSkip}>
+          <Ionicons name="log-in-outline" size={18} color={Colors.primary} />
+          <Text style={wStyles.skipText}>Skip setup, I'll add later</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
 
 const wStyles = StyleSheet.create({
-  container: { alignItems: 'center', paddingTop: spacing.huge },
-  iconWrap: {
-    width: 80, height: 80, borderRadius: 20,
-    backgroundColor: Colors.primaryLight, alignItems: 'center',
-    justifyContent: 'center', marginBottom: spacing.xxl,
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
   },
-  title: { fontFamily: fontFamily.bold, fontSize: fontSize.xxxl, color: Colors.text, marginBottom: spacing.md, textAlign: 'center' },
-  desc: { fontFamily: fontFamily.regular, fontSize: fontSize.md, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22, paddingHorizontal: spacing.xxl, marginBottom: spacing.xxl },
-  features: { gap: spacing.md, marginBottom: spacing.xxxl },
-  featureRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  featureText: { fontFamily: fontFamily.medium, fontSize: fontSize.md, color: Colors.text },
-  skipText: { fontFamily: fontFamily.medium, fontSize: fontSize.sm, color: Colors.textTertiary },
+  content: {
+    alignItems: 'center',
+    gap: spacing.xxxl,
+  },
+  logoSection: {
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  logoWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 18,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  brandLabel: {
+    fontFamily: fontFamily.bold,
+    fontSize: 14,
+    color: Colors.primary,
+    letterSpacing: 2,
+  },
+  textSection: {
+    alignItems: 'center',
+    gap: spacing.lg,
+    paddingHorizontal: spacing.sm,
+  },
+  title: {
+    fontFamily: fontFamily.bold,
+    fontSize: 30,
+    lineHeight: 38,
+    color: Colors.text,
+    textAlign: 'center',
+    letterSpacing: -0.4,
+  },
+  subtitle: {
+    fontFamily: fontFamily.regular,
+    fontSize: 17,
+    lineHeight: 26,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+  },
+  divider: {
+    width: 48,
+    height: 1,
+    backgroundColor: Colors.border,
+  },
+  features: {
+    gap: spacing.md,
+    paddingHorizontal: spacing.xxl,
+    alignSelf: 'stretch',
+  },
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  checkCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  featureText: {
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.md,
+    color: Colors.text,
+    letterSpacing: -0.1,
+  },
+  actions: {
+    gap: spacing.xl,
+    alignItems: 'center',
+    marginTop: spacing.huge,
+    paddingHorizontal: spacing.sm,
+  },
+  getStartedBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: Colors.primary,
+    paddingVertical: 14,
+    borderRadius: 999,
+    width: '100%',
+  },
+  getStartedText: {
+    fontFamily: fontFamily.semibold,
+    fontSize: fontSize.md,
+    color: Colors.white,
+  },
+  skipBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  skipText: {
+    fontFamily: fontFamily.semibold,
+    fontSize: fontSize.md,
+    color: Colors.primary,
+  },
 });
 
 function InvestmentsStep({ items, setItems }: { items: Holding[]; setItems: (h: Holding[]) => void }) {
