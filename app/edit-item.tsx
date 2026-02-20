@@ -11,6 +11,7 @@ import * as Crypto from 'expo-crypto';
 import { useAppStore } from '@/lib/store';
 import { computeCurrentTotals } from '@/lib/calculations';
 import { createSnapshot } from '@/lib/snapshot';
+import TickerInput from '@/components/TickerInput';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
 
@@ -118,7 +119,13 @@ function HoldingForm({ existing, isEditing, store, saveAndSnapshot }: any) {
         ))}
       </View>
       <FieldLabel label="Symbol" />
-      <TextInput style={styles.input} value={symbol} onChangeText={setSymbol} placeholder="e.g. AAPL or BTC" autoCapitalize="characters" placeholderTextColor={Colors.textTertiary} />
+      <TickerInput
+        value={symbol}
+        onChangeText={setSymbol}
+        onSelect={setSymbol}
+        type={holdingType}
+        placeholder={holdingType === 'stock' ? 'e.g. AAPL' : 'e.g. BTC'}
+      />
       <FieldLabel label="Number of Shares" />
       <TextInput style={styles.input} value={shares} onChangeText={setShares} keyboardType="numeric" placeholder="0" placeholderTextColor={Colors.textTertiary} />
       <FieldLabel label="Manual Price Override (optional)" />
@@ -167,7 +174,13 @@ function RSUForm({ existing, isEditing, store, saveAndSnapshot }: any) {
   return (
     <View>
       <FieldLabel label="Ticker Symbol" />
-      <TextInput style={styles.input} value={symbol} onChangeText={setSymbol} autoCapitalize="characters" placeholder="e.g. GOOGL" placeholderTextColor={Colors.textTertiary} />
+      <TickerInput
+        value={symbol}
+        onChangeText={setSymbol}
+        onSelect={setSymbol}
+        type="stock"
+        placeholder="e.g. GOOGL"
+      />
       <FieldLabel label="Total Shares" />
       <TextInput style={styles.input} value={totalShares} onChangeText={setTotalShares} keyboardType="numeric" placeholder="0" placeholderTextColor={Colors.textTertiary} />
       <FieldLabel label="Already Vested" />

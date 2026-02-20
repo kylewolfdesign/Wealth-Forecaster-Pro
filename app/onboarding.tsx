@@ -12,6 +12,7 @@ import { useAppStore } from '@/lib/store';
 import { computeCurrentTotals } from '@/lib/calculations';
 import { createSnapshot } from '@/lib/snapshot';
 import { formatCurrency } from '@/lib/format';
+import TickerInput from '@/components/TickerInput';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
 import type { Holding, RSUGrant, CashAccount, Mortgage, OtherAsset } from '@/lib/types';
@@ -221,8 +222,14 @@ function InvestmentsStep({ items, setItems }: { items: Holding[]; setItems: (h: 
         ))}
       </View>
 
+      <TickerInput
+        value={symbol}
+        onChangeText={setSymbol}
+        onSelect={setSymbol}
+        type={type}
+        placeholder={type === 'stock' ? 'Symbol (e.g. AAPL)' : 'Symbol (e.g. BTC)'}
+      />
       <View style={formStyles.inputRow}>
-        <TextInput style={[formStyles.input, { flex: 2 }]} placeholder="Symbol (e.g. AAPL)" value={symbol} onChangeText={setSymbol} autoCapitalize="characters" placeholderTextColor={Colors.textTertiary} />
         <TextInput style={[formStyles.input, { flex: 1 }]} placeholder="Shares" value={shares} onChangeText={setShares} keyboardType="numeric" placeholderTextColor={Colors.textTertiary} />
         <Pressable style={formStyles.addBtn} onPress={handleAdd}>
           <Ionicons name="add" size={22} color={Colors.white} />
@@ -275,7 +282,13 @@ function RSUStep({ items, setItems }: { items: RSUGrant[]; setItems: (r: RSUGran
       <Text style={formStyles.title}>Add RSUs</Text>
       <Text style={formStyles.desc}>Enter your RSU grants with vesting details</Text>
 
-      <TextInput style={formStyles.input} placeholder="Ticker (e.g. GOOGL)" value={symbol} onChangeText={setSymbol} autoCapitalize="characters" placeholderTextColor={Colors.textTertiary} />
+      <TickerInput
+        value={symbol}
+        onChangeText={setSymbol}
+        onSelect={setSymbol}
+        type="stock"
+        placeholder="Ticker (e.g. GOOGL)"
+      />
       <View style={formStyles.inputRow}>
         <TextInput style={[formStyles.input, { flex: 1 }]} placeholder="Total shares" value={total} onChangeText={setTotal} keyboardType="numeric" placeholderTextColor={Colors.textTertiary} />
         <TextInput style={[formStyles.input, { flex: 1 }]} placeholder="Already vested" value={vested} onChangeText={setVested} keyboardType="numeric" placeholderTextColor={Colors.textTertiary} />
