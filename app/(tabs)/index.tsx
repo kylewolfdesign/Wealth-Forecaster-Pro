@@ -166,11 +166,11 @@ const styles = StyleSheet.create({
   },
   headerLabel: {
     fontFamily: fontFamily.medium,
-    fontSize: fontSize.sm,
-    color: Colors.textSecondary,
+    fontSize: fontSize.xs,
+    color: Colors.textTertiary,
     marginBottom: spacing.xs,
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 1.2,
   },
   netWorthValue: {
     fontFamily: fontFamily.bold,
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
   tileIcon: {
     width: 36,
     height: 36,
-    borderRadius: 10,
+    borderRadius: borderRadius.sm,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,

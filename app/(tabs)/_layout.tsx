@@ -1,13 +1,9 @@
 import { isLiquidGlassAvailable } from 'expo-glass-effect';
 import { Tabs } from 'expo-router';
 import { NativeTabs, Icon, Label } from 'expo-router/unstable-native-tabs';
-import { BlurView } from 'expo-blur';
-import { SymbolView } from 'expo-symbols';
 import { Ionicons } from '@expo/vector-icons';
-import { Platform, StyleSheet, useColorScheme, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Platform, StyleSheet, View } from 'react-native';
 import React from 'react';
-import Colors from '@/constants/colors';
 
 function NativeTabLayout() {
   return (
@@ -37,35 +33,27 @@ function NativeTabLayout() {
 }
 
 function ClassicTabLayout() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
   const isWeb = Platform.OS === 'web';
-  const isIOS = Platform.OS === 'ios';
-  const insets = useSafeAreaInsets();
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.tabIconDefault,
+        tabBarActiveTintColor: '#6172F3',
+        tabBarInactiveTintColor: '#98A2B3',
         tabBarStyle: {
           position: 'absolute',
-          backgroundColor: isIOS ? 'transparent' : isDark ? '#000' : '#fff',
-          borderTopWidth: isWeb ? 1 : 0,
-          borderTopColor: Colors.border,
+          backgroundColor: '#FFFFFF',
+          borderTopWidth: 1,
+          borderTopColor: '#EAECF0',
           elevation: 0,
           ...(isWeb ? { height: 84 } : {}),
         },
         tabBarBackground: () =>
-          isIOS ? (
-            <BlurView intensity={100} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
-          ) : isWeb ? (
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: isDark ? '#000' : '#fff' }]} />
-          ) : null,
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: '#FFFFFF' }]} />,
         tabBarLabelStyle: {
           fontSize: 10,
-          fontWeight: '600',
+          fontWeight: '500',
         },
       }}
     >
@@ -73,35 +61,45 @@ function ClassicTabLayout() {
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color, size }) => <Ionicons name="home" size={size} color={color} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'home' : 'home-outline'} size={size} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="breakdown"
         options={{
           title: 'Breakdown',
-          tabBarIcon: ({ color, size }) => <Ionicons name="pie-chart" size={size} color={color} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'pie-chart' : 'pie-chart-outline'} size={size} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="forecast"
         options={{
           title: 'Forecast',
-          tabBarIcon: ({ color, size }) => <Ionicons name="trending-up" size={size} color={color} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'trending-up' : 'trending-up-outline'} size={size} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="history"
         options={{
           title: 'History',
-          tabBarIcon: ({ color, size }) => <Ionicons name="time" size={size} color={color} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'time' : 'time-outline'} size={size} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',
-          tabBarIcon: ({ color, size }) => <Ionicons name="settings-sharp" size={size} color={color} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'settings' : 'settings-outline'} size={size} color={color} />
+          ),
         }}
       />
     </Tabs>

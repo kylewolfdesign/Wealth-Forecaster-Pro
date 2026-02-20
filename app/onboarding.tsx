@@ -318,6 +318,10 @@ const wStyles = StyleSheet.create({
     fontSize: fontSize.md,
     color: Colors.primary,
   },
+  iconWrap: {
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
 });
 
 function InvestmentsStep({ items, setItems }: { items: Holding[]; setItems: (h: Holding[]) => void }) {
