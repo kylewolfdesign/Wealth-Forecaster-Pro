@@ -1,0 +1,169 @@
+You are an expert senior mobile product engineer + UX engineer. Build v1 of a simple, polished “Net Worth & Forecast” app as a React Native (Expo) project that runs on iOS. Optimize for: (1) fastest path to a working MVP, (2) clean architecture, (3) great UX, (4) easy extension later, (5) safe handling of financial data (no tracking, no ads).
+
+IMPORTANT OUTPUT RULES
+- Create or update ALL necessary files so the project runs immediately.
+- Prefer TypeScript.
+- Include clear folder structure.
+- Include a minimal but solid design system (spacing, typography, card/list patterns).
+- Add basic error states, empty states, and loading states.
+- Use local-first storage (no account/login) with the option to add cloud sync later.
+- Don’t overbuild: keep it simple but complete.
+
+TECH STACK (use exactly this)
+- React Native + Expo + TypeScript
+- expo-router for navigation
+- Zustand for state management
+- AsyncStorage for persistence
+- react-hook-form + zod for forms/validation
+- Victory Native (or a similarly simple RN chart lib compatible with Expo) for charts
+- Market data: implement an abstraction with a mock provider by default.
+  - For v1: DO NOT require API keys. Use a free public endpoint where possible for crypto and a mocked stock price provider if needed.
+  - The goal is the app works even without stock market API keys; users can still manually input price if needed.
+- No backend in v1.
+
+CORE APP CONCEPT
+A net worth and wealth forecasting app. User enters assets, liabilities, and investment holdings. App shows:
+- Current net worth dashboard (by category + total).
+- History over time (net worth trend).
+- Forecast projections (1, 5, 10, 20, 50 years) using assumed annual growth rates.
+- Ability to adjust annual growth assumptions for each investment category (stocks/ETFs, crypto, RSUs, cash/savings, other assets; and mortgage rate / principal payments).
+
+KEY REQUIREMENTS (must implement)
+1) Onboarding Wizard (first launch)
+- Step-by-step wizard collecting:
+  A) Investments (public tickers): type ticker + number of shares.
+  B) RSUs: ticker + number of shares + vesting schedule.
+     - Vesting schedule model: start date, cliff (months), total duration (months), vest frequency (monthly/quarterly), and optional “already vested” shares.
+  C) Savings accounts: current amount + monthly contribution (e.g., +2000/month) + optional annual interest rate.
+  D) Offset accounts: current amount + monthly contribution + optional annual interest rate.
+  E) Mortgage: current principal balance + interest rate + monthly payment (or principal payment growth inputs).
+     - Support monthly payment amount and optional annual increase % for payment.
+  F) Additional assets: name + current value + optional annual growth rate (e.g., car, collectibles, property equity, private shares).
+- Wizard ends with a review screen and saves everything.
+
+2) Post-onboarding editing
+- User can add/edit/delete any category items at any time:
+  - Investments holdings
+  - RSUs and schedules
+  - Savings accounts
+  - Offset accounts
+  - Mortgage
+  - Additional assets
+- Provide “Add” actions from each category list and from a global “+ Add” button.
+
+3) Totals + drill-in
+- A “Breakdown” screen that shows totals by category and allows drilling into category detail lists.
+- Each detail list shows item rows with current value, growth assumptions, and edit action.
+
+4) Home Dashboard
+- Shows total net worth (assets - liabilities).
+- Shows summary tiles by category:
+  - Stocks/ETFs (holdings)
+  - Crypto
+  - RSUs (vested value + unvested value optionally)
+  - Savings
+  - Offset
+  - Other assets
+  - Mortgage (liability)
+- Show net worth change over time using stored history (e.g., last 30/90/365 days) + a chart.
+- Show “Today vs last snapshot” delta.
+
+5) History tracking
+- Maintain a daily snapshot of total net worth and category totals.
+- Snapshot is recorded on app open (once per day) and whenever the user saves changes.
+- Store history locally (AsyncStorage).
+- Provide a History screen with a chart and list of snapshots.
+
+6) Forecasting
+- Forecast future net worth at 1, 5, 10, 20, 50 years.
+- Use compounding growth assumptions:
+  - Investments: annual growth % adjustable (global default + per-holding override optional).
+  - Crypto: annual growth % adjustable
+  - RSUs: simulate vesting into vested shares; vested shares then grow at investment growth rate for their ticker category.
+  - Savings/Offset: include monthly contributions and optional annual interest rate (or use a default cash growth rate).
+  - Mortgage: amortization model using balance, interest rate, monthly payment, and optional annual payment increase %. If too complex, approximate with principal reduction using payment - interest each month.
+  - Additional assets: annual growth % adjustable per asset.
+- Include a “Assumptions” settings screen where the user can:
+  - Set default annual growth for Stocks/ETFs
+  - Set default annual growth for Crypto
+  - Set default annual growth for RSUs (or map to ticker type)
+  - Set default annual growth for Cash (Savings/Offset)
+  - Set inflation rate (optional) and a toggle to show “real” vs “nominal”
+- Forecast screen should show:
+  - A line chart of net worth projection over time (monthly points for first 5 years, yearly after).
+  - A table/list of the 1/5/10/20/50 year values.
+  - Ability to tweak assumptions inline and instantly recompute.
+
+DATA MODEL (implement)
+- Categories:
+  - Holding: { id, type: "stock"|"crypto", symbol, shares, costBasis?: number, manualPrice?: number, growthOverride?: number }
+  - RSUGrant: { id, symbol, totalShares, alreadyVestedShares, vest: { startDate, cliffMonths, durationMonths, frequency: "monthly"|"quarterly" }, growthOverride?: number }
+  - CashAccount: { id, type: "savings"|"offset", name, balance, monthlyContribution, annualInterestRate?: number }
+  - Mortgage: { id, name, principalBalance, annualInterestRate, monthlyPayment, annualPaymentIncreasePct?: number }
+  - OtherAsset: { id, name, value, annualGrowthRate?: number }
+  - Settings/Assumptions: { stockGrowthPct, cryptoGrowthPct, cashGrowthPct, rsuGrowthPct, inflationPct, showRealReturns }
+  - Snapshot: { id, dateISO, totals: { netWorth, stocks, crypto, rsusVested, rsusUnvested, savings, offset, otherAssets, mortgage }, notes?: string }
+
+UI / NAV STRUCTURE (expo-router)
+Tabs:
+- Home
+- Breakdown
+- Forecast
+- History
+- Settings
+
+Onboarding is a stack flow shown only when firstLaunch = true.
+
+DESIGN REQUIREMENTS
+- Clean, modern, high-quality aesthetic.
+- Cards, subtle dividers, consistent spacing.
+- Use a simple theme file for spacing, font sizes, colors.
+- All money values formatted with locale + currency (default USD; allow Settings toggle USD/AUD later but for v1 just USD).
+- Input validation with helpful inline errors.
+
+PRICING / IAP (v1 preparation only)
+- Do NOT implement actual in-app purchases yet.
+- But structure the app so “Pro features” can be gated later:
+  - Example: forecasting beyond 10 years, multiple portfolios, CSV export.
+- Implement a simple feature flag in Settings: `isPro` (default false) and show a “Upgrade” CTA (no purchase flow).
+- Keep code modular so RevenueCat can be added later.
+
+MARKET PRICES (v1)
+- Implement PriceService interface with:
+  - getQuote(symbol, type) -> { price, asOfISO }
+- Provide:
+  - Crypto: use CoinGecko simple price endpoint for major coins by symbol mapping, but if mapping fails fall back to manual price.
+  - Stocks: implement a mock provider returning a stable random-ish price unless manualPrice set.
+- Every holding should allow “Manual price override” in the edit screen.
+
+DELIVERABLES
+- Working Expo RN app with the above screens and flows.
+- Seed data option for development (button in Settings: “Load demo data”).
+- Basic tests are optional; if included, keep minimal.
+
+IMPLEMENTATION DETAILS
+- Use Zustand store with persistence to AsyncStorage.
+- Derive totals using selector functions.
+- Create a calculation engine module:
+  - computeCurrentTotals(state) -> totals object
+  - computeForecast(state, horizonYears) -> series points + summary table
+  - computeRSUVesting(grant, date) -> vested/unvested shares at date
+  - computeMortgageBalance(mortgage, date) -> remaining balance at date (monthly iteration)
+- Use a “snapshot manager” that records snapshots:
+  - on app start
+  - after any save action
+  - ensure at most 1 snapshot per day unless forced
+
+PROJECT SETUP
+- Initialize with Expo + TypeScript.
+- Configure expo-router properly.
+- Ensure iOS run works with `npx expo start`.
+- Include instructions in README for running.
+
+NOW DO IT
+- Generate the full project in the Replit workspace.
+- Create all files, implement all screens, and make sure the app boots to onboarding on first run.
+- After implementation, print:
+  1) Folder/file tree
+  2) Any commands to run
+  3) Notes about where to add real stock price providers and IAP later
