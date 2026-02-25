@@ -55,11 +55,22 @@ export default function OnboardingScreen() {
   const [phase, setPhase] = useState<'intro' | 'categories' | 'setup'>('intro');
   const [introPage, setIntroPage] = useState(0);
   const [selectedCategories, setSelectedCategories] = useState<Set<CategoryKey>>(new Set());
+  const [expandedCards, setExpandedCards] = useState<Set<CategoryKey>>(new Set());
   const store = useAppStore();
   const scrollRef = useRef<FlatList>(null);
 
   const topInset = Platform.OS === 'web' ? 67 : insets.top;
   const bottomInset = Platform.OS === 'web' ? 34 : insets.bottom;
+
+  const toggleCardExpand = (key: CategoryKey) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setExpandedCards((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
   const toggleCategory = (key: CategoryKey) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -90,6 +101,7 @@ export default function OnboardingScreen() {
   const handleCategoriesContinue = () => {
     if (selectedCategories.size === 0) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setExpandedCards(new Set(selectedCategories));
     setPhase('setup');
   };
 
@@ -120,16 +132,29 @@ export default function OnboardingScreen() {
     router.replace('/(tabs)');
   };
 
-  const getCardInfo = (catKey: CategoryKey): { label: string; icon: keyof typeof Ionicons.glyphMap; itemCount: number; value: string } => {
+  type CardItem = { id: string; name: string; value: string; editType: string };
+  const getCardInfo = (catKey: CategoryKey): { label: string; icon: keyof typeof Ionicons.glyphMap; items: CardItem[]; value: string } => {
     switch (catKey) {
-      case 'investments': return { label: 'Stocks & ETFs', icon: 'trending-up', itemCount: store.holdings.filter(h => h.type === 'stock').length, value: formatCurrency(store.holdings.filter(h => h.type === 'stock').reduce((s, h) => s + (h.manualPrice || 0) * h.shares, 0)) };
-      case 'crypto': return { label: 'Crypto', icon: 'logo-bitcoin', itemCount: store.holdings.filter(h => h.type === 'crypto').length, value: formatCurrency(store.holdings.filter(h => h.type === 'crypto').reduce((s, h) => s + (h.manualPrice || 0) * h.shares, 0)) };
-      case 'rsus': return { label: 'RSUs', icon: 'layers', itemCount: store.rsuGrants.length, value: formatCurrency(0) };
-      case 'savings': return { label: 'Cash / Savings', icon: 'wallet', itemCount: store.cashAccounts.filter(c => c.type === 'savings').length, value: formatCurrency(store.cashAccounts.filter(c => c.type === 'savings').reduce((s, c) => s + c.balance, 0)) };
-      case 'offset': return { label: 'Offset Account', icon: 'swap-horizontal', itemCount: store.cashAccounts.filter(c => c.type === 'offset').length, value: formatCurrency(store.cashAccounts.filter(c => c.type === 'offset').reduce((s, c) => s + c.balance, 0)) };
-      case 'mortgage': return { label: 'Mortgage', icon: 'home', itemCount: store.mortgages.length, value: formatCurrency(store.mortgages.reduce((s, m) => s + m.remainingPrincipal, 0)) };
-      case 'other': return { label: 'Other Assets', icon: 'diamond', itemCount: store.otherAssets.length, value: formatCurrency(store.otherAssets.reduce((s, a) => s + a.value, 0)) };
-      default: return { label: '', icon: 'help', itemCount: 0, value: '$0' };
+      case 'investments': {
+        const items = store.holdings.filter(h => h.type === 'stock');
+        return { label: 'Stocks & ETFs', icon: 'trending-up', items: items.map(h => ({ id: h.id, name: h.symbol.toUpperCase(), value: formatCurrency((h.manualPrice || 0) * h.shares), editType: 'holding' })), value: formatCurrency(items.reduce((s, h) => s + (h.manualPrice || 0) * h.shares, 0)) };
+      }
+      case 'crypto': {
+        const items = store.holdings.filter(h => h.type === 'crypto');
+        return { label: 'Crypto', icon: 'logo-bitcoin', items: items.map(h => ({ id: h.id, name: h.symbol.toUpperCase(), value: formatCurrency((h.manualPrice || 0) * h.shares), editType: 'holding' })), value: formatCurrency(items.reduce((s, h) => s + (h.manualPrice || 0) * h.shares, 0)) };
+      }
+      case 'rsus': return { label: 'RSUs', icon: 'layers', items: store.rsuGrants.map(r => ({ id: r.id, name: r.symbol.toUpperCase(), value: formatCurrency(r.totalShares * 0), editType: 'rsu' })), value: formatCurrency(0) };
+      case 'savings': {
+        const items = store.cashAccounts.filter(c => c.type === 'savings');
+        return { label: 'Cash / Savings', icon: 'wallet', items: items.map(c => ({ id: c.id, name: c.name, value: formatCurrency(c.balance), editType: 'cash' })), value: formatCurrency(items.reduce((s, c) => s + c.balance, 0)) };
+      }
+      case 'offset': {
+        const items = store.cashAccounts.filter(c => c.type === 'offset');
+        return { label: 'Offset Account', icon: 'swap-horizontal', items: items.map(c => ({ id: c.id, name: c.name, value: formatCurrency(c.balance), editType: 'cash' })), value: formatCurrency(items.reduce((s, c) => s + c.balance, 0)) };
+      }
+      case 'mortgage': return { label: 'Mortgage', icon: 'home', items: store.mortgages.map(m => ({ id: m.id, name: m.name, value: formatCurrency(m.principalBalance), editType: 'mortgage' })), value: formatCurrency(store.mortgages.reduce((s, m) => s + m.principalBalance, 0)) };
+      case 'other': return { label: 'Other Assets', icon: 'diamond', items: store.otherAssets.map(a => ({ id: a.id, name: a.name, value: formatCurrency(a.value), editType: 'other' })), value: formatCurrency(store.otherAssets.reduce((s, a) => s + a.value, 0)) };
+      default: return { label: '', icon: 'help', items: [], value: '$0' };
     }
   };
 
@@ -280,8 +305,14 @@ export default function OnboardingScreen() {
       >
         {selectedCatArray.map((cat) => {
           const info = getCardInfo(cat.key);
+          const isExpanded = expandedCards.has(cat.key);
+          const hasItems = info.items.length > 0;
           return (
-            <View key={cat.key} style={setupStyles.card}>
+            <Pressable
+              key={cat.key}
+              style={[setupStyles.card, !isExpanded && setupStyles.cardCollapsed]}
+              onPress={() => toggleCardExpand(cat.key)}
+            >
               <View style={setupStyles.cardHeader}>
                 <View style={setupStyles.cardNameRow}>
                   <View style={setupStyles.iconCircle}>
@@ -291,23 +322,54 @@ export default function OnboardingScreen() {
                 </View>
                 <View style={setupStyles.cardValueRow}>
                   <Text style={setupStyles.cardValue}>{info.value}</Text>
-                  {info.itemCount > 0 && (
-                    <View style={setupStyles.countBadge}>
-                      <Text style={setupStyles.countText}>{info.itemCount}</Text>
-                    </View>
-                  )}
+                  <Ionicons
+                    name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                    size={24}
+                    color="#94A3B8"
+                  />
                 </View>
               </View>
-              <View style={setupStyles.divider} />
-              <View style={setupStyles.cardFooter}>
-                <Pressable
-                  style={setupStyles.addBtn}
-                  onPress={() => handleAddItem(cat.key)}
-                >
-                  <Text style={setupStyles.addBtnText}>Add</Text>
-                </Pressable>
-              </View>
-            </View>
+              {isExpanded && (
+                <>
+                  <View style={setupStyles.divider} />
+                  {hasItems && (
+                    <View style={setupStyles.itemsList}>
+                      {info.items.map((item) => (
+                        <Pressable
+                          key={item.id}
+                          style={setupStyles.itemRow}
+                          onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            router.push({ pathname: '/edit-item', params: { type: item.editType, id: item.id } });
+                          }}
+                        >
+                          <View style={setupStyles.itemNameRow}>
+                            <View style={setupStyles.itemIconCircle}>
+                              <Text style={setupStyles.itemIconText}>
+                                {item.name.charAt(0)}
+                              </Text>
+                            </View>
+                            <Text style={setupStyles.itemName}>{item.name}</Text>
+                          </View>
+                          <View style={setupStyles.itemValueRow}>
+                            <Text style={setupStyles.itemValue}>{item.value}</Text>
+                            <Ionicons name="chevron-forward" size={20} color="#64748B" />
+                          </View>
+                        </Pressable>
+                      ))}
+                    </View>
+                  )}
+                  <View style={setupStyles.cardFooter}>
+                    <Pressable
+                      style={setupStyles.addBtn}
+                      onPress={() => handleAddItem(cat.key)}
+                    >
+                      <Text style={setupStyles.addBtnText}>Add</Text>
+                    </Pressable>
+                  </View>
+                </>
+              )}
+            </Pressable>
           );
         })}
       </ScrollView>
@@ -536,6 +598,9 @@ const setupStyles = StyleSheet.create({
     padding: 16,
     gap: 16,
   },
+  cardCollapsed: {
+    gap: 0,
+  },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -571,23 +636,54 @@ const setupStyles = StyleSheet.create({
     color: '#F8F9FD',
     letterSpacing: 0.3,
   },
-  countBadge: {
-    backgroundColor: '#6B39F4',
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
-  },
-  countText: {
-    fontFamily: fontFamily.bold,
-    fontSize: 10,
-    color: '#FFFFFF',
-  },
   divider: {
     height: 1,
     backgroundColor: '#334155',
+  },
+  itemsList: {
+    gap: 0,
+  },
+  itemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 48,
+    paddingVertical: 4,
+  },
+  itemNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  itemIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#1E293B',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  itemIconText: {
+    fontFamily: fontFamily.bold,
+    fontSize: 16,
+    color: '#FFFFFF',
+  },
+  itemName: {
+    fontFamily: fontFamily.bold,
+    fontSize: 14,
+    color: '#F8F9FD',
+    letterSpacing: 0.3,
+  },
+  itemValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  itemValue: {
+    fontFamily: fontFamily.semibold,
+    fontSize: 14,
+    color: '#F8F9FD',
+    letterSpacing: 0.3,
   },
   cardFooter: {
     flexDirection: 'row',
