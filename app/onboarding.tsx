@@ -48,38 +48,18 @@ const CATEGORY_OPTIONS = [
 
 type CategoryKey = typeof CATEGORY_OPTIONS[number]['key'];
 
-const ALL_STEPS = [
-  { key: 'investments', title: 'Investments', icon: 'trending-up' as const, categories: ['investments', 'crypto'] as CategoryKey[] },
-  { key: 'rsus', title: 'RSUs', icon: 'layers' as const, categories: ['rsus'] as CategoryKey[] },
-  { key: 'savings', title: 'Savings', icon: 'wallet' as const, categories: ['savings'] as CategoryKey[] },
-  { key: 'offset', title: 'Offset', icon: 'swap-horizontal' as const, categories: ['offset'] as CategoryKey[] },
-  { key: 'mortgage', title: 'Mortgage', icon: 'home' as const, categories: ['mortgage'] as CategoryKey[] },
-  { key: 'other', title: 'Other Assets', icon: 'diamond' as const, categories: ['other'] as CategoryKey[] },
-  { key: 'review', title: 'Review', icon: 'checkmark-circle' as const, categories: [] as CategoryKey[] },
-];
 
 export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
   const [phase, setPhase] = useState<'intro' | 'categories' | 'setup'>('intro');
   const [introPage, setIntroPage] = useState(0);
-  const [step, setStep] = useState(0);
   const [selectedCategories, setSelectedCategories] = useState<Set<CategoryKey>>(new Set());
   const store = useAppStore();
   const scrollRef = useRef<FlatList>(null);
 
-  const [holdings, setHoldings] = useState<Holding[]>([]);
-  const [rsuGrants, setRsuGrants] = useState<RSUGrant[]>([]);
-  const [cashAccounts, setCashAccounts] = useState<CashAccount[]>([]);
-  const [mortgages, setMortgages] = useState<Mortgage[]>([]);
-  const [otherAssets, setOtherAssets] = useState<OtherAsset[]>([]);
-
   const topInset = Platform.OS === 'web' ? 67 : insets.top;
   const bottomInset = Platform.OS === 'web' ? 34 : insets.bottom;
-
-  const filteredSteps = ALL_STEPS.filter(
-    (s) => s.key === 'review' || s.categories.some((c) => selectedCategories.has(c))
-  );
 
   const toggleCategory = (key: CategoryKey) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -110,62 +90,46 @@ export default function OnboardingScreen() {
   const handleCategoriesContinue = () => {
     if (selectedCategories.size === 0) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setStep(0);
     setPhase('setup');
   };
 
-  const handleNext = () => {
+  const handleAddItem = (catKey: CategoryKey) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (step < filteredSteps.length - 1) {
-      setStep(step + 1);
+    let type: string;
+    switch (catKey) {
+      case 'investments': type = 'holding'; break;
+      case 'crypto': type = 'holding'; break;
+      case 'rsus': type = 'rsu'; break;
+      case 'savings': type = 'cash'; break;
+      case 'offset': type = 'cash'; break;
+      case 'mortgage': type = 'mortgage'; break;
+      case 'other': type = 'other'; break;
+      default: type = 'holding';
     }
+    router.push({ pathname: '/edit-item', params: { type } });
   };
 
-  const handleBack = () => {
-    if (step > 0) setStep(step - 1);
-    else setPhase('categories');
-  };
-
-  const handleFinish = () => {
+  const handleFinishSetup = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    holdings.forEach((h) => store.addHolding(h));
-    rsuGrants.forEach((r) => store.addRSUGrant(r));
-    cashAccounts.forEach((c) => store.addCashAccount(c));
-    mortgages.forEach((m) => store.addMortgage(m));
-    otherAssets.forEach((a) => store.addOtherAsset(a));
     store.completeOnboarding();
-
     const totals = computeCurrentTotals(
-      [...store.holdings, ...holdings],
-      [...store.rsuGrants, ...rsuGrants],
-      [...store.cashAccounts, ...cashAccounts],
-      [...store.mortgages, ...mortgages],
-      [...store.otherAssets, ...otherAssets],
+      store.holdings, store.rsuGrants, store.cashAccounts,
+      store.mortgages, store.otherAssets,
     );
     store.addSnapshot(createSnapshot(totals));
     router.replace('/(tabs)');
   };
 
-  const renderStep = () => {
-    const currentStep = filteredSteps[step];
-    if (!currentStep) return null;
-    switch (currentStep.key) {
-      case 'investments': return <InvestmentsStep items={holdings} setItems={setHoldings} />;
-      case 'rsus': return <RSUStep items={rsuGrants} setItems={setRsuGrants} />;
-      case 'savings': return <CashStep type="savings" items={cashAccounts.filter(c => c.type === 'savings')} setItems={(items) => setCashAccounts([...cashAccounts.filter(c => c.type !== 'savings'), ...items])} />;
-      case 'offset': return <CashStep type="offset" items={cashAccounts.filter(c => c.type === 'offset')} setItems={(items) => setCashAccounts([...cashAccounts.filter(c => c.type !== 'offset'), ...items])} />;
-      case 'mortgage': return <MortgageStep items={mortgages} setItems={setMortgages} />;
-      case 'other': return <OtherStep items={otherAssets} setItems={setOtherAssets} />;
-      case 'review': return (
-        <ReviewStep
-          holdings={holdings}
-          rsuGrants={rsuGrants}
-          cashAccounts={cashAccounts}
-          mortgages={mortgages}
-          otherAssets={otherAssets}
-        />
-      );
-      default: return null;
+  const getCardInfo = (catKey: CategoryKey): { label: string; icon: keyof typeof Ionicons.glyphMap; itemCount: number; value: string } => {
+    switch (catKey) {
+      case 'investments': return { label: 'Stocks & ETFs', icon: 'trending-up', itemCount: store.holdings.filter(h => h.type === 'stock').length, value: formatCurrency(store.holdings.filter(h => h.type === 'stock').reduce((s, h) => s + (h.manualPrice || 0) * h.shares, 0)) };
+      case 'crypto': return { label: 'Crypto', icon: 'logo-bitcoin', itemCount: store.holdings.filter(h => h.type === 'crypto').length, value: formatCurrency(store.holdings.filter(h => h.type === 'crypto').reduce((s, h) => s + (h.manualPrice || 0) * h.shares, 0)) };
+      case 'rsus': return { label: 'RSUs', icon: 'layers', itemCount: store.rsuGrants.length, value: formatCurrency(0) };
+      case 'savings': return { label: 'Cash / Savings', icon: 'wallet', itemCount: store.cashAccounts.filter(c => c.type === 'savings').length, value: formatCurrency(store.cashAccounts.filter(c => c.type === 'savings').reduce((s, c) => s + c.balance, 0)) };
+      case 'offset': return { label: 'Offset Account', icon: 'swap-horizontal', itemCount: store.cashAccounts.filter(c => c.type === 'offset').length, value: formatCurrency(store.cashAccounts.filter(c => c.type === 'offset').reduce((s, c) => s + c.balance, 0)) };
+      case 'mortgage': return { label: 'Mortgage', icon: 'home', itemCount: store.mortgages.length, value: formatCurrency(store.mortgages.reduce((s, m) => s + m.remainingPrincipal, 0)) };
+      case 'other': return { label: 'Other Assets', icon: 'diamond', itemCount: store.otherAssets.length, value: formatCurrency(store.otherAssets.reduce((s, a) => s + a.value, 0)) };
+      default: return { label: '', icon: 'help', itemCount: 0, value: '$0' };
     }
   };
 
@@ -289,49 +253,71 @@ export default function OnboardingScreen() {
     );
   }
 
-  const isLast = step === filteredSteps.length - 1;
+  const selectedCatArray = CATEGORY_OPTIONS.filter((c) => selectedCategories.has(c.key));
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <View style={[styles.topBar, { paddingTop: topInset + spacing.md }]}>
-        <View style={styles.stepIndicator}>
-          {filteredSteps.map((_, i) => (
-            <View
-              key={i}
-              style={[styles.dot, i <= step && styles.dotActive, i === step && styles.dotCurrent]}
-            />
-          ))}
+    <View style={[catStyles.container, { paddingTop: topInset }]}>
+      <View style={setupStyles.header}>
+        <View style={catStyles.dots}>
+          <View style={catStyles.dot} />
+          <View style={[catStyles.dot, catStyles.dotActive]} />
+        </View>
+
+        <View style={catStyles.textBlock}>
+          <Text style={catStyles.heading}>
+            Add your details
+          </Text>
+          <Text style={catStyles.subheading}>
+            Tap "Add" on any card below to enter your financial details
+          </Text>
         </View>
       </View>
 
       <ScrollView
-        style={styles.scrollBody}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
+        style={setupStyles.scrollArea}
+        contentContainerStyle={setupStyles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {renderStep()}
+        {selectedCatArray.map((cat) => {
+          const info = getCardInfo(cat.key);
+          return (
+            <View key={cat.key} style={setupStyles.card}>
+              <View style={setupStyles.cardHeader}>
+                <View style={setupStyles.cardNameRow}>
+                  <View style={setupStyles.iconCircle}>
+                    <Ionicons name={info.icon} size={20} color="#94A3B8" />
+                  </View>
+                  <Text style={setupStyles.cardLabel}>{info.label}</Text>
+                </View>
+                <View style={setupStyles.cardValueRow}>
+                  <Text style={setupStyles.cardValue}>{info.value}</Text>
+                  {info.itemCount > 0 && (
+                    <View style={setupStyles.countBadge}>
+                      <Text style={setupStyles.countText}>{info.itemCount}</Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+              <View style={setupStyles.divider} />
+              <View style={setupStyles.cardFooter}>
+                <Pressable
+                  style={setupStyles.addBtn}
+                  onPress={() => handleAddItem(cat.key)}
+                >
+                  <Text style={setupStyles.addBtnText}>Add</Text>
+                </Pressable>
+              </View>
+            </View>
+          );
+        })}
       </ScrollView>
 
-      <View style={[styles.bottomBar, { paddingBottom: bottomInset + spacing.md }]}>
-        <Pressable style={styles.backBtn} onPress={handleBack}>
-          <Ionicons name="arrow-back" size={20} color={Colors.textSecondary} />
-        </Pressable>
-
-        <Pressable
-          style={[styles.nextBtn, isLast && styles.finishBtn]}
-          onPress={isLast ? handleFinish : handleNext}
-        >
-          <Text style={[styles.nextBtnText, isLast && styles.finishBtnText]}>
-            {isLast ? 'Finish' : 'Next'}
-          </Text>
-          {!isLast && <Ionicons name="arrow-forward" size={18} color={Colors.white} />}
+      <View style={[catStyles.footer, { paddingBottom: bottomInset + spacing.lg }]}>
+        <Pressable style={catStyles.continueBtn} onPress={handleFinishSetup}>
+          <Text style={catStyles.continueBtnText}>Continue</Text>
         </Pressable>
       </View>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -524,6 +510,102 @@ const catStyles = StyleSheet.create({
   },
   continueBtnTextDisabled: {
     color: '#64748B',
+  },
+});
+
+const setupStyles = StyleSheet.create({
+  header: {
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    gap: 24,
+  },
+  scrollArea: {
+    flex: 1,
+    marginTop: 24,
+  },
+  scrollContent: {
+    paddingHorizontal: 24,
+    gap: 16,
+    paddingBottom: 16,
+  },
+  card: {
+    backgroundColor: '#0F172A',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 12,
+    padding: 16,
+    gap: 16,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  cardNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  iconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#1E293B',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardLabel: {
+    fontFamily: fontFamily.bold,
+    fontSize: 14,
+    color: '#F8F9FD',
+    letterSpacing: 0.3,
+  },
+  cardValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  cardValue: {
+    fontFamily: fontFamily.bold,
+    fontSize: 14,
+    color: '#F8F9FD',
+    letterSpacing: 0.3,
+  },
+  countBadge: {
+    backgroundColor: '#6B39F4',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  countText: {
+    fontFamily: fontFamily.bold,
+    fontSize: 10,
+    color: '#FFFFFF',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#334155',
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  addBtn: {
+    backgroundColor: '#6B39F4',
+    height: 32,
+    width: 64,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addBtnText: {
+    fontFamily: fontFamily.bold,
+    fontSize: 12,
+    color: '#FFFFFF',
+    letterSpacing: 0.2,
   },
 });
 
