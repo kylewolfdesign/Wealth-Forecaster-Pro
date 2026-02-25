@@ -585,7 +585,7 @@ const s = StyleSheet.create({
     color: PURPLE,
   },
   actionBtn: {
-    backgroundColor: PURPLE_LIGHT,
+    backgroundColor: PURPLE,
     height: 56,
     borderRadius: 12,
     alignItems: 'center',
