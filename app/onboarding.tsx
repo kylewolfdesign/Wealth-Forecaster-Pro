@@ -467,13 +467,13 @@ const catStyles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 10,
-    backgroundColor: '#F8F9FD',
+    backgroundColor: '#1E293B',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   chipSelected: {
-    backgroundColor: '#F8F5FF',
-    borderWidth: 1,
     borderColor: '#6B39F4',
   },
   chipText: {
@@ -485,7 +485,7 @@ const catStyles = StyleSheet.create({
     textAlign: 'center',
   },
   chipTextSelected: {
-    color: '#6B39F4',
+    color: '#FFFFFF',
   },
   chipPlaceholder: {
     height: 40,
