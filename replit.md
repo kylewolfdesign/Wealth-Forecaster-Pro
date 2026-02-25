@@ -38,6 +38,7 @@ lib/
   query-client.ts        - React Query client (for potential future API use)
 
 components/
+  AnimatedSplash.tsx      - Animated splash screen (dark bg, SVG chart, text fade-in, 3s display)
   LineChart.tsx           - SVG-based line/area chart
   Card.tsx                - Reusable card component
   ErrorBoundary.tsx       - Error boundary wrapper
@@ -68,6 +69,7 @@ constants/
 - **CSV export**: Pro feature, export snapshots/holdings
 
 ## Recent Changes
+- 2026-02-25: Animated splash screen from Figma design — dark navy bg (#0F172A), SVG chart with purple gradient animates upward, "Wealth Forecaster" text fades in, displays for 3000ms then fades out
 - 2026-02-20: Merged Forecast tab into Home screen with time-range chart tabs (Today, 1Y, 5Y, 10Y, 20Y, 50Y). Removed Forecast from bottom tab bar.
 - 2026-02-20: Paychain design system overhaul (indigo primary, bordered cards, Inter font)
 - 2026-02-20: Initial v1 build with all core features
