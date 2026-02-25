@@ -1,8 +1,8 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, Pressable, TextInput, FlatList,
   KeyboardAvoidingView, Platform, ScrollView, Alert,
-  Image, useWindowDimensions, Animated,
+  Image, useWindowDimensions,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -36,23 +36,35 @@ const VALUE_PROP_PAGES = [
   },
 ];
 
-const STEPS = [
-  { key: 'welcome', title: 'Welcome', icon: 'rocket' as const },
-  { key: 'investments', title: 'Investments', icon: 'trending-up' as const },
-  { key: 'rsus', title: 'RSUs', icon: 'layers' as const },
-  { key: 'savings', title: 'Savings', icon: 'wallet' as const },
-  { key: 'offset', title: 'Offset', icon: 'swap-horizontal' as const },
-  { key: 'mortgage', title: 'Mortgage', icon: 'home' as const },
-  { key: 'other', title: 'Other Assets', icon: 'diamond' as const },
-  { key: 'review', title: 'Review', icon: 'checkmark-circle' as const },
+const CATEGORY_OPTIONS = [
+  { key: 'investments', label: 'Stocks & ETFs' },
+  { key: 'crypto', label: 'Crypto' },
+  { key: 'rsus', label: 'RSUs' },
+  { key: 'savings', label: 'Savings' },
+  { key: 'offset', label: 'Offset Account' },
+  { key: 'mortgage', label: 'Mortgage' },
+  { key: 'other', label: 'Other Assets' },
+] as const;
+
+type CategoryKey = typeof CATEGORY_OPTIONS[number]['key'];
+
+const ALL_STEPS = [
+  { key: 'investments', title: 'Investments', icon: 'trending-up' as const, categories: ['investments', 'crypto'] as CategoryKey[] },
+  { key: 'rsus', title: 'RSUs', icon: 'layers' as const, categories: ['rsus'] as CategoryKey[] },
+  { key: 'savings', title: 'Savings', icon: 'wallet' as const, categories: ['savings'] as CategoryKey[] },
+  { key: 'offset', title: 'Offset', icon: 'swap-horizontal' as const, categories: ['offset'] as CategoryKey[] },
+  { key: 'mortgage', title: 'Mortgage', icon: 'home' as const, categories: ['mortgage'] as CategoryKey[] },
+  { key: 'other', title: 'Other Assets', icon: 'diamond' as const, categories: ['other'] as CategoryKey[] },
+  { key: 'review', title: 'Review', icon: 'checkmark-circle' as const, categories: [] as CategoryKey[] },
 ];
 
 export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
-  const [phase, setPhase] = useState<'intro' | 'setup'>('intro');
+  const [phase, setPhase] = useState<'intro' | 'categories' | 'setup'>('intro');
   const [introPage, setIntroPage] = useState(0);
   const [step, setStep] = useState(0);
+  const [selectedCategories, setSelectedCategories] = useState<Set<CategoryKey>>(new Set());
   const store = useAppStore();
   const scrollRef = useRef<FlatList>(null);
 
@@ -65,6 +77,20 @@ export default function OnboardingScreen() {
   const topInset = Platform.OS === 'web' ? 67 : insets.top;
   const bottomInset = Platform.OS === 'web' ? 34 : insets.bottom;
 
+  const filteredSteps = ALL_STEPS.filter(
+    (s) => s.key === 'review' || s.categories.some((c) => selectedCategories.has(c))
+  );
+
+  const toggleCategory = (key: CategoryKey) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
   const handleIntroNext = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (introPage < VALUE_PROP_PAGES.length - 1) {
@@ -72,25 +98,32 @@ export default function OnboardingScreen() {
       setIntroPage(next);
       scrollRef.current?.scrollToIndex({ index: next, animated: true });
     } else {
-      setPhase('setup');
+      setPhase('categories');
     }
   };
 
   const handleIntroSkip = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setPhase('categories');
+  };
+
+  const handleCategoriesContinue = () => {
+    if (selectedCategories.size === 0) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setStep(0);
     setPhase('setup');
   };
 
   const handleNext = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (step < STEPS.length - 1) {
+    if (step < filteredSteps.length - 1) {
       setStep(step + 1);
     }
   };
 
   const handleBack = () => {
     if (step > 0) setStep(step - 1);
-    else setPhase('intro');
+    else setPhase('categories');
   };
 
   const handleFinish = () => {
@@ -113,14 +146,10 @@ export default function OnboardingScreen() {
     router.replace('/(tabs)');
   };
 
-  const handleSkipAll = () => {
-    store.completeOnboarding();
-    router.replace('/(tabs)');
-  };
-
   const renderStep = () => {
-    switch (STEPS[step].key) {
-      case 'welcome': return <WelcomeStep onGetStarted={handleNext} onSkip={handleSkipAll} />;
+    const currentStep = filteredSteps[step];
+    if (!currentStep) return null;
+    switch (currentStep.key) {
       case 'investments': return <InvestmentsStep items={holdings} setItems={setHoldings} />;
       case 'rsus': return <RSUStep items={rsuGrants} setItems={setRsuGrants} />;
       case 'savings': return <CashStep type="savings" items={cashAccounts.filter(c => c.type === 'savings')} setItems={(items) => setCashAccounts([...cashAccounts.filter(c => c.type !== 'savings'), ...items])} />;
@@ -205,16 +234,62 @@ export default function OnboardingScreen() {
     );
   }
 
-  const isLast = step === STEPS.length - 1;
-  const isWelcome = step === 0;
-
-  if (isWelcome) {
+  if (phase === 'categories') {
+    const hasSelection = selectedCategories.size > 0;
     return (
-      <View style={[styles.container, { paddingTop: topInset }]}>
-        <WelcomeStep onGetStarted={handleNext} onSkip={handleSkipAll} />
+      <View style={[catStyles.container, { paddingTop: topInset }]}>
+        <View style={catStyles.content}>
+          <View style={catStyles.dots}>
+            <View style={[catStyles.dot, catStyles.dotActive]} />
+            <View style={catStyles.dot} />
+          </View>
+
+          <View style={catStyles.textBlock}>
+            <Text style={catStyles.heading}>
+              What all do you want to track and forecast?
+            </Text>
+            <Text style={catStyles.subheading}>
+              Select the categories you'd like to track and forecast as a window into your wealth
+            </Text>
+          </View>
+
+          <View style={catStyles.chipsContainer}>
+            {CATEGORY_OPTIONS.map((cat) => {
+              const selected = selectedCategories.has(cat.key);
+              return (
+                <Pressable
+                  key={cat.key}
+                  style={[catStyles.chip, selected && catStyles.chipSelected]}
+                  onPress={() => toggleCategory(cat.key)}
+                >
+                  <Text style={[catStyles.chipText, selected && catStyles.chipTextSelected]}>
+                    {cat.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+            <View style={catStyles.chipPlaceholder}>
+              <Text style={catStyles.moreText}>more to come...</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={[catStyles.footer, { paddingBottom: bottomInset + spacing.lg }]}>
+          <Pressable
+            style={[catStyles.continueBtn, !hasSelection && catStyles.continueBtnDisabled]}
+            onPress={handleCategoriesContinue}
+            disabled={!hasSelection}
+          >
+            <Text style={[catStyles.continueBtnText, !hasSelection && catStyles.continueBtnTextDisabled]}>
+              Continue
+            </Text>
+          </Pressable>
+        </View>
       </View>
     );
   }
+
+  const isLast = step === filteredSteps.length - 1;
 
   return (
     <KeyboardAvoidingView
@@ -223,10 +298,10 @@ export default function OnboardingScreen() {
     >
       <View style={[styles.topBar, { paddingTop: topInset + spacing.md }]}>
         <View style={styles.stepIndicator}>
-          {STEPS.slice(1).map((_, i) => (
+          {filteredSteps.map((_, i) => (
             <View
               key={i}
-              style={[styles.dot, i <= step - 1 && styles.dotActive, i === step - 1 && styles.dotCurrent]}
+              style={[styles.dot, i <= step && styles.dotActive, i === step && styles.dotCurrent]}
             />
           ))}
         </View>
@@ -341,171 +416,114 @@ const introStyles = StyleSheet.create({
   },
 });
 
-const FEATURES = [
-  { icon: 'pie-chart' as const, text: 'Real-time net worth tracking' },
-  { icon: 'trending-up' as const, text: 'Smart growth forecasting' },
-  { icon: 'time' as const, text: 'Historical snapshot timeline' },
-  { icon: 'layers' as const, text: 'Stocks, crypto, RSUs & more' },
-  { icon: 'shield-checkmark' as const, text: '100% local & private' },
-];
-
-function WelcomeStep({ onGetStarted, onSkip }: { onGetStarted: () => void; onSkip: () => void }) {
-  return (
-    <View style={wStyles.container}>
-      <View style={wStyles.content}>
-        <View style={wStyles.logoSection}>
-          <View style={wStyles.logoWrap}>
-            <Ionicons name="stats-chart" size={32} color={Colors.white} />
-          </View>
-          <Text style={wStyles.brandLabel}>NETWORTH</Text>
-        </View>
-
-        <View style={wStyles.textSection}>
-          <Text style={wStyles.title}>Your Complete{'\n'}Wealth Dashboard</Text>
-          <Text style={wStyles.subtitle}>
-            Track every asset, forecast your future, and watch your wealth grow over time.
-          </Text>
-        </View>
-
-        <View style={wStyles.divider} />
-
-        <View style={wStyles.features}>
-          {FEATURES.map((f) => (
-            <View key={f.text} style={wStyles.featureRow}>
-              <View style={wStyles.checkCircle}>
-                <Ionicons name="checkmark" size={12} color={Colors.white} />
-              </View>
-              <Text style={wStyles.featureText}>{f.text}</Text>
-            </View>
-          ))}
-        </View>
-      </View>
-
-      <View style={wStyles.actions}>
-        <Pressable style={wStyles.getStartedBtn} onPress={onGetStarted}>
-          <Text style={wStyles.getStartedText}>Get Started</Text>
-          <Ionicons name="arrow-forward" size={18} color={Colors.white} />
-        </Pressable>
-        <Pressable style={wStyles.skipBtn} onPress={onSkip}>
-          <Ionicons name="log-in-outline" size={18} color={Colors.primary} />
-          <Text style={wStyles.skipText}>Skip setup, I'll add later</Text>
-        </Pressable>
-      </View>
-    </View>
-  );
-}
-
-const wStyles = StyleSheet.create({
+const catStyles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xl,
+    backgroundColor: '#0F172A',
   },
   content: {
-    alignItems: 'center',
-    gap: spacing.xxxl,
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    gap: 42,
   },
-  logoSection: {
-    alignItems: 'center',
-    gap: spacing.md,
+  dots: {
+    flexDirection: 'row',
+    gap: 6,
   },
-  logoWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 18,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+  dot: {
+    width: 18,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#334155',
   },
-  brandLabel: {
+  dotActive: {
+    backgroundColor: '#6B39F4',
+  },
+  textBlock: {
+    gap: 8,
+  },
+  heading: {
     fontFamily: fontFamily.bold,
-    fontSize: 14,
-    color: Colors.primary,
-    letterSpacing: 2,
+    fontSize: 24,
+    lineHeight: 36,
+    color: '#F8F9FD',
   },
-  textSection: {
-    alignItems: 'center',
-    gap: spacing.lg,
-    paddingHorizontal: spacing.sm,
-  },
-  title: {
-    fontFamily: fontFamily.bold,
-    fontSize: 30,
-    lineHeight: 38,
-    color: Colors.text,
-    textAlign: 'center',
-    letterSpacing: -0.4,
-  },
-  subtitle: {
+  subheading: {
     fontFamily: fontFamily.regular,
-    fontSize: 17,
-    lineHeight: 26,
-    color: Colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 23.8,
+    color: '#94A3B8',
+    letterSpacing: 0.3,
+    maxWidth: 301,
+  },
+  chipsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  chip: {
+    height: 40,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: '#F8F9FD',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chipSelected: {
+    backgroundColor: '#F8F5FF',
+    borderWidth: 1,
+    borderColor: '#6B39F4',
+  },
+  chipText: {
+    fontFamily: fontFamily.bold,
+    fontSize: 12,
+    color: '#94A3B8',
+    letterSpacing: 0.2,
+    lineHeight: 20.4,
     textAlign: 'center',
   },
-  divider: {
-    width: 48,
-    height: 1,
-    backgroundColor: Colors.border,
+  chipTextSelected: {
+    color: '#6B39F4',
   },
-  features: {
-    gap: spacing.md,
-    paddingHorizontal: spacing.xxl,
-    alignSelf: 'stretch',
-  },
-  featureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  checkCircle: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: Colors.primary,
+  chipPlaceholder: {
+    height: 40,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  featureText: {
-    fontFamily: fontFamily.medium,
-    fontSize: fontSize.md,
-    color: Colors.text,
-    letterSpacing: -0.1,
+  moreText: {
+    fontFamily: fontFamily.regular,
+    fontSize: 14,
+    color: '#64748B',
+    letterSpacing: 0.3,
+    lineHeight: 23.8,
   },
-  actions: {
-    gap: spacing.xl,
-    alignItems: 'center',
-    marginTop: spacing.huge,
-    paddingHorizontal: spacing.sm,
+  footer: {
+    paddingHorizontal: 24,
+    paddingTop: spacing.md,
   },
-  getStartedBtn: {
-    flexDirection: 'row',
+  continueBtn: {
+    height: 56,
+    borderRadius: 12,
+    backgroundColor: '#6B39F4',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: Colors.primary,
-    paddingVertical: 14,
-    borderRadius: 999,
-    width: '100%',
+    paddingHorizontal: 16,
   },
-  getStartedText: {
-    fontFamily: fontFamily.semibold,
-    fontSize: fontSize.md,
-    color: Colors.white,
+  continueBtnDisabled: {
+    backgroundColor: '#334155',
   },
-  skipBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
+  continueBtnText: {
+    fontFamily: fontFamily.bold,
+    fontSize: 16,
+    color: '#FFFFFF',
+    letterSpacing: 0.4,
   },
-  skipText: {
-    fontFamily: fontFamily.semibold,
-    fontSize: fontSize.md,
-    color: Colors.primary,
-  },
-  iconWrap: {
-    alignItems: 'center',
-    marginBottom: spacing.lg,
+  continueBtnTextDisabled: {
+    color: '#64748B',
   },
 });
 
@@ -889,7 +907,7 @@ function ReviewStep({ holdings, rsuGrants, cashAccounts, mortgages, otherAssets 
 
   return (
     <View style={formStyles.container}>
-      <View style={[wStyles.iconWrap, { marginTop: spacing.xxl }]}>
+      <View style={{ alignItems: 'center', marginBottom: spacing.lg, marginTop: spacing.xxl }}>
         <Ionicons name="checkmark-circle" size={48} color={Colors.positive} />
       </View>
       <Text style={[formStyles.title, { textAlign: 'center' }]}>Ready to Go</Text>
