@@ -374,9 +374,12 @@ export default function OnboardingScreen() {
         })}
       </ScrollView>
 
-      <View style={[catStyles.footer, { paddingBottom: bottomInset + spacing.lg }]}>
-        <Pressable style={catStyles.continueBtn} onPress={handleFinishSetup}>
-          <Text style={catStyles.continueBtnText}>Continue</Text>
+      <View style={[setupStyles.footerBar, { paddingBottom: bottomInset + spacing.lg }]}>
+        <Pressable style={setupStyles.backBtn} onPress={() => setPhase('categories')}>
+          <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+        </Pressable>
+        <Pressable style={setupStyles.createBtn} onPress={handleFinishSetup}>
+          <Text style={setupStyles.createBtnText}>Create overview</Text>
         </Pressable>
       </View>
     </View>
@@ -702,6 +705,35 @@ const setupStyles = StyleSheet.create({
     fontSize: 12,
     color: '#FFFFFF',
     letterSpacing: 0.2,
+  },
+  footerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+  },
+  backBtn: {
+    width: 56,
+    height: 56,
+    borderRadius: 12,
+    backgroundColor: '#1E293B',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  createBtn: {
+    flex: 1,
+    height: 56,
+    borderRadius: 12,
+    backgroundColor: '#6B39F4',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  createBtnText: {
+    fontFamily: fontFamily.semibold,
+    fontSize: 16,
+    color: '#FFFFFF',
+    letterSpacing: 0.4,
   },
 });
 
