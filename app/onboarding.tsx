@@ -290,10 +290,10 @@ export default function OnboardingScreen() {
 
         <View style={catStyles.textBlock}>
           <Text style={catStyles.heading}>
-            Add your details
+            Fill out each category to get your baseline
           </Text>
           <Text style={catStyles.subheading}>
-            Tap "Add" on any card below to enter your financial details
+            Fill out each category to capture your data.{'\n'}Can always add and modify later.
           </Text>
         </View>
       </View>
