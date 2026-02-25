@@ -6,6 +6,8 @@ export interface Holding {
   costBasis?: number;
   manualPrice?: number;
   growthOverride?: number;
+  recurringShares?: number;
+  recurringCadence?: 'monthly' | 'quarterly' | 'yearly';
 }
 
 export interface RSUGrant {

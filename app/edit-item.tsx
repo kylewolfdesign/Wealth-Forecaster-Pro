@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   View, Text, StyleSheet, TextInput, Pressable,
-  ScrollView, Alert, Platform,
+  ScrollView, Alert, Platform, Switch,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,8 +12,16 @@ import { useAppStore } from '@/lib/store';
 import { computeCurrentTotals } from '@/lib/calculations';
 import { createSnapshot } from '@/lib/snapshot';
 import TickerInput from '@/components/TickerInput';
-import Colors from '@/constants/colors';
-import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
+import { fontFamily } from '@/constants/theme';
+
+const DARK_BG = '#0F172A';
+const CARD_BG = '#1E293B';
+const BORDER = '#334155';
+const PURPLE = '#6B39F4';
+const PURPLE_LIGHT = '#D3C4FC';
+const TEXT_PRIMARY = '#F8F9FD';
+const TEXT_SECONDARY = '#94A3B8';
+const TEXT_MUTED = '#64748B';
 
 type EditType = 'holding' | 'rsu' | 'cash' | 'mortgage' | 'other';
 
@@ -22,6 +30,8 @@ export default function EditItemScreen() {
   const type = (rawType || 'holding') as EditType;
   const insets = useSafeAreaInsets();
   const store = useAppStore();
+  const topInset = Platform.OS === 'web' ? 67 : insets.top;
+  const bottomInset = Platform.OS === 'web' ? 34 : insets.bottom;
 
   const existing = useMemo(() => {
     if (!id) return null;
@@ -36,7 +46,6 @@ export default function EditItemScreen() {
   }, [type, id]);
 
   const isEditing = !!existing;
-  const title = isEditing ? 'Edit' : 'Add';
 
   const saveAndSnapshot = () => {
     const totals = computeCurrentTotals(
@@ -46,44 +55,61 @@ export default function EditItemScreen() {
     store.addSnapshot(createSnapshot(totals, 'Manual update'));
   };
 
+  const getTitle = () => {
+    if (isEditing) return 'Edit';
+    switch (type) {
+      case 'holding': return 'Add stock';
+      case 'rsu': return 'Add RSU grant';
+      case 'cash': return 'Add account';
+      case 'mortgage': return 'Add mortgage';
+      case 'other': return 'Add asset';
+    }
+  };
+
+  const getSubtitle = () => {
+    switch (type) {
+      case 'holding': return 'How much do you currently have?';
+      case 'rsu': return 'Enter your vesting details';
+      case 'cash': return 'Enter your account details';
+      case 'mortgage': return 'Enter your loan details';
+      case 'other': return 'Enter your asset details';
+    }
+  };
+
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
-    >
-      <View style={styles.header}>
-        <Text style={styles.title}>{title} {getTypeLabel(type)}</Text>
-        <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Ionicons name="close" size={24} color={Colors.textSecondary} />
+    <View style={[s.container, { paddingTop: topInset }]}>
+      <View style={s.appBar}>
+        <Pressable onPress={() => router.back()} hitSlop={12} style={s.backBtn}>
+          <Ionicons name="arrow-back" size={24} color={TEXT_PRIMARY} />
         </Pressable>
       </View>
 
-      {type === 'holding' && <HoldingForm existing={existing as any} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} />}
-      {type === 'rsu' && <RSUForm existing={existing as any} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} />}
-      {type === 'cash' && <CashForm existing={existing as any} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} />}
-      {type === 'mortgage' && <MortgageForm existing={existing as any} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} />}
-      {type === 'other' && <OtherForm existing={existing as any} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} />}
-    </ScrollView>
+      <ScrollView
+        style={s.scrollArea}
+        contentContainerStyle={[s.scrollContent, { paddingBottom: bottomInset + 24 }]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={s.heading}>{getTitle()}</Text>
+        <Text style={s.subtitle}>{getSubtitle()}</Text>
+
+        {type === 'holding' && <HoldingForm existing={existing as any} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} />}
+        {type === 'rsu' && <RSUForm existing={existing as any} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} />}
+        {type === 'cash' && <CashForm existing={existing as any} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} />}
+        {type === 'mortgage' && <MortgageForm existing={existing as any} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} />}
+        {type === 'other' && <OtherForm existing={existing as any} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} />}
+      </ScrollView>
+    </View>
   );
 }
 
-function getTypeLabel(type: EditType): string {
-  switch (type) {
-    case 'holding': return 'Investment';
-    case 'rsu': return 'RSU Grant';
-    case 'cash': return 'Account';
-    case 'mortgage': return 'Mortgage';
-    case 'other': return 'Asset';
-  }
-}
-
 function HoldingForm({ existing, isEditing, store, saveAndSnapshot }: any) {
-  const [holdingType, setHoldingType] = useState<'stock' | 'crypto'>(existing?.type ?? 'stock');
   const [symbol, setSymbol] = useState(existing?.symbol ?? '');
   const [shares, setShares] = useState(existing?.shares?.toString() ?? '');
-  const [manualPrice, setManualPrice] = useState(existing?.manualPrice?.toString() ?? '');
-  const [growthOverride, setGrowthOverride] = useState(existing?.growthOverride?.toString() ?? '');
+  const [addingMore, setAddingMore] = useState(!!existing?.recurringShares);
+  const [recurringShares, setRecurringShares] = useState(existing?.recurringShares?.toString() ?? '');
+  const [cadence, setCadence] = useState<'monthly' | 'quarterly' | 'yearly'>(existing?.recurringCadence ?? 'monthly');
+  const [showCadencePicker, setShowCadencePicker] = useState(false);
 
   const handleSave = () => {
     if (!symbol.trim() || !shares.trim()) {
@@ -91,13 +117,15 @@ function HoldingForm({ existing, isEditing, store, saveAndSnapshot }: any) {
       return;
     }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    const data = {
-      type: holdingType,
+    const data: any = {
+      type: 'stock' as const,
       symbol: symbol.toUpperCase().trim(),
       shares: parseFloat(shares),
-      manualPrice: manualPrice ? parseFloat(manualPrice) : undefined,
-      growthOverride: growthOverride ? parseFloat(growthOverride) : undefined,
     };
+    if (addingMore && recurringShares) {
+      data.recurringShares = parseFloat(recurringShares);
+      data.recurringCadence = cadence;
+    }
     if (isEditing) {
       store.updateHolding(existing.id, data);
     } else {
@@ -107,32 +135,67 @@ function HoldingForm({ existing, isEditing, store, saveAndSnapshot }: any) {
     router.back();
   };
 
+  const cadenceLabel = cadence === 'monthly' ? 'Monthly' : cadence === 'quarterly' ? 'Quarterly' : 'Yearly';
+
   return (
     <View>
-      <View style={styles.toggleRow}>
-        {(['stock', 'crypto'] as const).map((t) => (
-          <Pressable key={t} style={[styles.toggle, holdingType === t && styles.toggleActive]} onPress={() => setHoldingType(t)}>
-            <Text style={[styles.toggleText, holdingType === t && styles.toggleTextActive]}>
-              {t === 'stock' ? 'Stock/ETF' : 'Crypto'}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-      <FieldLabel label="Symbol" />
+      <FieldLabel label="Stock ticker" />
       <TickerInput
         value={symbol}
         onChangeText={setSymbol}
         onSelect={setSymbol}
-        type={holdingType}
-        placeholder={holdingType === 'stock' ? 'e.g. AAPL' : 'e.g. BTC'}
+        type="stock"
+        placeholder="AAPL"
+        darkMode
       />
-      <FieldLabel label="Number of Shares" />
-      <TextInput style={styles.input} value={shares} onChangeText={setShares} keyboardType="numeric" placeholder="0" placeholderTextColor={Colors.textTertiary} />
-      <FieldLabel label="Manual Price Override (optional)" />
-      <TextInput style={styles.input} value={manualPrice} onChangeText={setManualPrice} keyboardType="numeric" placeholder="Leave empty for auto" placeholderTextColor={Colors.textTertiary} />
-      <FieldLabel label="Growth Override % (optional)" />
-      <TextInput style={styles.input} value={growthOverride} onChangeText={setGrowthOverride} keyboardType="numeric" placeholder="Uses default rate" placeholderTextColor={Colors.textTertiary} />
-      <SaveButton onPress={handleSave} isEditing={isEditing} />
+
+      <FieldLabel label="Number of shares" />
+      <DarkInput value={shares} onChangeText={setShares} keyboardType="numeric" placeholder="350" />
+
+      <View style={s.toggleSection}>
+        <View style={s.toggleHeader}>
+          <View>
+            <Text style={s.toggleTitle}>Adding more?</Text>
+            <Text style={s.toggleSubtitle}>Will you get more regularly ongoing?</Text>
+          </View>
+          <Switch
+            value={addingMore}
+            onValueChange={setAddingMore}
+            trackColor={{ false: BORDER, true: PURPLE }}
+            thumbColor="#FFFFFF"
+          />
+        </View>
+      </View>
+
+      {addingMore && (
+        <View>
+          <FieldLabel label="Number of shares" />
+          <DarkInput value={recurringShares} onChangeText={setRecurringShares} keyboardType="numeric" placeholder="100" />
+
+          <FieldLabel label="Cadence" />
+          <Pressable style={s.dropdown} onPress={() => setShowCadencePicker(!showCadencePicker)}>
+            <Text style={s.dropdownText}>{cadenceLabel}</Text>
+            <Ionicons name="chevron-down" size={20} color={TEXT_SECONDARY} />
+          </Pressable>
+          {showCadencePicker && (
+            <View style={s.pickerOptions}>
+              {(['monthly', 'quarterly', 'yearly'] as const).map((c) => (
+                <Pressable
+                  key={c}
+                  style={[s.pickerOption, cadence === c && s.pickerOptionActive]}
+                  onPress={() => { setCadence(c); setShowCadencePicker(false); }}
+                >
+                  <Text style={[s.pickerOptionText, cadence === c && s.pickerOptionTextActive]}>
+                    {c === 'monthly' ? 'Monthly' : c === 'quarterly' ? 'Quarterly' : 'Yearly'}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
+        </View>
+      )}
+
+      <ActionButton label={isEditing ? 'Save changes' : 'Add stock'} onPress={handleSave} />
     </View>
   );
 }
@@ -191,29 +254,25 @@ function RSUForm({ existing, isEditing, store, saveAndSnapshot }: any) {
 
   return (
     <View>
-      <FieldLabel label="Ticker Symbol" />
-      <TickerInput
-        value={symbol}
-        onChangeText={setSymbol}
-        onSelect={setSymbol}
-        type="stock"
-        placeholder="e.g. GOOGL"
-      />
+      <FieldLabel label="Ticker symbol" />
+      <TickerInput value={symbol} onChangeText={setSymbol} onSelect={setSymbol} type="stock" placeholder="e.g. GOOGL" darkMode />
       <FieldLabel label="Shares per vest" />
-      <TextInput style={styles.input} value={sharesPerVest} onChangeText={setSharesPerVest} keyboardType="numeric" placeholder="e.g. 250" placeholderTextColor={Colors.textTertiary} />
+      <DarkInput value={sharesPerVest} onChangeText={setSharesPerVest} keyboardType="numeric" placeholder="e.g. 250" />
       <FieldLabel label="Vesting cadence" />
-      <View style={styles.toggleRow}>
+      <View style={s.cadenceRow}>
         {(['monthly', 'quarterly', 'yearly'] as const).map((f) => (
-          <Pressable key={f} style={[styles.toggle, freq === f && styles.toggleActive]} onPress={() => setFreq(f)}>
-            <Text style={[styles.toggleText, freq === f && styles.toggleTextActive]}>{f}</Text>
+          <Pressable key={f} style={[s.cadenceBtn, freq === f && s.cadenceBtnActive]} onPress={() => setFreq(f)}>
+            <Text style={[s.cadenceBtnText, freq === f && s.cadenceBtnTextActive]}>
+              {f === 'monthly' ? 'Monthly' : f === 'quarterly' ? 'Quarterly' : 'Yearly'}
+            </Text>
           </Pressable>
         ))}
       </View>
       <FieldLabel label="Remaining vests" />
-      <TextInput style={styles.input} value={vestCount} onChangeText={setVestCount} keyboardType="numeric" placeholder="e.g. 16" placeholderTextColor={Colors.textTertiary} />
+      <DarkInput value={vestCount} onChangeText={setVestCount} keyboardType="numeric" placeholder="e.g. 16" />
       <FieldLabel label="Next vest date" />
-      <TextInput style={styles.input} value={nextVestDate} onChangeText={setNextVestDate} placeholder="YYYY-MM-DD" placeholderTextColor={Colors.textTertiary} />
-      <SaveButton onPress={handleSave} isEditing={isEditing} />
+      <DarkInput value={nextVestDate} onChangeText={setNextVestDate} placeholder="YYYY-MM-DD" />
+      <ActionButton label={isEditing ? 'Save changes' : 'Add RSU grant'} onPress={handleSave} />
     </View>
   );
 }
@@ -249,22 +308,24 @@ function CashForm({ existing, isEditing, store, saveAndSnapshot }: any) {
 
   return (
     <View>
-      <View style={styles.toggleRow}>
+      <View style={s.cadenceRow}>
         {(['savings', 'offset'] as const).map((t) => (
-          <Pressable key={t} style={[styles.toggle, cashType === t && styles.toggleActive]} onPress={() => setCashType(t)}>
-            <Text style={[styles.toggleText, cashType === t && styles.toggleTextActive]}>{t}</Text>
+          <Pressable key={t} style={[s.cadenceBtn, cashType === t && s.cadenceBtnActive]} onPress={() => setCashType(t)}>
+            <Text style={[s.cadenceBtnText, cashType === t && s.cadenceBtnTextActive]}>
+              {t === 'savings' ? 'Savings' : 'Offset'}
+            </Text>
           </Pressable>
         ))}
       </View>
-      <FieldLabel label="Account Name" />
-      <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="e.g. Emergency Fund" placeholderTextColor={Colors.textTertiary} />
-      <FieldLabel label="Current Balance ($)" />
-      <TextInput style={styles.input} value={balance} onChangeText={setBalance} keyboardType="numeric" placeholder="0" placeholderTextColor={Colors.textTertiary} />
-      <FieldLabel label="Monthly Contribution ($)" />
-      <TextInput style={styles.input} value={monthly} onChangeText={setMonthly} keyboardType="numeric" placeholder="0" placeholderTextColor={Colors.textTertiary} />
-      <FieldLabel label="Annual Interest Rate (%)" />
-      <TextInput style={styles.input} value={rate} onChangeText={setRate} keyboardType="numeric" placeholder="Optional" placeholderTextColor={Colors.textTertiary} />
-      <SaveButton onPress={handleSave} isEditing={isEditing} />
+      <FieldLabel label="Account name" />
+      <DarkInput value={name} onChangeText={setName} placeholder="e.g. Emergency Fund" />
+      <FieldLabel label="Current balance ($)" />
+      <DarkInput value={balance} onChangeText={setBalance} keyboardType="numeric" placeholder="0" />
+      <FieldLabel label="Monthly contribution ($)" />
+      <DarkInput value={monthly} onChangeText={setMonthly} keyboardType="numeric" placeholder="0" />
+      <FieldLabel label="Annual interest rate (%)" />
+      <DarkInput value={rate} onChangeText={setRate} keyboardType="numeric" placeholder="Optional" />
+      <ActionButton label={isEditing ? 'Save changes' : 'Add account'} onPress={handleSave} />
     </View>
   );
 }
@@ -300,17 +361,17 @@ function MortgageForm({ existing, isEditing, store, saveAndSnapshot }: any) {
 
   return (
     <View>
-      <FieldLabel label="Loan Name" />
-      <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="e.g. Home Loan" placeholderTextColor={Colors.textTertiary} />
-      <FieldLabel label="Principal Balance ($)" />
-      <TextInput style={styles.input} value={principal} onChangeText={setPrincipal} keyboardType="numeric" placeholder="0" placeholderTextColor={Colors.textTertiary} />
-      <FieldLabel label="Annual Interest Rate (%)" />
-      <TextInput style={styles.input} value={rate} onChangeText={setRate} keyboardType="numeric" placeholder="0" placeholderTextColor={Colors.textTertiary} />
-      <FieldLabel label="Monthly Payment ($)" />
-      <TextInput style={styles.input} value={payment} onChangeText={setPayment} keyboardType="numeric" placeholder="0" placeholderTextColor={Colors.textTertiary} />
-      <FieldLabel label="Annual Payment Increase % (optional)" />
-      <TextInput style={styles.input} value={increase} onChangeText={setIncrease} keyboardType="numeric" placeholder="e.g. 2" placeholderTextColor={Colors.textTertiary} />
-      <SaveButton onPress={handleSave} isEditing={isEditing} />
+      <FieldLabel label="Loan name" />
+      <DarkInput value={name} onChangeText={setName} placeholder="e.g. Home Loan" />
+      <FieldLabel label="Principal balance ($)" />
+      <DarkInput value={principal} onChangeText={setPrincipal} keyboardType="numeric" placeholder="0" />
+      <FieldLabel label="Annual interest rate (%)" />
+      <DarkInput value={rate} onChangeText={setRate} keyboardType="numeric" placeholder="0" />
+      <FieldLabel label="Monthly payment ($)" />
+      <DarkInput value={payment} onChangeText={setPayment} keyboardType="numeric" placeholder="0" />
+      <FieldLabel label="Annual payment increase % (optional)" />
+      <DarkInput value={increase} onChangeText={setIncrease} keyboardType="numeric" placeholder="e.g. 2" />
+      <ActionButton label={isEditing ? 'Save changes' : 'Add mortgage'} onPress={handleSave} />
     </View>
   );
 }
@@ -342,103 +403,199 @@ function OtherForm({ existing, isEditing, store, saveAndSnapshot }: any) {
 
   return (
     <View>
-      <FieldLabel label="Asset Name" />
-      <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="e.g. Car, Property" placeholderTextColor={Colors.textTertiary} />
-      <FieldLabel label="Current Value ($)" />
-      <TextInput style={styles.input} value={value} onChangeText={setValue} keyboardType="numeric" placeholder="0" placeholderTextColor={Colors.textTertiary} />
-      <FieldLabel label="Annual Growth Rate % (optional)" />
-      <TextInput style={styles.input} value={growth} onChangeText={setGrowth} keyboardType="numeric" placeholder="e.g. -10 for depreciation" placeholderTextColor={Colors.textTertiary} />
-      <SaveButton onPress={handleSave} isEditing={isEditing} />
+      <FieldLabel label="Asset name" />
+      <DarkInput value={name} onChangeText={setName} placeholder="e.g. Car, Property" />
+      <FieldLabel label="Current value ($)" />
+      <DarkInput value={value} onChangeText={setValue} keyboardType="numeric" placeholder="0" />
+      <FieldLabel label="Annual growth rate % (optional)" />
+      <DarkInput value={growth} onChangeText={setGrowth} keyboardType="numeric" placeholder="e.g. -10 for depreciation" />
+      <ActionButton label={isEditing ? 'Save changes' : 'Add asset'} onPress={handleSave} />
     </View>
   );
 }
 
 function FieldLabel({ label }: { label: string }) {
-  return <Text style={styles.fieldLabel}>{label}</Text>;
+  return <Text style={s.fieldLabel}>{label}</Text>;
 }
 
-function SaveButton({ onPress, isEditing }: { onPress: () => void; isEditing: boolean }) {
+function DarkInput({ value, onChangeText, placeholder, keyboardType }: {
+  value: string;
+  onChangeText: (t: string) => void;
+  placeholder?: string;
+  keyboardType?: 'numeric' | 'default';
+}) {
+  const [focused, setFocused] = useState(false);
   return (
-    <Pressable
-      style={({ pressed }) => [styles.saveBtn, { opacity: pressed ? 0.9 : 1 }]}
-      onPress={onPress}
-    >
-      <Ionicons name={isEditing ? 'checkmark' : 'add'} size={20} color={Colors.white} />
-      <Text style={styles.saveBtnText}>{isEditing ? 'Save Changes' : 'Add Item'}</Text>
+    <TextInput
+      style={[s.input, focused && s.inputFocused]}
+      value={value}
+      onChangeText={onChangeText}
+      placeholder={placeholder}
+      placeholderTextColor={TEXT_MUTED}
+      keyboardType={keyboardType || 'default'}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+    />
+  );
+}
+
+function ActionButton({ label, onPress }: { label: string; onPress: () => void }) {
+  return (
+    <Pressable style={({ pressed }) => [s.actionBtn, pressed && { opacity: 0.85 }]} onPress={onPress}>
+      <Text style={s.actionBtnText}>{label}</Text>
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: spacing.xl, paddingBottom: spacing.huge },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.xxl,
+const s = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: DARK_BG,
   },
-  title: {
+  appBar: {
+    height: 56,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  backBtn: {
+    width: 24,
+    height: 24,
+  },
+  scrollArea: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 24,
+  },
+  heading: {
     fontFamily: fontFamily.bold,
-    fontSize: fontSize.xxl,
-    color: Colors.text,
+    fontSize: 24,
+    color: TEXT_PRIMARY,
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontFamily: fontFamily.regular,
+    fontSize: 14,
+    color: TEXT_SECONDARY,
+    marginBottom: 24,
   },
   fieldLabel: {
     fontFamily: fontFamily.medium,
-    fontSize: fontSize.sm,
-    color: Colors.textSecondary,
-    marginBottom: spacing.xs,
-    marginTop: spacing.md,
+    fontSize: 13,
+    color: TEXT_SECONDARY,
+    marginBottom: 8,
+    marginTop: 20,
   },
   input: {
-    backgroundColor: Colors.surface,
+    backgroundColor: CARD_BG,
     borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    borderColor: BORDER,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     fontFamily: fontFamily.regular,
-    fontSize: fontSize.md,
-    color: Colors.text,
+    fontSize: 16,
+    color: TEXT_PRIMARY,
   },
-  toggleRow: {
+  inputFocused: {
+    borderColor: PURPLE,
+  },
+  toggleSection: {
+    marginTop: 28,
+  },
+  toggleHeader: {
     flexDirection: 'row',
-    backgroundColor: Colors.surfaceSecondary,
-    borderRadius: borderRadius.sm,
-    padding: 2,
-    marginBottom: spacing.md,
-  },
-  toggle: {
-    flex: 1,
-    paddingVertical: spacing.sm,
     alignItems: 'center',
-    borderRadius: borderRadius.sm - 2,
+    justifyContent: 'space-between',
   },
-  toggleActive: {
-    backgroundColor: Colors.surface,
+  toggleTitle: {
+    fontFamily: fontFamily.bold,
+    fontSize: 18,
+    color: TEXT_PRIMARY,
+    marginBottom: 4,
   },
-  toggleText: {
-    fontFamily: fontFamily.medium,
-    fontSize: fontSize.sm,
-    color: Colors.textTertiary,
-    textTransform: 'capitalize',
+  toggleSubtitle: {
+    fontFamily: fontFamily.regular,
+    fontSize: 13,
+    color: TEXT_SECONDARY,
   },
-  toggleTextActive: {
-    color: Colors.text,
-  },
-  saveBtn: {
+  dropdown: {
+    backgroundColor: CARD_BG,
+    borderWidth: 1,
+    borderColor: BORDER,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dropdownText: {
+    fontFamily: fontFamily.regular,
+    fontSize: 16,
+    color: TEXT_PRIMARY,
+  },
+  pickerOptions: {
+    backgroundColor: CARD_BG,
+    borderWidth: 1,
+    borderColor: BORDER,
+    borderRadius: 12,
+    marginTop: 4,
+    overflow: 'hidden',
+  },
+  pickerOption: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  pickerOptionActive: {
+    backgroundColor: PURPLE + '22',
+  },
+  pickerOptionText: {
+    fontFamily: fontFamily.regular,
+    fontSize: 15,
+    color: TEXT_SECONDARY,
+  },
+  pickerOptionTextActive: {
+    color: PURPLE,
+    fontFamily: fontFamily.semibold,
+  },
+  cadenceRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  cadenceBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 8,
+    backgroundColor: CARD_BG,
+    borderWidth: 1,
+    borderColor: BORDER,
+  },
+  cadenceBtnActive: {
+    backgroundColor: PURPLE + '22',
+    borderColor: PURPLE,
+  },
+  cadenceBtnText: {
+    fontFamily: fontFamily.medium,
+    fontSize: 13,
+    color: TEXT_SECONDARY,
+  },
+  cadenceBtnTextActive: {
+    color: PURPLE,
+  },
+  actionBtn: {
+    backgroundColor: PURPLE_LIGHT,
+    height: 56,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: Colors.primary,
-    borderRadius: borderRadius.md,
-    paddingVertical: spacing.lg,
-    marginTop: spacing.xxl,
+    marginTop: 32,
   },
-  saveBtnText: {
-    fontFamily: fontFamily.semibold,
-    fontSize: fontSize.md,
-    color: Colors.white,
+  actionBtnText: {
+    fontFamily: fontFamily.bold,
+    fontSize: 16,
+    color: '#FFFFFF',
+    letterSpacing: 0.4,
   },
 });

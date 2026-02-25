@@ -115,7 +115,17 @@ interface TickerInputProps {
   type?: 'stock' | 'crypto' | 'all';
   placeholder?: string;
   style?: any;
+  darkMode?: boolean;
 }
+
+const DARK = {
+  bg: '#1E293B',
+  border: '#334155',
+  focusBorder: '#6B39F4',
+  text: '#F8F9FD',
+  muted: '#64748B',
+  dropdownBg: '#1E293B',
+};
 
 export default function TickerInput({
   value,
@@ -124,6 +134,7 @@ export default function TickerInput({
   type = 'all',
   placeholder = 'Symbol (e.g. AAPL)',
   style,
+  darkMode = false,
 }: TickerInputProps) {
   const [isFocused, setIsFocused] = useState(false);
 
@@ -153,44 +164,50 @@ export default function TickerInput({
     setIsFocused(false);
   };
 
+  const darkInput = darkMode ? { backgroundColor: DARK.bg, borderColor: isFocused ? DARK.focusBorder : DARK.border } : {};
+  const darkText = darkMode ? { color: DARK.text } : {};
+  const darkDropdown = darkMode ? { backgroundColor: DARK.dropdownBg, borderColor: DARK.border } : {};
+  const darkSuggBorder = darkMode ? { borderBottomColor: DARK.border } : {};
+
   return (
     <View style={[styles.wrapper, style]}>
-      <View style={[styles.inputContainer, isFocused && styles.inputFocused]}>
-        <Ionicons name="search" size={16} color={Colors.textTertiary} style={styles.searchIcon} />
+      <View style={[styles.inputContainer, isFocused && !darkMode && styles.inputFocused, darkInput]}>
+        <Ionicons name="search" size={16} color={darkMode ? DARK.muted : Colors.textTertiary} style={styles.searchIcon} />
         <TextInput
-          style={styles.input}
+          style={[styles.input, darkText]}
           value={value}
           onChangeText={onChangeText}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setTimeout(() => setIsFocused(false), 200)}
           placeholder={placeholder}
-          placeholderTextColor={Colors.textTertiary}
+          placeholderTextColor={darkMode ? DARK.muted : Colors.textTertiary}
           autoCapitalize="characters"
           autoCorrect={false}
         />
         {!!value && (
           <Pressable onPress={() => onChangeText('')} hitSlop={8}>
-            <Ionicons name="close-circle" size={16} color={Colors.textTertiary} />
+            <Ionicons name="close-circle" size={16} color={darkMode ? DARK.muted : Colors.textTertiary} />
           </Pressable>
         )}
       </View>
 
       {showSuggestions && (
-        <View style={styles.dropdown}>
+        <View style={[styles.dropdown, darkDropdown]}>
           {suggestions.map((item, index) => (
             <Pressable
               key={item.symbol}
               style={[
                 styles.suggestion,
                 index < suggestions.length - 1 && styles.suggestionBorder,
+                index < suggestions.length - 1 && darkSuggBorder,
               ]}
               onPress={() => handleSelect(item.symbol)}
             >
               <View style={styles.suggestionLeft}>
-                <Text style={styles.suggestionSymbol}>{item.symbol}</Text>
-                <Text style={styles.suggestionName} numberOfLines={1}>{item.name}</Text>
+                <Text style={[styles.suggestionSymbol, darkText]}>{item.symbol}</Text>
+                <Text style={[styles.suggestionName, darkMode && { color: DARK.muted }]} numberOfLines={1}>{item.name}</Text>
               </View>
-              <Ionicons name="arrow-forward" size={14} color={Colors.textTertiary} />
+              <Ionicons name="arrow-forward" size={14} color={darkMode ? DARK.muted : Colors.textTertiary} />
             </Pressable>
           ))}
         </View>
