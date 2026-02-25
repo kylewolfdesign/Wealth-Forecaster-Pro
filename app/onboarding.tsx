@@ -101,6 +101,7 @@ export default function OnboardingScreen() {
   const handleCategoriesContinue = () => {
     if (selectedCategories.size === 0) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    store.clearAllData();
     setExpandedCards(new Set(selectedCategories));
     setPhase('setup');
   };
