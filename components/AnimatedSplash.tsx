@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -54,6 +54,7 @@ interface AnimatedSplashProps {
 }
 
 export function AnimatedSplash({ onFinish }: AnimatedSplashProps) {
+  const [fontReady, setFontReady] = useState(Platform.OS !== 'web');
   const chartTranslateY = useSharedValue(80);
   const chartOpacity = useSharedValue(0);
   const textOpacity = useSharedValue(0);
@@ -61,6 +62,15 @@ export function AnimatedSplash({ onFinish }: AnimatedSplashProps) {
   const containerOpacity = useSharedValue(1);
 
   useEffect(() => {
+    if (Platform.OS === 'web') {
+      (document as any).fonts?.ready?.then(() => setFontReady(true)) ??
+        setTimeout(() => setFontReady(true), 100);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!fontReady) return;
+
     chartTranslateY.value = withTiming(0, {
       duration: CHART_ANIM_DURATION,
       easing: Easing.out(Easing.cubic),
@@ -89,7 +99,7 @@ export function AnimatedSplash({ onFinish }: AnimatedSplashProps) {
     }, DISPLAY_DURATION + FADE_OUT_DURATION);
 
     return () => clearTimeout(timeout);
-  }, []);
+  }, [fontReady]);
 
   const chartStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: chartTranslateY.value }],
@@ -112,8 +122,12 @@ export function AnimatedSplash({ onFinish }: AnimatedSplashProps) {
           <SplashChart />
         </Animated.View>
         <Animated.View style={[styles.textWrap, textStyle]}>
-          <Text style={styles.title}>{'Wealth'}</Text>
-          <Text style={styles.title}>{'Forecaster'}</Text>
+          {fontReady && (
+            <>
+              <Text style={styles.title}>{'Wealth'}</Text>
+              <Text style={styles.title}>{'Forecaster'}</Text>
+            </>
+          )}
         </Animated.View>
       </View>
     </Animated.View>
