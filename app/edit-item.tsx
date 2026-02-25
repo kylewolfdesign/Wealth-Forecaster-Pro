@@ -195,7 +195,7 @@ function HoldingForm({ existing, isEditing, store, saveAndSnapshot }: any) {
         </View>
       )}
 
-      <ActionButton label={isEditing ? 'Save changes' : 'Add stock'} onPress={handleSave} />
+      <ActionButton label={isEditing ? 'Save changes' : 'Add stock'} onPress={handleSave} disabled={!symbol.trim() || !shares.trim()} />
     </View>
   );
 }
@@ -272,7 +272,7 @@ function RSUForm({ existing, isEditing, store, saveAndSnapshot }: any) {
       <DarkInput value={vestCount} onChangeText={setVestCount} keyboardType="numeric" placeholder="e.g. 16" />
       <FieldLabel label="Next vest date" />
       <DarkInput value={nextVestDate} onChangeText={setNextVestDate} placeholder="YYYY-MM-DD" />
-      <ActionButton label={isEditing ? 'Save changes' : 'Add RSU grant'} onPress={handleSave} />
+      <ActionButton label={isEditing ? 'Save changes' : 'Add RSU grant'} onPress={handleSave} disabled={!symbol.trim() || !sharesPerVest.trim() || !vestCount.trim()} />
     </View>
   );
 }
@@ -325,7 +325,7 @@ function CashForm({ existing, isEditing, store, saveAndSnapshot }: any) {
       <DarkInput value={monthly} onChangeText={setMonthly} keyboardType="numeric" placeholder="0" />
       <FieldLabel label="Annual interest rate (%)" />
       <DarkInput value={rate} onChangeText={setRate} keyboardType="numeric" placeholder="Optional" />
-      <ActionButton label={isEditing ? 'Save changes' : 'Add account'} onPress={handleSave} />
+      <ActionButton label={isEditing ? 'Save changes' : 'Add account'} onPress={handleSave} disabled={!name.trim() || !balance.trim()} />
     </View>
   );
 }
@@ -371,7 +371,7 @@ function MortgageForm({ existing, isEditing, store, saveAndSnapshot }: any) {
       <DarkInput value={payment} onChangeText={setPayment} keyboardType="numeric" placeholder="0" />
       <FieldLabel label="Annual payment increase % (optional)" />
       <DarkInput value={increase} onChangeText={setIncrease} keyboardType="numeric" placeholder="e.g. 2" />
-      <ActionButton label={isEditing ? 'Save changes' : 'Add mortgage'} onPress={handleSave} />
+      <ActionButton label={isEditing ? 'Save changes' : 'Add mortgage'} onPress={handleSave} disabled={!name.trim() || !principal.trim() || !rate.trim() || !payment.trim()} />
     </View>
   );
 }
@@ -409,7 +409,7 @@ function OtherForm({ existing, isEditing, store, saveAndSnapshot }: any) {
       <DarkInput value={value} onChangeText={setValue} keyboardType="numeric" placeholder="0" />
       <FieldLabel label="Annual growth rate % (optional)" />
       <DarkInput value={growth} onChangeText={setGrowth} keyboardType="numeric" placeholder="e.g. -10 for depreciation" />
-      <ActionButton label={isEditing ? 'Save changes' : 'Add asset'} onPress={handleSave} />
+      <ActionButton label={isEditing ? 'Save changes' : 'Add asset'} onPress={handleSave} disabled={!name.trim() || !value.trim()} />
     </View>
   );
 }
@@ -439,10 +439,14 @@ function DarkInput({ value, onChangeText, placeholder, keyboardType }: {
   );
 }
 
-function ActionButton({ label, onPress }: { label: string; onPress: () => void }) {
+function ActionButton({ label, onPress, disabled }: { label: string; onPress: () => void; disabled?: boolean }) {
   return (
-    <Pressable style={({ pressed }) => [s.actionBtn, pressed && { opacity: 0.85 }]} onPress={onPress}>
-      <Text style={s.actionBtnText}>{label}</Text>
+    <Pressable
+      style={({ pressed }) => [s.actionBtn, disabled && s.actionBtnDisabled, pressed && !disabled && { opacity: 0.85 }]}
+      onPress={onPress}
+      disabled={disabled}
+    >
+      <Text style={[s.actionBtnText, disabled && s.actionBtnTextDisabled]}>{label}</Text>
     </Pressable>
   );
 }
@@ -592,10 +596,16 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 32,
   },
+  actionBtnDisabled: {
+    backgroundColor: '#1E293B',
+  },
   actionBtnText: {
     fontFamily: fontFamily.bold,
     fontSize: 16,
     color: '#FFFFFF',
     letterSpacing: 0.4,
+  },
+  actionBtnTextDisabled: {
+    color: '#475569',
   },
 });
