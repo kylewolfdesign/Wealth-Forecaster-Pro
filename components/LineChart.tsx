@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import Svg, { Path, Defs, LinearGradient, Stop, Line, Text as SvgText } from 'react-native-svg';
+import Svg, { Path, Defs, LinearGradient, Stop, Line, Text as SvgText, ClipPath, Rect } from 'react-native-svg';
 import Colors from '@/constants/colors';
 import { fontFamily, fontSize } from '@/constants/theme';
 
@@ -21,6 +21,8 @@ interface LineChartProps {
   compact?: boolean;
   gridColor?: string;
   labelColor?: string;
+  highlightEndX?: number;
+  dimmedColor?: string;
 }
 
 export default function LineChart({
@@ -34,6 +36,8 @@ export default function LineChart({
   compact = false,
   gridColor,
   labelColor,
+  highlightEndX,
+  dimmedColor,
 }: LineChartProps) {
   if (data.length < 2) {
     return (
@@ -79,6 +83,10 @@ export default function LineChart({
     gridYValues.push(yMin - yPad + ((yRange + 2 * yPad) * i) / (gridLines || 1));
   }
 
+  const hasHighlight = highlightEndX != null && highlightEndX < xMax;
+  const splitX = hasHighlight ? toX(highlightEndX) : 0;
+  const resolvedDimmedColor = dimmedColor || Colors.textTertiary;
+
   return (
     <View style={{ width, height }}>
       <Svg width={width} height={height}>
@@ -87,6 +95,20 @@ export default function LineChart({
             <Stop offset="0" stopColor={color} stopOpacity="0.2" />
             <Stop offset="1" stopColor={color} stopOpacity="0.01" />
           </LinearGradient>
+          <LinearGradient id="areaGradientDimmed" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor={resolvedDimmedColor} stopOpacity="0.08" />
+            <Stop offset="1" stopColor={resolvedDimmedColor} stopOpacity="0.01" />
+          </LinearGradient>
+          {hasHighlight && (
+            <>
+              <ClipPath id="clipHighlight">
+                <Rect x={0} y={0} width={splitX} height={height} />
+              </ClipPath>
+              <ClipPath id="clipDimmed">
+                <Rect x={splitX} y={0} width={width - splitX} height={height} />
+              </ClipPath>
+            </>
+          )}
         </Defs>
 
         {showGrid &&
@@ -115,8 +137,19 @@ export default function LineChart({
             </React.Fragment>
           ))}
 
-        <Path d={areaPath} fill="url(#areaGradient)" />
-        <Path d={linePath} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+        {hasHighlight ? (
+          <>
+            <Path d={areaPath} fill="url(#areaGradient)" clipPath="url(#clipHighlight)" />
+            <Path d={linePath} fill="none" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" clipPath="url(#clipHighlight)" />
+            <Path d={areaPath} fill="url(#areaGradientDimmed)" clipPath="url(#clipDimmed)" />
+            <Path d={linePath} fill="none" stroke={resolvedDimmedColor} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" opacity={0.4} clipPath="url(#clipDimmed)" />
+          </>
+        ) : (
+          <>
+            <Path d={areaPath} fill="url(#areaGradient)" />
+            <Path d={linePath} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+          </>
+        )}
       </Svg>
     </View>
   );

@@ -1,9 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Platform,
-  TextInput, useWindowDimensions,
+  TextInput, useWindowDimensions, TouchableOpacity,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '@/lib/store';
 import { computeForecast } from '@/lib/calculations';
 import { formatCurrency } from '@/lib/format';
@@ -11,6 +12,14 @@ import Card from '@/components/Card';
 import LineChart from '@/components/LineChart';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
+
+const TIME_HORIZONS = [
+  { key: '1Y', years: 1, label: '1Y' },
+  { key: '5Y', years: 5, label: '5Y' },
+  { key: '10Y', years: 10, label: '10Y' },
+  { key: '20Y', years: 20, label: '20Y' },
+  { key: '50Y', years: 50, label: '50Y' },
+] as const;
 
 const MILESTONE_YEARS = [1, 5, 10, 20, 50];
 
@@ -23,6 +32,14 @@ export default function ForecastScreen() {
   } = useAppStore();
 
   const [localSettings, setLocalSettings] = useState({ ...settings });
+  const [selectedHorizon, setSelectedHorizon] = useState<string>('10Y');
+
+  useEffect(() => {
+    const horizon = TIME_HORIZONS.find((h) => h.key === selectedHorizon);
+    if (horizon && !isPro && horizon.years > 10) {
+      setSelectedHorizon('10Y');
+    }
+  }, [isPro, selectedHorizon]);
 
   const forecast = useMemo(
     () => computeForecast(
@@ -38,6 +55,18 @@ export default function ForecastScreen() {
       y: p.netWorth,
     }));
   }, [forecast]);
+
+  const selectedYears = useMemo(() => {
+    const horizon = TIME_HORIZONS.find((h) => h.key === selectedHorizon);
+    return horizon?.years ?? 10;
+  }, [selectedHorizon]);
+
+  const selectedMonths = selectedYears * 12;
+
+  const headlineValue = useMemo(() => {
+    const point = forecast.find((p) => p.monthsFromNow >= selectedMonths);
+    return point?.netWorth ?? null;
+  }, [forecast, selectedMonths]);
 
   const milestoneValues = useMemo(() => {
     return MILESTONE_YEARS.map((yr) => {
@@ -59,7 +88,17 @@ export default function ForecastScreen() {
     }
   };
 
+  const handleHorizonSelect = (key: string) => {
+    const horizon = TIME_HORIZONS.find((h) => h.key === key);
+    if (!horizon) return;
+    if (!isPro && horizon.years > 10) return;
+    setSelectedHorizon(key);
+  };
+
   const topInset = Platform.OS === 'web' ? 67 : insets.top;
+
+  const maxDataMonths = forecast.length > 0 ? forecast[forecast.length - 1].monthsFromNow : 0;
+  const showHighlight = selectedMonths < maxDataMonths;
 
   return (
     <ScrollView
@@ -72,6 +111,55 @@ export default function ForecastScreen() {
         {localSettings.showRealReturns ? 'Real (inflation-adjusted)' : 'Nominal'} projections
       </Text>
 
+      <View style={styles.headlineContainer}>
+        <Text style={styles.headlineLabel}>
+          Projected Net Worth · {selectedYears}{selectedYears === 1 ? ' Year' : ' Years'}
+        </Text>
+        <Text style={styles.headlineValue}>
+          {headlineValue != null ? formatCurrency(headlineValue) : '--'}
+        </Text>
+      </View>
+
+      <View style={styles.tabBar}>
+        {TIME_HORIZONS.map((h) => {
+          const isLocked = !isPro && h.years > 10;
+          const isSelected = selectedHorizon === h.key;
+          return (
+            <TouchableOpacity
+              key={h.key}
+              testID={`horizon-tab-${h.key}`}
+              style={[
+                styles.tab,
+                isSelected && styles.tabActive,
+                isLocked && styles.tabLocked,
+              ]}
+              onPress={() => handleHorizonSelect(h.key)}
+              activeOpacity={isLocked ? 1 : 0.7}
+              disabled={isLocked}
+              accessibilityRole="button"
+              accessibilityState={{ selected: isSelected, disabled: isLocked }}
+              accessibilityLabel={`${h.label} forecast${isLocked ? ', requires Pro' : ''}`}
+            >
+              <Text style={[
+                styles.tabText,
+                isSelected && styles.tabTextActive,
+                isLocked && styles.tabTextLocked,
+              ]}>
+                {h.label}
+              </Text>
+              {isLocked && (
+                <Ionicons
+                  name="lock-closed"
+                  size={10}
+                  color={Colors.textTertiary}
+                  style={styles.lockIcon}
+                />
+              )}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
       {chartData.length >= 2 && (
         <Card style={styles.chartCard}>
           <LineChart
@@ -82,6 +170,7 @@ export default function ForecastScreen() {
             showGrid
             showLabels
             formatY={(v) => formatCurrency(v)}
+            highlightEndX={showHighlight ? selectedMonths : undefined}
           />
         </Card>
       )}
@@ -216,6 +305,57 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: Colors.textSecondary,
     marginBottom: spacing.xl,
+  },
+  headlineContainer: {
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  headlineLabel: {
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.sm,
+    color: Colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  headlineValue: {
+    fontFamily: fontFamily.bold,
+    fontSize: fontSize.hero,
+    color: Colors.text,
+  },
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: Colors.surface,
+    borderRadius: borderRadius.md,
+    padding: 4,
+    marginBottom: spacing.xl,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.sm,
+  },
+  tabActive: {
+    backgroundColor: Colors.primary,
+  },
+  tabLocked: {
+    opacity: 0.5,
+  },
+  tabText: {
+    fontFamily: fontFamily.semibold,
+    fontSize: fontSize.sm,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+  },
+  tabTextActive: {
+    color: Colors.white,
+  },
+  tabTextLocked: {
+    color: Colors.textTertiary,
+  },
+  lockIcon: {
+    marginLeft: 3,
   },
   chartCard: { marginBottom: spacing.xl },
   milestoneCard: { marginBottom: spacing.xl },
