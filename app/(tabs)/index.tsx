@@ -12,13 +12,13 @@ import { computeCurrentTotals, computeHoldingValue, computeRSUVesting } from '@/
 import { getInstantPrice } from '@/lib/price-service';
 import { useStockPrices } from '@/hooks/useStockPrices';
 import { createSnapshot, shouldTakeSnapshot } from '@/lib/snapshot';
-import { formatCurrency, formatPercent, formatShares } from '@/lib/format';
+import { formatCurrency, formatShares } from '@/lib/format';
 import { Holding, RSUGrant, CashAccount, Mortgage, OtherAsset, RealEstate } from '@/lib/types';
 import DonutChart from '@/components/DonutChart';
 import TickerLogo from '@/components/TickerLogo';
 import Card from '@/components/Card';
 import Colors from '@/constants/colors';
-import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
+import { spacing, fontSize, fontFamily } from '@/constants/theme';
 
 type CategoryItem = Holding | RSUGrant | CashAccount | Mortgage | OtherAsset | RealEstate;
 
@@ -70,15 +70,6 @@ export default function PortfolioScreen() {
       addSnapshot(createSnapshot(totals));
     }
   }, [onboardingComplete]);
-
-  const delta = useMemo(() => {
-    if (snapshots.length < 2) return null;
-    const prev = snapshots[snapshots.length - 2].totals.netWorth;
-    const curr = totals.netWorth;
-    const change = curr - prev;
-    const pct = prev !== 0 ? (change / prev) * 100 : 0;
-    return { change, pct };
-  }, [snapshots, totals]);
 
   const categoryValues: Record<string, number> = useMemo(() => ({
     stocks: totals.stocks,
@@ -133,7 +124,7 @@ export default function PortfolioScreen() {
   }
 
   const topInset = Platform.OS === 'web' ? 67 : insets.top;
-  const donutSize = Math.min(screenWidth - spacing.xl * 4, 220);
+  const donutSize = Math.min(screenWidth - spacing.xl * 4, 280);
 
   const getItemDetails = (catKey: string, item: CategoryItem): { name: string; value: number; subtitle: string; symbol?: string } => {
     if ((catKey === 'stocks' || catKey === 'crypto') && 'symbol' in item && 'shares' in item) {
@@ -193,29 +184,9 @@ export default function PortfolioScreen() {
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={[styles.content, { paddingTop: topInset + spacing.lg, paddingBottom: Platform.OS === 'web' ? 84 : 100 }]}
+      contentContainerStyle={[styles.content, { paddingTop: topInset + spacing.sm, paddingBottom: Platform.OS === 'web' ? 84 : 100 }]}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.header}>
-        <Text style={styles.headerLabel}>Total Net Worth</Text>
-        <Text style={styles.netWorthValue}>{formatCurrency(totals.netWorth)}</Text>
-        {delta && (
-          <View style={styles.deltaRow}>
-            <View style={[styles.deltaBadge, { backgroundColor: delta.change >= 0 ? 'rgba(18,183,106,0.15)' : 'rgba(240,68,56,0.15)' }]}>
-              <Ionicons
-                name={delta.change >= 0 ? 'arrow-up' : 'arrow-down'}
-                size={12}
-                color={delta.change >= 0 ? Colors.positive : Colors.negative}
-              />
-              <Text style={[styles.deltaText, { color: delta.change >= 0 ? Colors.positive : Colors.negative }]}>
-                {formatCurrency(Math.abs(delta.change))} ({formatPercent(delta.pct)})
-              </Text>
-            </View>
-            <Text style={styles.deltaPeriod}>vs last snapshot</Text>
-          </View>
-        )}
-      </View>
-
       <View style={styles.donutSection}>
         <DonutChart
           slices={donutSlices}
@@ -305,47 +276,6 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: spacing.xl,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: spacing.xl,
-    paddingTop: spacing.lg,
-  },
-  headerLabel: {
-    fontFamily: fontFamily.medium,
-    fontSize: fontSize.xs,
-    color: Colors.textTertiary,
-    marginBottom: spacing.xs,
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
-  },
-  netWorthValue: {
-    fontFamily: fontFamily.bold,
-    fontSize: fontSize.hero,
-    color: Colors.text,
-    marginBottom: spacing.sm,
-  },
-  deltaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  deltaBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: borderRadius.full,
-  },
-  deltaText: {
-    fontFamily: fontFamily.semibold,
-    fontSize: fontSize.xs,
-  },
-  deltaPeriod: {
-    fontFamily: fontFamily.regular,
-    fontSize: fontSize.xs,
-    color: Colors.textTertiary,
   },
   donutSection: {
     alignItems: 'center',

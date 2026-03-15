@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
   },
   centerLabel: {
     fontFamily: fontFamily.bold,
-    fontSize: fontSize.xxl,
+    fontSize: fontSize.xxl * 1.5,
     color: Colors.text,
   },
 });
