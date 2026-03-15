@@ -19,7 +19,7 @@ function NativeTabLayout() {
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="settings">
         <Icon sf={{ default: 'slider.horizontal.3', selected: 'slider.horizontal.3' }} />
-        <Label>Profile</Label>
+        <Label>Config</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );
@@ -83,7 +83,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'Profile',
+          title: 'Config',
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons name={focused ? 'options' : 'options-outline'} size={size} color={color} />
           ),
