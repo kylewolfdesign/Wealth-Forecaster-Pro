@@ -7,7 +7,7 @@ import {
 } from './types';
 import { generateDemoData } from './demo-data';
 
-interface AppState {
+export interface AppState {
   holdings: Holding[];
   rsuGrants: RSUGrant[];
   cashAccounts: CashAccount[];

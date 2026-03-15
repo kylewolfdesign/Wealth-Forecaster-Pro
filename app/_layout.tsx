@@ -29,10 +29,8 @@ function RootLayoutNav() {
       <Stack.Screen
         name="edit-item"
         options={{
-          presentation: 'formSheet',
-          sheetAllowedDetents: [0.85],
-          sheetGrabberVisible: true,
           headerShown: false,
+          animation: 'slide_from_right',
         }}
       />
     </Stack>

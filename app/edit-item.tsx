@@ -1,29 +1,45 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, TextInput, Pressable,
-  ScrollView, Alert, Platform, Switch,
+  Alert, Platform, Switch, Modal,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as Crypto from 'expo-crypto';
-import { useAppStore } from '@/lib/store';
+import { Picker } from '@react-native-picker/picker';
+import { useAppStore, AppState } from '@/lib/store';
+import { Holding, RSUGrant, CashAccount, Mortgage, OtherAsset } from '@/lib/types';
 import { computeCurrentTotals } from '@/lib/calculations';
 import { createSnapshot } from '@/lib/snapshot';
 import TickerInput from '@/components/TickerInput';
+import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { fontFamily } from '@/constants/theme';
 
 const DARK_BG = '#0F172A';
 const CARD_BG = '#1E293B';
 const BORDER = '#334155';
 const PURPLE = '#6B39F4';
-const PURPLE_LIGHT = '#D3C4FC';
 const TEXT_PRIMARY = '#F8F9FD';
 const TEXT_SECONDARY = '#94A3B8';
 const TEXT_MUTED = '#64748B';
 
 type EditType = 'holding' | 'rsu' | 'cash' | 'mortgage' | 'other';
+type AppStore = AppState;
+
+interface FormAction {
+  label: string;
+  onPress: () => void;
+  disabled: boolean;
+}
+
+interface FormProps {
+  isEditing: boolean;
+  store: AppStore;
+  saveAndSnapshot: () => void;
+  onAction: (action: FormAction) => void;
+}
 
 export default function EditItemScreen() {
   const { type: rawType, id } = useLocalSearchParams<{ type: string; id?: string }>();
@@ -43,7 +59,7 @@ export default function EditItemScreen() {
       case 'other': return store.otherAssets.find(a => a.id === id);
       default: return null;
     }
-  }, [type, id]);
+  }, [type, id, store.holdings, store.rsuGrants, store.cashAccounts, store.mortgages, store.otherAssets]);
 
   const isEditing = !!existing;
 
@@ -76,6 +92,12 @@ export default function EditItemScreen() {
     }
   };
 
+  const [formAction, setFormAction] = useState<FormAction>({
+    label: '',
+    onPress: () => {},
+    disabled: true,
+  });
+
   return (
     <View style={[s.container, { paddingTop: topInset }]}>
       <View style={s.appBar}>
@@ -84,32 +106,54 @@ export default function EditItemScreen() {
         </Pressable>
       </View>
 
-      <ScrollView
+      <KeyboardAwareScrollViewCompat
         style={s.scrollArea}
-        contentContainerStyle={[s.scrollContent, { paddingBottom: bottomInset + 24 }]}
+        contentContainerStyle={[s.scrollContent, { paddingBottom: bottomInset + 16 + 56 + 24 }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        bottomOffset={40}
       >
         <Text style={s.heading}>{getTitle()}</Text>
         <Text style={s.subtitle}>{getSubtitle()}</Text>
 
-        {type === 'holding' && <HoldingForm existing={existing as any} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} />}
-        {type === 'rsu' && <RSUForm existing={existing as any} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} />}
-        {type === 'cash' && <CashForm existing={existing as any} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} />}
-        {type === 'mortgage' && <MortgageForm existing={existing as any} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} />}
-        {type === 'other' && <OtherForm existing={existing as any} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} />}
-      </ScrollView>
+        {type === 'holding' && <HoldingForm existing={existing as Holding | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} />}
+        {type === 'rsu' && <RSUForm existing={existing as RSUGrant | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} />}
+        {type === 'cash' && <CashForm existing={existing as CashAccount | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} />}
+        {type === 'mortgage' && <MortgageForm existing={existing as Mortgage | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} />}
+        {type === 'other' && <OtherForm existing={existing as OtherAsset | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} />}
+      </KeyboardAwareScrollViewCompat>
+
+      <View style={[s.footer, { paddingBottom: bottomInset + 16 }]}>
+        <ActionButton
+          label={formAction.label}
+          onPress={formAction.onPress}
+          disabled={formAction.disabled}
+        />
+      </View>
     </View>
   );
 }
 
-function HoldingForm({ existing, isEditing, store, saveAndSnapshot }: any) {
+function useFormAction(
+  onAction: (action: FormAction) => void,
+  label: string,
+  disabled: boolean,
+  handler: () => void,
+) {
+  const handlerRef = useRef(handler);
+  handlerRef.current = handler;
+
+  useEffect(() => {
+    onAction({ label, onPress: () => handlerRef.current(), disabled });
+  }, [label, disabled, onAction]);
+}
+
+function HoldingForm({ existing, isEditing, store, saveAndSnapshot, onAction }: FormProps & { existing: Holding | null }) {
   const [symbol, setSymbol] = useState(existing?.symbol ?? '');
   const [shares, setShares] = useState(existing?.shares?.toString() ?? '');
   const [addingMore, setAddingMore] = useState(!!existing?.recurringShares);
   const [recurringShares, setRecurringShares] = useState(existing?.recurringShares?.toString() ?? '');
   const [cadence, setCadence] = useState<'monthly' | 'quarterly' | 'yearly'>(existing?.recurringCadence ?? 'monthly');
-  const [showCadencePicker, setShowCadencePicker] = useState(false);
 
   const handleSave = () => {
     if (!symbol.trim() || !shares.trim()) {
@@ -117,7 +161,7 @@ function HoldingForm({ existing, isEditing, store, saveAndSnapshot }: any) {
       return;
     }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    const data: any = {
+    const data: Partial<Holding> = {
       type: 'stock' as const,
       symbol: symbol.toUpperCase().trim(),
       shares: parseFloat(shares),
@@ -126,16 +170,16 @@ function HoldingForm({ existing, isEditing, store, saveAndSnapshot }: any) {
       data.recurringShares = parseFloat(recurringShares);
       data.recurringCadence = cadence;
     }
-    if (isEditing) {
+    if (isEditing && existing) {
       store.updateHolding(existing.id, data);
     } else {
-      store.addHolding({ id: Crypto.randomUUID(), ...data });
+      store.addHolding({ id: Crypto.randomUUID(), ...data } as Holding);
     }
     saveAndSnapshot();
     router.back();
   };
 
-  const cadenceLabel = cadence === 'monthly' ? 'Monthly' : cadence === 'quarterly' ? 'Quarterly' : 'Yearly';
+  useFormAction(onAction, isEditing ? 'Save changes' : 'Add stock', !symbol.trim() || !shares.trim(), handleSave);
 
   return (
     <View>
@@ -173,40 +217,28 @@ function HoldingForm({ existing, isEditing, store, saveAndSnapshot }: any) {
           <DarkInput value={recurringShares} onChangeText={setRecurringShares} keyboardType="numeric" placeholder="100" />
 
           <FieldLabel label="Cadence" />
-          <Pressable style={s.dropdown} onPress={() => setShowCadencePicker(!showCadencePicker)}>
-            <Text style={s.dropdownText}>{cadenceLabel}</Text>
-            <Ionicons name="chevron-down" size={20} color={TEXT_SECONDARY} />
-          </Pressable>
-          {showCadencePicker && (
-            <View style={s.pickerOptions}>
-              {(['monthly', 'quarterly', 'yearly'] as const).map((c) => (
-                <Pressable
-                  key={c}
-                  style={[s.pickerOption, cadence === c && s.pickerOptionActive]}
-                  onPress={() => { setCadence(c); setShowCadencePicker(false); }}
-                >
-                  <Text style={[s.pickerOptionText, cadence === c && s.pickerOptionTextActive]}>
-                    {c === 'monthly' ? 'Monthly' : c === 'quarterly' ? 'Quarterly' : 'Yearly'}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          )}
+          <NativePicker
+            selectedValue={cadence}
+            onValueChange={(val) => setCadence(val as 'monthly' | 'quarterly' | 'yearly')}
+            items={[
+              { label: 'Monthly', value: 'monthly' },
+              { label: 'Quarterly', value: 'quarterly' },
+              { label: 'Yearly', value: 'yearly' },
+            ]}
+          />
         </View>
       )}
-
-      <ActionButton label={isEditing ? 'Save changes' : 'Add stock'} onPress={handleSave} disabled={!symbol.trim() || !shares.trim()} />
     </View>
   );
 }
 
-function RSUForm({ existing, isEditing, store, saveAndSnapshot }: any) {
+function RSUForm({ existing, isEditing, store, saveAndSnapshot, onAction }: FormProps & { existing: RSUGrant | null }) {
   const [symbol, setSymbol] = useState(existing?.symbol ?? '');
   const [freq, setFreq] = useState<'monthly' | 'quarterly' | 'yearly'>(existing?.vest?.frequency ?? 'quarterly');
 
   const existingInterval = existing?.vest?.frequency === 'monthly' ? 1 : existing?.vest?.frequency === 'yearly' ? 12 : 3;
   const existingVests = existing ? Math.round((existing.vest?.durationMonths ?? 0) / existingInterval) : 0;
-  const existingSpv = existingVests > 0 ? Math.round((existing.totalShares - (existing.alreadyVestedShares ?? 0)) / existingVests) : 0;
+  const existingSpv = existingVests > 0 && existing ? Math.round((existing.totalShares - (existing.alreadyVestedShares ?? 0)) / existingVests) : 0;
 
   const [sharesPerVest, setSharesPerVest] = useState(existing ? existingSpv.toString() : '');
   const [vestCount, setVestCount] = useState(existing ? existingVests.toString() : '');
@@ -243,7 +275,7 @@ function RSUForm({ existing, isEditing, store, saveAndSnapshot }: any) {
         frequency: freq,
       },
     };
-    if (isEditing) {
+    if (isEditing && existing) {
       store.updateRSUGrant(existing.id, data);
     } else {
       store.addRSUGrant({ id: Crypto.randomUUID(), ...data });
@@ -252,6 +284,8 @@ function RSUForm({ existing, isEditing, store, saveAndSnapshot }: any) {
     router.back();
   };
 
+  useFormAction(onAction, isEditing ? 'Save changes' : 'Add RSU grant', !symbol.trim() || !sharesPerVest.trim() || !vestCount.trim(), handleSave);
+
   return (
     <View>
       <FieldLabel label="Ticker symbol" />
@@ -259,25 +293,24 @@ function RSUForm({ existing, isEditing, store, saveAndSnapshot }: any) {
       <FieldLabel label="Shares per vest" />
       <DarkInput value={sharesPerVest} onChangeText={setSharesPerVest} keyboardType="numeric" placeholder="e.g. 250" />
       <FieldLabel label="Vesting cadence" />
-      <View style={s.cadenceRow}>
-        {(['monthly', 'quarterly', 'yearly'] as const).map((f) => (
-          <Pressable key={f} style={[s.cadenceBtn, freq === f && s.cadenceBtnActive]} onPress={() => setFreq(f)}>
-            <Text style={[s.cadenceBtnText, freq === f && s.cadenceBtnTextActive]}>
-              {f === 'monthly' ? 'Monthly' : f === 'quarterly' ? 'Quarterly' : 'Yearly'}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
+      <NativePicker
+        selectedValue={freq}
+        onValueChange={(val) => setFreq(val as 'monthly' | 'quarterly' | 'yearly')}
+        items={[
+          { label: 'Monthly', value: 'monthly' },
+          { label: 'Quarterly', value: 'quarterly' },
+          { label: 'Yearly', value: 'yearly' },
+        ]}
+      />
       <FieldLabel label="Remaining vests" />
       <DarkInput value={vestCount} onChangeText={setVestCount} keyboardType="numeric" placeholder="e.g. 16" />
       <FieldLabel label="Next vest date" />
       <DarkInput value={nextVestDate} onChangeText={setNextVestDate} placeholder="YYYY-MM-DD" />
-      <ActionButton label={isEditing ? 'Save changes' : 'Add RSU grant'} onPress={handleSave} disabled={!symbol.trim() || !sharesPerVest.trim() || !vestCount.trim()} />
     </View>
   );
 }
 
-function CashForm({ existing, isEditing, store, saveAndSnapshot }: any) {
+function CashForm({ existing, isEditing, store, saveAndSnapshot, onAction }: FormProps & { existing: CashAccount | null }) {
   const [cashType, setCashType] = useState<'savings' | 'offset'>(existing?.type ?? 'savings');
   const [name, setName] = useState(existing?.name ?? '');
   const [balance, setBalance] = useState(existing?.balance?.toString() ?? '');
@@ -297,26 +330,28 @@ function CashForm({ existing, isEditing, store, saveAndSnapshot }: any) {
       monthlyContribution: parseFloat(monthly) || 0,
       annualInterestRate: rate ? parseFloat(rate) : undefined,
     };
-    if (isEditing) {
+    if (isEditing && existing) {
       store.updateCashAccount(existing.id, data);
     } else {
-      store.addCashAccount({ id: Crypto.randomUUID(), ...data });
+      store.addCashAccount({ id: Crypto.randomUUID(), ...data } as CashAccount);
     }
     saveAndSnapshot();
     router.back();
   };
 
+  useFormAction(onAction, isEditing ? 'Save changes' : 'Add account', !name.trim() || !balance.trim(), handleSave);
+
   return (
     <View>
-      <View style={s.cadenceRow}>
-        {(['savings', 'offset'] as const).map((t) => (
-          <Pressable key={t} style={[s.cadenceBtn, cashType === t && s.cadenceBtnActive]} onPress={() => setCashType(t)}>
-            <Text style={[s.cadenceBtnText, cashType === t && s.cadenceBtnTextActive]}>
-              {t === 'savings' ? 'Savings' : 'Offset'}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
+      <FieldLabel label="Account type" />
+      <NativePicker
+        selectedValue={cashType}
+        onValueChange={(val) => setCashType(val as 'savings' | 'offset')}
+        items={[
+          { label: 'Savings', value: 'savings' },
+          { label: 'Offset', value: 'offset' },
+        ]}
+      />
       <FieldLabel label="Account name" />
       <DarkInput value={name} onChangeText={setName} placeholder="e.g. Emergency Fund" />
       <FieldLabel label="Current balance ($)" />
@@ -325,12 +360,11 @@ function CashForm({ existing, isEditing, store, saveAndSnapshot }: any) {
       <DarkInput value={monthly} onChangeText={setMonthly} keyboardType="numeric" placeholder="0" />
       <FieldLabel label="Annual interest rate (%)" />
       <DarkInput value={rate} onChangeText={setRate} keyboardType="numeric" placeholder="Optional" />
-      <ActionButton label={isEditing ? 'Save changes' : 'Add account'} onPress={handleSave} disabled={!name.trim() || !balance.trim()} />
     </View>
   );
 }
 
-function MortgageForm({ existing, isEditing, store, saveAndSnapshot }: any) {
+function MortgageForm({ existing, isEditing, store, saveAndSnapshot, onAction }: FormProps & { existing: Mortgage | null }) {
   const [name, setName] = useState(existing?.name ?? '');
   const [principal, setPrincipal] = useState(existing?.principalBalance?.toString() ?? '');
   const [rate, setRate] = useState(existing?.annualInterestRate?.toString() ?? '');
@@ -350,14 +384,16 @@ function MortgageForm({ existing, isEditing, store, saveAndSnapshot }: any) {
       monthlyPayment: parseFloat(payment),
       annualPaymentIncreasePct: increase ? parseFloat(increase) : undefined,
     };
-    if (isEditing) {
+    if (isEditing && existing) {
       store.updateMortgage(existing.id, data);
     } else {
-      store.addMortgage({ id: Crypto.randomUUID(), ...data });
+      store.addMortgage({ id: Crypto.randomUUID(), ...data } as Mortgage);
     }
     saveAndSnapshot();
     router.back();
   };
+
+  useFormAction(onAction, isEditing ? 'Save changes' : 'Add mortgage', !name.trim() || !principal.trim() || !rate.trim() || !payment.trim(), handleSave);
 
   return (
     <View>
@@ -371,12 +407,11 @@ function MortgageForm({ existing, isEditing, store, saveAndSnapshot }: any) {
       <DarkInput value={payment} onChangeText={setPayment} keyboardType="numeric" placeholder="0" />
       <FieldLabel label="Annual payment increase % (optional)" />
       <DarkInput value={increase} onChangeText={setIncrease} keyboardType="numeric" placeholder="e.g. 2" />
-      <ActionButton label={isEditing ? 'Save changes' : 'Add mortgage'} onPress={handleSave} disabled={!name.trim() || !principal.trim() || !rate.trim() || !payment.trim()} />
     </View>
   );
 }
 
-function OtherForm({ existing, isEditing, store, saveAndSnapshot }: any) {
+function OtherForm({ existing, isEditing, store, saveAndSnapshot, onAction }: FormProps & { existing: OtherAsset | null }) {
   const [name, setName] = useState(existing?.name ?? '');
   const [value, setValue] = useState(existing?.value?.toString() ?? '');
   const [growth, setGrowth] = useState(existing?.annualGrowthRate?.toString() ?? '');
@@ -392,14 +427,16 @@ function OtherForm({ existing, isEditing, store, saveAndSnapshot }: any) {
       value: parseFloat(value),
       annualGrowthRate: growth ? parseFloat(growth) : undefined,
     };
-    if (isEditing) {
+    if (isEditing && existing) {
       store.updateOtherAsset(existing.id, data);
     } else {
-      store.addOtherAsset({ id: Crypto.randomUUID(), ...data });
+      store.addOtherAsset({ id: Crypto.randomUUID(), ...data } as OtherAsset);
     }
     saveAndSnapshot();
     router.back();
   };
+
+  useFormAction(onAction, isEditing ? 'Save changes' : 'Add asset', !name.trim() || !value.trim(), handleSave);
 
   return (
     <View>
@@ -409,7 +446,6 @@ function OtherForm({ existing, isEditing, store, saveAndSnapshot }: any) {
       <DarkInput value={value} onChangeText={setValue} keyboardType="numeric" placeholder="0" />
       <FieldLabel label="Annual growth rate % (optional)" />
       <DarkInput value={growth} onChangeText={setGrowth} keyboardType="numeric" placeholder="e.g. -10 for depreciation" />
-      <ActionButton label={isEditing ? 'Save changes' : 'Add asset'} onPress={handleSave} disabled={!name.trim() || !value.trim()} />
     </View>
   );
 }
@@ -448,6 +484,86 @@ function ActionButton({ label, onPress, disabled }: { label: string; onPress: ()
     >
       <Text style={[s.actionBtnText, disabled && s.actionBtnTextDisabled]}>{label}</Text>
     </Pressable>
+  );
+}
+
+function NativePicker({ selectedValue, onValueChange, items }: {
+  selectedValue: string;
+  onValueChange: (value: string) => void;
+  items: { label: string; value: string }[];
+}) {
+  const [showPicker, setShowPicker] = useState(false);
+  const selectedLabel = items.find(i => i.value === selectedValue)?.label ?? selectedValue;
+
+  if (Platform.OS === 'web') {
+    return (
+      <View style={s.webPickerWrapper}>
+        {/* @ts-ignore - HTML select element for web platform */}
+        <select
+          value={selectedValue}
+          onChange={(e: React.ChangeEvent<HTMLSelectElement>) => onValueChange(e.target.value)}
+          style={{
+            backgroundColor: CARD_BG,
+            color: TEXT_PRIMARY,
+            border: `1px solid ${BORDER}`,
+            borderRadius: 12,
+            padding: '14px 16px',
+            fontSize: 16,
+            fontFamily: 'Inter_400Regular, sans-serif',
+            width: '100%',
+            appearance: 'none' as const,
+            WebkitAppearance: 'none' as const,
+            outline: 'none',
+            cursor: 'pointer',
+          }}
+        >
+          {items.map((item) => (
+            <option key={item.value} value={item.value}>{item.label}</option>
+          ))}
+        </select>
+        <View style={s.webPickerChevron}>
+          <Ionicons name="chevron-down" size={20} color={TEXT_SECONDARY} />
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <View>
+      <Pressable style={s.pickerRow} onPress={() => setShowPicker(true)}>
+        <Text style={s.pickerRowText}>{selectedLabel}</Text>
+        <Ionicons name="chevron-down" size={20} color={TEXT_SECONDARY} />
+      </Pressable>
+
+      <Modal
+        visible={showPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowPicker(false)}
+      >
+        <Pressable style={s.pickerModalOverlay} onPress={() => setShowPicker(false)}>
+          <View style={s.pickerModalContent}>
+            <View style={s.pickerModalHeader}>
+              <Pressable onPress={() => setShowPicker(false)}>
+                <Text style={s.pickerModalDone}>Done</Text>
+              </Pressable>
+            </View>
+            <Picker
+              selectedValue={selectedValue}
+              onValueChange={(val) => {
+                onValueChange(val);
+              }}
+              style={s.nativePicker}
+              itemStyle={s.nativePickerItem}
+            >
+              {items.map((item) => (
+                <Picker.Item key={item.value} label={item.label} value={item.value} />
+              ))}
+            </Picker>
+          </View>
+        </Pressable>
+      </Modal>
+    </View>
   );
 }
 
@@ -523,7 +639,7 @@ const s = StyleSheet.create({
     fontSize: 13,
     color: TEXT_SECONDARY,
   },
-  dropdown: {
+  pickerRow: {
     backgroundColor: CARD_BG,
     borderWidth: 1,
     borderColor: BORDER,
@@ -534,59 +650,62 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  dropdownText: {
+  pickerRowText: {
     fontFamily: fontFamily.regular,
     fontSize: 16,
     color: TEXT_PRIMARY,
   },
-  pickerOptions: {
-    backgroundColor: CARD_BG,
-    borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: 12,
-    marginTop: 4,
-    overflow: 'hidden',
+  pickerModalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
-  pickerOption: {
+  pickerModalContent: {
+    backgroundColor: '#1C1C1E',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+  },
+  pickerModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
     paddingHorizontal: 16,
     paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#3A3A3C',
   },
-  pickerOptionActive: {
-    backgroundColor: PURPLE + '22',
-  },
-  pickerOptionText: {
-    fontFamily: fontFamily.regular,
-    fontSize: 15,
-    color: TEXT_SECONDARY,
-  },
-  pickerOptionTextActive: {
-    color: PURPLE,
+  pickerModalDone: {
     fontFamily: fontFamily.semibold,
-  },
-  cadenceRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  cadenceBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: 8,
-    backgroundColor: CARD_BG,
-    borderWidth: 1,
-    borderColor: BORDER,
-  },
-  cadenceBtnActive: {
-    backgroundColor: PURPLE + '22',
-    borderColor: PURPLE,
-  },
-  cadenceBtnText: {
-    fontFamily: fontFamily.medium,
-    fontSize: 13,
-    color: TEXT_SECONDARY,
-  },
-  cadenceBtnTextActive: {
+    fontSize: 17,
     color: PURPLE,
+  },
+  nativePicker: {
+    backgroundColor: '#1C1C1E',
+  },
+  nativePickerItem: {
+    color: TEXT_PRIMARY,
+    fontSize: 20,
+  },
+  webPickerWrapper: {
+    position: 'relative' as const,
+  },
+  webPickerChevron: {
+    position: 'absolute' as const,
+    right: 16,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center' as const,
+    pointerEvents: 'none' as const,
+  },
+  footer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    backgroundColor: DARK_BG,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: BORDER,
   },
   actionBtn: {
     backgroundColor: PURPLE,
@@ -594,7 +713,6 @@ const s = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 32,
   },
   actionBtnDisabled: {
     backgroundColor: '#1E293B',
