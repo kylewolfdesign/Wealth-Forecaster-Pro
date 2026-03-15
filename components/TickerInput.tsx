@@ -1,80 +1,12 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
-  View, Text, TextInput, Pressable, FlatList, StyleSheet,
-  TextInputProps,
+  View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
 import TickerLogo from '@/components/TickerLogo';
-
-const STOCK_TICKERS = [
-  { symbol: 'AAPL', name: 'Apple Inc.' },
-  { symbol: 'MSFT', name: 'Microsoft Corp.' },
-  { symbol: 'GOOGL', name: 'Alphabet Inc.' },
-  { symbol: 'GOOG', name: 'Alphabet Inc. (C)' },
-  { symbol: 'AMZN', name: 'Amazon.com Inc.' },
-  { symbol: 'META', name: 'Meta Platforms Inc.' },
-  { symbol: 'TSLA', name: 'Tesla Inc.' },
-  { symbol: 'NVDA', name: 'NVIDIA Corp.' },
-  { symbol: 'NFLX', name: 'Netflix Inc.' },
-  { symbol: 'DIS', name: 'Walt Disney Co.' },
-  { symbol: 'JPM', name: 'JPMorgan Chase' },
-  { symbol: 'V', name: 'Visa Inc.' },
-  { symbol: 'MA', name: 'Mastercard Inc.' },
-  { symbol: 'WMT', name: 'Walmart Inc.' },
-  { symbol: 'PG', name: 'Procter & Gamble' },
-  { symbol: 'JNJ', name: 'Johnson & Johnson' },
-  { symbol: 'UNH', name: 'UnitedHealth Group' },
-  { symbol: 'HD', name: 'Home Depot Inc.' },
-  { symbol: 'BAC', name: 'Bank of America' },
-  { symbol: 'XOM', name: 'Exxon Mobil Corp.' },
-  { symbol: 'KO', name: 'Coca-Cola Co.' },
-  { symbol: 'PEP', name: 'PepsiCo Inc.' },
-  { symbol: 'COST', name: 'Costco Wholesale' },
-  { symbol: 'ABBV', name: 'AbbVie Inc.' },
-  { symbol: 'CRM', name: 'Salesforce Inc.' },
-  { symbol: 'AVGO', name: 'Broadcom Inc.' },
-  { symbol: 'TMO', name: 'Thermo Fisher' },
-  { symbol: 'MRK', name: 'Merck & Co.' },
-  { symbol: 'ACN', name: 'Accenture plc' },
-  { symbol: 'LLY', name: 'Eli Lilly & Co.' },
-  { symbol: 'AMD', name: 'Advanced Micro Devices' },
-  { symbol: 'INTC', name: 'Intel Corp.' },
-  { symbol: 'CSCO', name: 'Cisco Systems' },
-  { symbol: 'ADBE', name: 'Adobe Inc.' },
-  { symbol: 'ORCL', name: 'Oracle Corp.' },
-  { symbol: 'NKE', name: 'Nike Inc.' },
-  { symbol: 'T', name: 'AT&T Inc.' },
-  { symbol: 'VZ', name: 'Verizon Communications' },
-  { symbol: 'PYPL', name: 'PayPal Holdings' },
-  { symbol: 'SQ', name: 'Block Inc.' },
-  { symbol: 'SHOP', name: 'Shopify Inc.' },
-  { symbol: 'UBER', name: 'Uber Technologies' },
-  { symbol: 'ABNB', name: 'Airbnb Inc.' },
-  { symbol: 'SNAP', name: 'Snap Inc.' },
-  { symbol: 'COIN', name: 'Coinbase Global' },
-  { symbol: 'PLTR', name: 'Palantir Technologies' },
-  { symbol: 'RBLX', name: 'Roblox Corp.' },
-  { symbol: 'SPOT', name: 'Spotify Technology' },
-  { symbol: 'ZM', name: 'Zoom Video' },
-  { symbol: 'SNOW', name: 'Snowflake Inc.' },
-  { symbol: 'NET', name: 'Cloudflare Inc.' },
-  { symbol: 'CRWD', name: 'CrowdStrike Holdings' },
-  { symbol: 'DDOG', name: 'Datadog Inc.' },
-  { symbol: 'SPY', name: 'S&P 500 ETF' },
-  { symbol: 'QQQ', name: 'Nasdaq 100 ETF' },
-  { symbol: 'VTI', name: 'Total Stock Market ETF' },
-  { symbol: 'VOO', name: 'Vanguard S&P 500 ETF' },
-  { symbol: 'VGT', name: 'Vanguard Info Tech ETF' },
-  { symbol: 'VUG', name: 'Vanguard Growth ETF' },
-  { symbol: 'ARKK', name: 'ARK Innovation ETF' },
-  { symbol: 'IVV', name: 'iShares Core S&P 500' },
-  { symbol: 'VEA', name: 'Vanguard FTSE Developed' },
-  { symbol: 'VWO', name: 'Vanguard FTSE Emerging' },
-  { symbol: 'SCHD', name: 'Schwab US Dividend' },
-  { symbol: 'BRK.B', name: 'Berkshire Hathaway B' },
-];
+import { getApiUrl } from '@/lib/query-client';
 
 const CRYPTO_TICKERS = [
   { symbol: 'BTC', name: 'Bitcoin' },
@@ -109,6 +41,11 @@ const CRYPTO_TICKERS = [
   { symbol: 'TRX', name: 'TRON' },
 ];
 
+interface TickerResult {
+  symbol: string;
+  name: string;
+}
+
 interface TickerInputProps {
   value: string;
   onChangeText: (text: string) => void;
@@ -128,6 +65,60 @@ const DARK = {
   dropdownBg: '#1E293B',
 };
 
+function useDebouncedStockSearch(query: string, enabled: boolean) {
+  const [results, setResults] = useState<TickerResult[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    if (!enabled || !query.trim()) {
+      setResults([]);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (abortRef.current) abortRef.current.abort();
+
+    timerRef.current = setTimeout(async () => {
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      try {
+        const baseUrl = getApiUrl();
+        const url = new URL('/api/search/stocks', baseUrl);
+        url.searchParams.set('q', query.trim());
+
+        const res = await fetch(url.toString(), { signal: controller.signal });
+        if (!res.ok) {
+          setResults([]);
+          setIsLoading(false);
+          return;
+        }
+        const data = await res.json();
+        if (!controller.signal.aborted) {
+          setResults(data.results || []);
+          setIsLoading(false);
+        }
+      } catch (e: unknown) {
+        if (e instanceof Error && e.name === 'AbortError') return;
+        setResults([]);
+        setIsLoading(false);
+      }
+    }, 300);
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      if (abortRef.current) abortRef.current.abort();
+    };
+  }, [query, enabled]);
+
+  return { results, isLoading };
+}
+
 export default function TickerInput({
   value,
   onChangeText,
@@ -139,31 +130,46 @@ export default function TickerInput({
 }: TickerInputProps) {
   const [isFocused, setIsFocused] = useState(false);
 
-  const tickers = useMemo(() => {
-    if (type === 'stock') return STOCK_TICKERS;
-    if (type === 'crypto') return CRYPTO_TICKERS;
-    return [...STOCK_TICKERS, ...CRYPTO_TICKERS];
-  }, [type]);
+  const needsStockSearch = type === 'stock' || type === 'all';
+  const { results: stockResults, isLoading: stockLoading } = useDebouncedStockSearch(
+    value,
+    needsStockSearch && isFocused && value.trim().length >= 1
+  );
 
-  const suggestions = useMemo(() => {
+  const cryptoSuggestions = useMemo(() => {
+    if (type === 'stock') return [];
     if (!value.trim() || value.length < 1) return [];
     const query = value.toUpperCase().trim();
-    return tickers
-      .filter(
-        (t) =>
-          t.symbol.toUpperCase().startsWith(query) ||
-          t.name.toUpperCase().includes(query)
-      )
-      .slice(0, 6);
-  }, [value, tickers]);
+    return CRYPTO_TICKERS.filter(
+      (t) =>
+        t.symbol.toUpperCase().startsWith(query) ||
+        t.name.toUpperCase().includes(query)
+    ).slice(0, 6);
+  }, [value, type]);
 
-  const showSuggestions = isFocused && suggestions.length > 0;
+  const suggestions = useMemo(() => {
+    if (type === 'crypto') return cryptoSuggestions;
+    if (type === 'stock') return stockResults;
+    const combined = [...stockResults];
+    for (const c of cryptoSuggestions) {
+      if (!combined.some(s => s.symbol === c.symbol)) {
+        combined.push(c);
+      }
+    }
+    return combined.slice(0, 8);
+  }, [type, stockResults, cryptoSuggestions]);
+
+  const isLoading = needsStockSearch && stockLoading && value.trim().length >= 1;
+  const showSuggestions = isFocused && (suggestions.length > 0 || isLoading);
+  const showEmpty = isFocused && !isLoading && value.trim().length >= 1 && suggestions.length === 0;
 
   const handleSelect = (symbol: string) => {
     onChangeText(symbol);
     onSelect?.(symbol);
     setIsFocused(false);
   };
+
+  const isCrypto = (symbol: string) => CRYPTO_TICKERS.some(c => c.symbol === symbol);
 
   const darkInput = darkMode ? { backgroundColor: DARK.bg, borderColor: isFocused ? DARK.focusBorder : DARK.border } : {};
   const darkText = darkMode ? { color: DARK.text } : {};
@@ -185,6 +191,9 @@ export default function TickerInput({
           autoCapitalize="characters"
           autoCorrect={false}
         />
+        {isLoading && (
+          <ActivityIndicator size="small" color={darkMode ? DARK.muted : Colors.textTertiary} style={{ marginRight: 6 }} />
+        )}
         {!!value && (
           <Pressable onPress={() => onChangeText('')} hitSlop={8}>
             <Ionicons name="close-circle" size={16} color={darkMode ? DARK.muted : Colors.textTertiary} />
@@ -207,7 +216,7 @@ export default function TickerInput({
               <View style={styles.suggestionLeft}>
                 <TickerLogo
                   symbol={item.symbol}
-                  type={CRYPTO_TICKERS.some(c => c.symbol === item.symbol) ? 'crypto' : 'stock'}
+                  type={isCrypto(item.symbol) ? 'crypto' : 'stock'}
                   size={28}
                 />
                 <Text style={[styles.suggestionSymbol, darkText]}>{item.symbol}</Text>
@@ -216,6 +225,20 @@ export default function TickerInput({
               <Ionicons name="arrow-forward" size={14} color={darkMode ? DARK.muted : Colors.textTertiary} />
             </Pressable>
           ))}
+          {isLoading && suggestions.length === 0 && (
+            <View style={styles.emptyState}>
+              <ActivityIndicator size="small" color={darkMode ? DARK.muted : Colors.textTertiary} />
+              <Text style={[styles.emptyText, darkMode && { color: DARK.muted }]}>Searching...</Text>
+            </View>
+          )}
+        </View>
+      )}
+
+      {showEmpty && (
+        <View style={[styles.dropdown, darkDropdown]}>
+          <View style={styles.emptyState}>
+            <Text style={[styles.emptyText, darkMode && { color: DARK.muted }]}>No results found</Text>
+          </View>
         </View>
       )}
     </View>
@@ -294,5 +317,18 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: Colors.textSecondary,
     flex: 1,
+  },
+  emptyState: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.md,
+  },
+  emptyText: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.sm,
+    color: Colors.textSecondary,
   },
 });
