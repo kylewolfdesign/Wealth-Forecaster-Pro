@@ -10,15 +10,15 @@ function NativeTabLayout() {
   return (
     <NativeTabs>
       <NativeTabs.Trigger name="index">
-        <Icon sf={{ default: 'house', selected: 'house.fill' }} />
+        <Icon sf={{ default: 'chart.pie', selected: 'chart.pie.fill' }} />
         <Label>Portfolio</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="forecast">
-        <Icon sf={{ default: 'chart.line.uptrend.xyaxis', selected: 'chart.line.uptrend.xyaxis' }} />
+        <Icon sf={{ default: 'chart.bar', selected: 'chart.bar.fill' }} />
         <Label>Forecast</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="settings">
-        <Icon sf={{ default: 'person', selected: 'person.fill' }} />
+        <Icon sf={{ default: 'slider.horizontal.3', selected: 'slider.horizontal.3' }} />
         <Label>Profile</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
@@ -55,7 +55,7 @@ function ClassicTabLayout() {
         options={{
           title: 'Portfolio',
           tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? 'home' : 'home-outline'} size={size} color={color} />
+            <Ionicons name={focused ? 'pie-chart' : 'pie-chart-outline'} size={size} color={color} />
           ),
         }}
       />
@@ -70,7 +70,7 @@ function ClassicTabLayout() {
         options={{
           title: 'Forecast',
           tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? 'trending-up' : 'trending-up-outline'} size={size} color={color} />
+            <Ionicons name={focused ? 'bar-chart' : 'bar-chart-outline'} size={size} color={color} />
           ),
         }}
       />
@@ -85,7 +85,7 @@ function ClassicTabLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? 'person' : 'person-outline'} size={size} color={color} />
+            <Ionicons name={focused ? 'options' : 'options-outline'} size={size} color={color} />
           ),
         }}
       />
