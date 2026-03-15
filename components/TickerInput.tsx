@@ -6,6 +6,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
+import TickerLogo from '@/components/TickerLogo';
 
 const STOCK_TICKERS = [
   { symbol: 'AAPL', name: 'Apple Inc.' },
@@ -204,6 +205,11 @@ export default function TickerInput({
               onPress={() => handleSelect(item.symbol)}
             >
               <View style={styles.suggestionLeft}>
+                <TickerLogo
+                  symbol={item.symbol}
+                  type={CRYPTO_TICKERS.some(c => c.symbol === item.symbol) ? 'crypto' : 'stock'}
+                  size={28}
+                />
                 <Text style={[styles.suggestionSymbol, darkText]}>{item.symbol}</Text>
                 <Text style={[styles.suggestionName, darkMode && { color: DARK.muted }]} numberOfLines={1}>{item.name}</Text>
               </View>

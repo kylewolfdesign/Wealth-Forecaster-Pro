@@ -13,6 +13,7 @@ import { useAppStore } from '@/lib/store';
 import { computeCurrentTotals } from '@/lib/calculations';
 import { createSnapshot } from '@/lib/snapshot';
 import { formatCurrency } from '@/lib/format';
+import TickerLogo from '@/components/TickerLogo';
 import TickerInput from '@/components/TickerInput';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
@@ -345,11 +346,19 @@ export default function OnboardingScreen() {
                           }}
                         >
                           <View style={setupStyles.itemNameRow}>
-                            <View style={setupStyles.itemIconCircle}>
-                              <Text style={setupStyles.itemIconText}>
-                                {item.name.charAt(0)}
-                              </Text>
-                            </View>
+                            {(cat.key === 'investments' || cat.key === 'crypto' || cat.key === 'rsus') ? (
+                              <TickerLogo
+                                symbol={item.name.replace(' RSU', '')}
+                                type={cat.key === 'crypto' ? 'crypto' : 'stock'}
+                                size={28}
+                              />
+                            ) : (
+                              <View style={setupStyles.itemIconCircle}>
+                                <Text style={setupStyles.itemIconText}>
+                                  {item.name.charAt(0)}
+                                </Text>
+                              </View>
+                            )}
                             <Text style={setupStyles.itemName}>{item.name}</Text>
                           </View>
                           <View style={setupStyles.itemValueRow}>
@@ -785,9 +794,11 @@ function InvestmentsStep({ items, setItems }: { items: Holding[]; setItems: (h: 
 
       {items.map((h) => (
         <View key={h.id} style={formStyles.itemRow}>
-          <View style={formStyles.itemBadge}>
-            <Text style={formStyles.itemBadgeText}>{h.type === 'stock' ? 'S' : 'C'}</Text>
-          </View>
+          <TickerLogo
+            symbol={h.symbol}
+            type={h.type === 'crypto' ? 'crypto' : 'stock'}
+            size={32}
+          />
           <View style={formStyles.itemInfo}>
             <Text style={formStyles.itemName}>{h.symbol}</Text>
             <Text style={formStyles.itemSub}>{h.shares} shares</Text>
@@ -921,9 +932,11 @@ function RSUStep({ items, setItems }: { items: RSUGrant[]; setItems: (r: RSUGran
         const spv = numVests > 0 ? Math.round(r.totalShares / numVests) : r.totalShares;
         return (
           <View key={r.id} style={formStyles.itemRow}>
-            <View style={[formStyles.itemBadge, { backgroundColor: Colors.categoryRSU + '20' }]}>
-              <Text style={[formStyles.itemBadgeText, { color: Colors.categoryRSU }]}>R</Text>
-            </View>
+            <TickerLogo
+              symbol={r.symbol}
+              type="stock"
+              size={32}
+            />
             <View style={formStyles.itemInfo}>
               <Text style={formStyles.itemName}>{r.symbol} RSU</Text>
               <Text style={formStyles.itemSub}>{spv} shares/{cadenceLabel(r.vest.frequency)} \u00d7 {numVests} vests</Text>

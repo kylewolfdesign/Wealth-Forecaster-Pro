@@ -11,6 +11,7 @@ import { computeCurrentTotals, computeHoldingValue, computeRSUVesting } from '@/
 import { getInstantPrice } from '@/lib/price-service';
 import { formatCurrency, formatShares } from '@/lib/format';
 import Card from '@/components/Card';
+import TickerLogo from '@/components/TickerLogo';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
 
@@ -132,6 +133,13 @@ export default function BreakdownScreen() {
         style={styles.itemRow}
         onPress={() => handleEdit(CATEGORIES.find(c => c.key === catKey)?.type || 'holding', item.id, catKey)}
       >
+        {(catKey === 'stocks' || catKey === 'crypto' || catKey === 'rsus') && (
+          <TickerLogo
+            symbol={item.symbol}
+            type={catKey === 'crypto' ? 'crypto' : 'stock'}
+            size={30}
+          />
+        )}
         <View style={styles.itemInfo}>
           <Text style={styles.itemName}>{name}</Text>
           {!!subtitle && <Text style={styles.itemSubtitle}>{subtitle}</Text>}
@@ -280,6 +288,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: Colors.borderLight,
+    gap: spacing.sm,
   },
   itemInfo: { flex: 1 },
   itemName: {
