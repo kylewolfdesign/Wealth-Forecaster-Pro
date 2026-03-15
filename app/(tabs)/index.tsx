@@ -273,14 +273,15 @@ export default function PortfolioScreen() {
                 ) : (
                   items.map((item) => renderItem(cat.key, item))
                 )}
-                <Pressable
-                  style={styles.addButton}
-                  onPress={() => handleAdd(cat.type, cat.subType)}
-                  testID={`add-${cat.key}`}
-                >
-                  <Ionicons name="add" size={18} color={Colors.primary} />
-                  <Text style={styles.addButtonText}>Add {cat.label}</Text>
-                </Pressable>
+                <View style={styles.addButtonContainer}>
+                  <Pressable
+                    style={styles.addButton}
+                    onPress={() => handleAdd(cat.type, cat.subType)}
+                    testID={`add-${cat.key}`}
+                  >
+                    <Text style={styles.addButtonText}>Add</Text>
+                  </Pressable>
+                </View>
               </View>
             )}
           </Card>
@@ -449,16 +450,21 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     color: Colors.text,
   },
-  addButton: {
+  addButtonContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.md,
+    justifyContent: 'flex-end',
+    paddingTop: spacing.sm,
+  },
+  addButton: {
+    backgroundColor: Colors.primary,
+    borderRadius: 20,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
   },
   addButtonText: {
     fontFamily: fontFamily.medium,
     fontSize: fontSize.sm,
-    color: Colors.primary,
+    color: '#FFFFFF',
   },
   emptyText: {
     fontFamily: fontFamily.regular,
