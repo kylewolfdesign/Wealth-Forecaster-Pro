@@ -54,6 +54,9 @@ export interface RealEstate {
   name: string;
   currentValue: number;
   annualGrowthRate?: number;
+  equity?: number;
+  additionalEquity?: number;
+  equityCadence?: 'monthly' | 'quarterly' | 'yearly';
 }
 
 export interface Settings {

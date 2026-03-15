@@ -56,8 +56,8 @@ export function generateDemoData() {
   ];
 
   const realEstate: RealEstate[] = [
-    { id: uid(), name: 'Primary Residence', currentValue: 750000, annualGrowthRate: 4 },
-    { id: uid(), name: 'Rental Property', currentValue: 420000, annualGrowthRate: 5 },
+    { id: uid(), name: 'Primary Residence', currentValue: 750000, annualGrowthRate: 4, equity: 300000, additionalEquity: 1200, equityCadence: 'monthly' },
+    { id: uid(), name: 'Rental Property', currentValue: 420000, annualGrowthRate: 5, equity: 180000, additionalEquity: 800, equityCadence: 'monthly' },
   ];
 
   const snapshots: Snapshot[] = [];
@@ -78,7 +78,7 @@ export function generateDemoData() {
         savings: 37000,
         offset: 35000,
         otherAssets: 43000,
-        realEstate: 1170000,
+        realEstate: 480000,
         mortgage: 450000,
       },
     });

@@ -130,8 +130,11 @@ export default function BreakdownScreen() {
       subtitle = `+${formatCurrency(item.monthlyContribution)}/mo`;
     } else if (catKey === 'realEstate') {
       name = item.name;
-      value = item.currentValue;
-      subtitle = item.annualGrowthRate ? `${item.annualGrowthRate}% growth/yr` : '';
+      value = item.equity ?? item.currentValue;
+      const parts: string[] = [];
+      if (item.currentValue) parts.push(`Total: $${item.currentValue.toLocaleString()}`);
+      if (item.annualGrowthRate) parts.push(`${item.annualGrowthRate}% growth/yr`);
+      subtitle = parts.join(' · ');
     } else if (catKey === 'other') {
       name = item.name;
       value = item.value;

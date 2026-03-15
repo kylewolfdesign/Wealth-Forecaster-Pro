@@ -339,7 +339,7 @@ export default function OnboardingScreen() {
       }
       case 'rsus': return { label: 'RSUs', icon: 'layers', items: store.rsuGrants.map(r => ({ id: r.id, name: r.symbol.toUpperCase(), value: formatCurrency(r.totalShares * 0), editType: 'rsu' })), value: formatCurrency(0) };
       case 'other': return { label: 'Assets', icon: 'diamond', items: store.otherAssets.map(a => ({ id: a.id, name: a.name, value: formatCurrency(a.value), editType: 'other' })), value: formatCurrency(store.otherAssets.reduce((s, a) => s + a.value, 0)) };
-      case 'realEstate': return { label: 'Real Estate', icon: 'business', items: store.realEstate.map(r => ({ id: r.id, name: r.name, value: formatCurrency(r.currentValue), editType: 'realEstate' })), value: formatCurrency(store.realEstate.reduce((s, r) => s + r.currentValue, 0)) };
+      case 'realEstate': return { label: 'Real Estate', icon: 'business', items: store.realEstate.map(r => ({ id: r.id, name: r.name, value: formatCurrency(r.equity ?? r.currentValue), editType: 'realEstate' })), value: formatCurrency(store.realEstate.reduce((s, r) => s + (r.equity ?? r.currentValue), 0)) };
       case 'cashSavings': {
         const items = store.cashAccounts;
         return { label: 'Cash / Savings', icon: 'wallet', items: items.map(c => ({ id: c.id, name: c.name, value: formatCurrency(c.balance), editType: 'cash' })), value: formatCurrency(items.reduce((s, c) => s + c.balance, 0)) };

@@ -154,6 +154,17 @@ export const useAppStore = create<AppState>()(
     {
       name: 'networth-app-storage',
       storage: createJSONStorage(() => AsyncStorage),
+      version: 1,
+      migrate: (persistedState, version) => {
+        const state = persistedState as AppState;
+        if (version === 0 && Array.isArray(state.realEstate)) {
+          state.realEstate = state.realEstate.map((r) => ({
+            ...r,
+            equity: r.equity ?? r.currentValue,
+          }));
+        }
+        return state;
+      },
     }
   )
 );

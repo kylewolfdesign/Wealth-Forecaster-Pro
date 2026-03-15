@@ -143,7 +143,11 @@ export default function PortfolioScreen() {
     }
     if (catKey === 'realEstate' && 'currentValue' in item) {
       const r = item as RealEstate;
-      return { name: r.name, value: r.currentValue, subtitle: r.annualGrowthRate ? `${r.annualGrowthRate}% growth/yr` : '' };
+      const equityVal = r.equity ?? r.currentValue;
+      const parts: string[] = [];
+      if (r.currentValue) parts.push(`Total: $${r.currentValue.toLocaleString()}`);
+      if (r.annualGrowthRate) parts.push(`${r.annualGrowthRate}% growth/yr`);
+      return { name: r.name, value: equityVal, subtitle: parts.join(' · ') };
     }
     if (catKey === 'otherAssets' && 'value' in item) {
       const o = item as OtherAsset;

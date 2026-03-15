@@ -102,7 +102,7 @@ export function computeCurrentTotals(
   const savings = savingsAccounts.reduce((sum, c) => sum + c.balance, 0);
   const offset = offsetAccounts.reduce((sum, c) => sum + c.balance, 0);
   const otherTotal = otherAssets.reduce((sum, a) => sum + a.value, 0);
-  const realEstateTotal = realEstate.reduce((sum, r) => sum + r.currentValue, 0);
+  const realEstateTotal = realEstate.reduce((sum, r) => sum + (r.equity ?? r.currentValue), 0);
   const mortgageTotal = mortgages.reduce((sum, m) => sum + m.principalBalance, 0);
 
   const totalAssets = stocks + crypto + rsusVested + rsusUnvested + savings + offset + otherTotal + realEstateTotal;
@@ -230,7 +230,16 @@ export function computeForecast(
     let realEstateVal = 0;
     for (const r of realEstate) {
       const rate = r.annualGrowthRate ?? 0;
-      realEstateVal += growMonthly(r.currentValue, rate, months);
+      const equityBase = r.equity ?? r.currentValue;
+      const addEquity = r.additionalEquity ?? 0;
+      let monthlyContribution = 0;
+      if (addEquity > 0) {
+        const cadence = r.equityCadence ?? 'monthly';
+        if (cadence === 'monthly') monthlyContribution = addEquity;
+        else if (cadence === 'quarterly') monthlyContribution = addEquity / 3;
+        else monthlyContribution = addEquity / 12;
+      }
+      realEstateVal += growWithContributions(equityBase, monthlyContribution, rate, months);
     }
 
     let mortgageVal = 0;

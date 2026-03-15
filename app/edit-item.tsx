@@ -504,6 +504,9 @@ function RealEstateForm({ existing, isEditing, store, saveAndSnapshot, onAction 
   const [name, setName] = useState(existing?.name ?? '');
   const [currentValue, setCurrentValue] = useState(existing?.currentValue?.toString() ?? '');
   const [growth, setGrowth] = useState(existing?.annualGrowthRate?.toString() ?? '');
+  const [equity, setEquity] = useState(existing?.equity?.toString() ?? '');
+  const [additionalEquity, setAdditionalEquity] = useState(existing?.additionalEquity?.toString() ?? '');
+  const [equityCadence, setEquityCadence] = useState<'monthly' | 'quarterly' | 'yearly'>(existing?.equityCadence ?? 'monthly');
 
   const handleSave = () => {
     if (!name.trim() || !currentValue.trim()) {
@@ -515,11 +518,24 @@ function RealEstateForm({ existing, isEditing, store, saveAndSnapshot, onAction 
       Alert.alert('Invalid', 'Please enter a valid current value');
       return;
     }
+    const parsedEquity = equity ? parseFloat(equity) : undefined;
+    if (parsedEquity !== undefined && (!isFinite(parsedEquity) || parsedEquity < 0)) {
+      Alert.alert('Invalid', 'Please enter a valid equity amount');
+      return;
+    }
+    const parsedAdditionalEquity = additionalEquity ? parseFloat(additionalEquity) : undefined;
+    if (parsedAdditionalEquity !== undefined && (!isFinite(parsedAdditionalEquity) || parsedAdditionalEquity < 0)) {
+      Alert.alert('Invalid', 'Please enter a valid additional equity amount');
+      return;
+    }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    const data = {
+    const data: Partial<RealEstate> & { name: string; currentValue: number } = {
       name: name.trim(),
       currentValue: parsedValue,
       annualGrowthRate: growth ? parseFloat(growth) : undefined,
+      equity: parsedEquity,
+      additionalEquity: parsedAdditionalEquity,
+      equityCadence: parsedAdditionalEquity ? equityCadence : undefined,
     };
     if (isEditing && existing) {
       store.updateRealEstate(existing.id, data);
@@ -536,10 +552,24 @@ function RealEstateForm({ existing, isEditing, store, saveAndSnapshot, onAction 
     <View>
       <FieldLabel label="Property name" />
       <DarkInput value={name} onChangeText={setName} placeholder="e.g. Primary Residence" />
-      <FieldLabel label="Current value ($)" />
+      <FieldLabel label="Current total value ($)" />
       <DarkInput value={currentValue} onChangeText={setCurrentValue} keyboardType="numeric" placeholder="0" />
       <FieldLabel label="Annual growth rate % (optional)" />
       <DarkInput value={growth} onChangeText={setGrowth} keyboardType="numeric" placeholder="e.g. 4" />
+      <FieldLabel label="Equity ($)" />
+      <DarkInput value={equity} onChangeText={setEquity} keyboardType="numeric" placeholder="0" />
+      <FieldLabel label="Additional equity added over time ($)" />
+      <DarkInput value={additionalEquity} onChangeText={setAdditionalEquity} keyboardType="numeric" placeholder="e.g. 500" />
+      <FieldLabel label="Cadence" />
+      <NativePicker
+        selectedValue={equityCadence}
+        onValueChange={(val) => setEquityCadence(val as 'monthly' | 'quarterly' | 'yearly')}
+        items={[
+          { label: 'Monthly', value: 'monthly' },
+          { label: 'Quarterly', value: 'quarterly' },
+          { label: 'Yearly', value: 'yearly' },
+        ]}
+      />
     </View>
   );
 }
