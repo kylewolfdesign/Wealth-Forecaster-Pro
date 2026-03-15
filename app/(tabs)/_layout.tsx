@@ -54,8 +54,8 @@ function ClassicTabLayout() {
         name="index"
         options={{
           title: 'Portfolio',
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? 'pie-chart' : 'pie-chart-outline'} size={size} color={color} />
+          tabBarIcon: ({ size, focused }) => (
+            <Ionicons name={focused ? 'pie-chart' : 'pie-chart-outline'} size={size} color={focused ? Colors.primary : Colors.textTertiary} />
           ),
         }}
       />
@@ -69,8 +69,8 @@ function ClassicTabLayout() {
         name="forecast"
         options={{
           title: 'Forecast',
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? 'bar-chart' : 'bar-chart-outline'} size={size} color={color} />
+          tabBarIcon: ({ size, focused }) => (
+            <Ionicons name={focused ? 'bar-chart' : 'bar-chart-outline'} size={size} color={focused ? Colors.primary : Colors.textTertiary} />
           ),
         }}
       />
@@ -84,8 +84,8 @@ function ClassicTabLayout() {
         name="settings"
         options={{
           title: 'Config',
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? 'options' : 'options-outline'} size={size} color={color} />
+          tabBarIcon: ({ size, focused }) => (
+            <Ionicons name={focused ? 'options' : 'options-outline'} size={size} color={focused ? Colors.primary : Colors.textTertiary} />
           ),
         }}
       />
