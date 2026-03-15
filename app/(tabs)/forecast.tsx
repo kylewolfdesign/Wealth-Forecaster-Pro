@@ -30,16 +30,15 @@ export default function ForecastScreen() {
     otherAssets, realEstate, settings, setSettings,
   } = useAppStore();
 
-  const [localSettings, setLocalSettings] = useState({ ...settings });
   const [selectedHorizon, setSelectedHorizon] = useState<string>('10Y');
 
 
   const forecast = useMemo(
     () => computeForecast(
       holdings, rsuGrants, cashAccounts, mortgages, otherAssets,
-      localSettings, 50, realEstate,
+      settings, 50, realEstate,
     ),
-    [holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate, localSettings]
+    [holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate, settings]
   );
 
   const chartData = useMemo(() => {
@@ -75,8 +74,6 @@ export default function ForecastScreen() {
   const handleSettingChange = (key: string, text: string) => {
     const val = parseFloat(text);
     if (!isNaN(val)) {
-      const updated = { ...localSettings, [key]: val };
-      setLocalSettings(updated);
       setSettings({ [key]: val });
     }
   };
@@ -168,32 +165,37 @@ export default function ForecastScreen() {
         <Text style={styles.cardTitle}>Growth Assumptions</Text>
 
         <AssumptionRow
+          key={`stock-${settings.stockGrowthPct}`}
           label="Stocks & ETFs"
-          value={localSettings.stockGrowthPct}
+          value={settings.stockGrowthPct}
           onChangeText={(t) => handleSettingChange('stockGrowthPct', t)}
           color={Colors.categoryStocks}
         />
         <AssumptionRow
+          key={`crypto-${settings.cryptoGrowthPct}`}
           label="Crypto"
-          value={localSettings.cryptoGrowthPct}
+          value={settings.cryptoGrowthPct}
           onChangeText={(t) => handleSettingChange('cryptoGrowthPct', t)}
           color={Colors.categoryCrypto}
         />
         <AssumptionRow
+          key={`rsu-${settings.rsuGrowthPct}`}
           label="RSUs"
-          value={localSettings.rsuGrowthPct}
+          value={settings.rsuGrowthPct}
           onChangeText={(t) => handleSettingChange('rsuGrowthPct', t)}
           color={Colors.categoryRSU}
         />
         <AssumptionRow
+          key={`cash-${settings.cashGrowthPct}`}
           label="Cash / Savings"
-          value={localSettings.cashGrowthPct}
+          value={settings.cashGrowthPct}
           onChangeText={(t) => handleSettingChange('cashGrowthPct', t)}
           color={Colors.categorySavings}
         />
         <AssumptionRow
+          key={`inflation-${settings.inflationPct}`}
           label="Inflation"
-          value={localSettings.inflationPct}
+          value={settings.inflationPct}
           onChangeText={(t) => handleSettingChange('inflationPct', t)}
           color={Colors.textSecondary}
         />
