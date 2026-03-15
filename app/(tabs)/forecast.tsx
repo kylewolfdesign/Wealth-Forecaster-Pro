@@ -1,10 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Platform,
   TextInput, useWindowDimensions, TouchableOpacity,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '@/lib/store';
 import { computeForecast } from '@/lib/calculations';
 import { formatCurrency } from '@/lib/format';
@@ -34,12 +33,6 @@ export default function ForecastScreen() {
   const [localSettings, setLocalSettings] = useState({ ...settings });
   const [selectedHorizon, setSelectedHorizon] = useState<string>('10Y');
 
-  useEffect(() => {
-    const horizon = TIME_HORIZONS.find((h) => h.key === selectedHorizon);
-    if (horizon && !isPro && horizon.years > 10) {
-      setSelectedHorizon('10Y');
-    }
-  }, [isPro, selectedHorizon]);
 
   const forecast = useMemo(
     () => computeForecast(
@@ -91,7 +84,6 @@ export default function ForecastScreen() {
   const handleHorizonSelect = (key: string) => {
     const horizon = TIME_HORIZONS.find((h) => h.key === key);
     if (!horizon) return;
-    if (!isPro && horizon.years > 10) return;
     setSelectedHorizon(key);
   };
 
@@ -122,7 +114,6 @@ export default function ForecastScreen() {
 
       <View style={styles.tabBar}>
         {TIME_HORIZONS.map((h) => {
-          const isLocked = !isPro && h.years > 10;
           const isSelected = selectedHorizon === h.key;
           return (
             <TouchableOpacity
@@ -131,30 +122,19 @@ export default function ForecastScreen() {
               style={[
                 styles.tab,
                 isSelected && styles.tabActive,
-                isLocked && styles.tabLocked,
               ]}
               onPress={() => handleHorizonSelect(h.key)}
-              activeOpacity={isLocked ? 1 : 0.7}
-              disabled={isLocked}
+              activeOpacity={0.7}
               accessibilityRole="button"
-              accessibilityState={{ selected: isSelected, disabled: isLocked }}
-              accessibilityLabel={`${h.label} forecast${isLocked ? ', requires Pro' : ''}`}
+              accessibilityState={{ selected: isSelected }}
+              accessibilityLabel={`${h.label} forecast`}
             >
               <Text style={[
                 styles.tabText,
                 isSelected && styles.tabTextActive,
-                isLocked && styles.tabTextLocked,
               ]}>
                 {h.label}
               </Text>
-              {isLocked && (
-                <Ionicons
-                  name="lock-closed"
-                  size={10}
-                  color={Colors.textTertiary}
-                  style={styles.lockIcon}
-                />
-              )}
             </TouchableOpacity>
           );
         })}
@@ -339,9 +319,6 @@ const styles = StyleSheet.create({
   tabActive: {
     backgroundColor: Colors.primary,
   },
-  tabLocked: {
-    opacity: 0.5,
-  },
   tabText: {
     fontFamily: fontFamily.semibold,
     fontSize: fontSize.sm,
@@ -350,12 +327,6 @@ const styles = StyleSheet.create({
   },
   tabTextActive: {
     color: Colors.white,
-  },
-  tabTextLocked: {
-    color: Colors.textTertiary,
-  },
-  lockIcon: {
-    marginLeft: 3,
   },
   chartCard: { marginBottom: spacing.xl },
   milestoneCard: { marginBottom: spacing.xl },
