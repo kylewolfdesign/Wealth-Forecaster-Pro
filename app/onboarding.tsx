@@ -301,17 +301,20 @@ export default function OnboardingScreen() {
   const handleAddItem = (catKey: CategoryKey) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     let type: string;
+    let category: string | undefined;
     switch (catKey) {
       case 'investments': type = 'holding'; break;
-      case 'crypto': type = 'holding'; break;
+      case 'crypto': type = 'holding'; category = 'crypto'; break;
       case 'rsus': type = 'rsu'; break;
-      case 'savings': type = 'cash'; break;
-      case 'offset': type = 'cash'; break;
+      case 'savings': type = 'cash'; category = 'savings'; break;
+      case 'offset': type = 'cash'; category = 'offset'; break;
       case 'mortgage': type = 'mortgage'; break;
       case 'other': type = 'other'; break;
       default: type = 'holding';
     }
-    router.push({ pathname: '/edit-item', params: { type } });
+    const params: Record<string, string> = { type };
+    if (category) params.category = category;
+    router.push({ pathname: '/edit-item', params });
   };
 
   const handleFinishSetup = () => {

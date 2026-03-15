@@ -65,7 +65,8 @@ export default function EditItemScreen() {
   }, [type, id, store.holdings, store.rsuGrants, store.cashAccounts, store.mortgages, store.otherAssets]);
 
   const isEditing = !!existing;
-  const isCrypto = existing && 'type' in existing ? (existing as Holding).type === 'crypto' : category === 'crypto';
+  const normalizedCategory = Array.isArray(category) ? category[0] : category;
+  const isCrypto = existing && 'type' in existing ? (existing as Holding).type === 'crypto' : normalizedCategory === 'crypto';
 
   const saveAndSnapshot = () => {
     const totals = computeCurrentTotals(
@@ -122,7 +123,7 @@ export default function EditItemScreen() {
 
         {type === 'holding' && <HoldingForm existing={existing as Holding | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} isCrypto={isCrypto} />}
         {type === 'rsu' && <RSUForm existing={existing as RSUGrant | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} />}
-        {type === 'cash' && <CashForm existing={existing as CashAccount | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} defaultCashType={category as 'savings' | 'offset' | undefined} />}
+        {type === 'cash' && <CashForm existing={existing as CashAccount | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} defaultCashType={normalizedCategory as 'savings' | 'offset' | undefined} />}
         {type === 'mortgage' && <MortgageForm existing={existing as Mortgage | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} />}
         {type === 'other' && <OtherForm existing={existing as OtherAsset | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} />}
       </KeyboardAwareScrollViewCompat>
