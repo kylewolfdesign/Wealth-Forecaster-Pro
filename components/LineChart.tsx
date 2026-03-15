@@ -69,8 +69,18 @@ export default function LineChart({
   const toY = (y: number) =>
     padding.top + chartH - ((y - (yMin - yPad)) / (yRange + 2 * yPad)) * chartH;
 
+  const jitterStrength = chartH * 0.012;
+
   const linePath = data
-    .map((d, i) => `${i === 0 ? 'M' : 'L'}${toX(d.x).toFixed(2)},${toY(d.y).toFixed(2)}`)
+    .map((d, i) => {
+      const px = toX(d.x).toFixed(2);
+      let py = toY(d.y);
+      if (i > 0 && i < data.length - 1) {
+        const seed = (i * 7919 + 104729) % 7727;
+        py += ((seed / 7727) - 0.5) * 2 * jitterStrength;
+      }
+      return `${i === 0 ? 'M' : 'L'}${px},${py.toFixed(2)}`;
+    })
     .join(' ');
 
   const firstPoint = data[0];

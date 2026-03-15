@@ -98,11 +98,6 @@ export default function ForecastScreen() {
       contentContainerStyle={[styles.content, { paddingTop: topInset + spacing.lg, paddingBottom: Platform.OS === 'web' ? 84 : 100 }]}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={styles.pageTitle}>Forecast</Text>
-      <Text style={styles.subtitle}>
-        {localSettings.showRealReturns ? 'Real (inflation-adjusted)' : 'Nominal'} projections
-      </Text>
-
       <View style={styles.headlineContainer}>
         <Text style={styles.headlineLabel}>
           Projected Net Worth · {selectedYears}{selectedYears === 1 ? ' Year' : ' Years'}
@@ -111,6 +106,21 @@ export default function ForecastScreen() {
           {headlineValue != null ? formatCurrency(headlineValue) : '--'}
         </Text>
       </View>
+
+      {chartData.length >= 2 && (
+        <View style={styles.chartContainer}>
+          <LineChart
+            data={chartData}
+            width={screenWidth - spacing.xl * 2}
+            height={200}
+            color={Colors.primary}
+            showGrid
+            showLabels
+            formatY={(v) => formatCurrency(v)}
+            highlightEndX={showHighlight ? selectedMonths : undefined}
+          />
+        </View>
+      )}
 
       <View style={styles.tabBar}>
         {TIME_HORIZONS.map((h) => {
@@ -139,21 +149,6 @@ export default function ForecastScreen() {
           );
         })}
       </View>
-
-      {chartData.length >= 2 && (
-        <Card style={styles.chartCard}>
-          <LineChart
-            data={chartData}
-            width={screenWidth - spacing.xl * 2 - spacing.lg * 2}
-            height={200}
-            color={Colors.primary}
-            showGrid
-            showLabels
-            formatY={(v) => formatCurrency(v)}
-            highlightEndX={showHighlight ? selectedMonths : undefined}
-          />
-        </Card>
-      )}
 
       <Card style={styles.milestoneCard}>
         <Text style={styles.cardTitle}>Projected Net Worth</Text>
@@ -274,18 +269,6 @@ const aStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   content: { paddingHorizontal: spacing.xl },
-  pageTitle: {
-    fontFamily: fontFamily.bold,
-    fontSize: fontSize.xxxl,
-    color: Colors.text,
-    marginBottom: spacing.xs,
-  },
-  subtitle: {
-    fontFamily: fontFamily.regular,
-    fontSize: fontSize.sm,
-    color: Colors.textSecondary,
-    marginBottom: spacing.xl,
-  },
   headlineContainer: {
     alignItems: 'center',
     marginBottom: spacing.lg,
@@ -328,7 +311,7 @@ const styles = StyleSheet.create({
   tabTextActive: {
     color: Colors.white,
   },
-  chartCard: { marginBottom: spacing.xl },
+  chartContainer: { marginBottom: spacing.lg },
   milestoneCard: { marginBottom: spacing.xl },
   cardTitle: {
     fontFamily: fontFamily.semibold,
