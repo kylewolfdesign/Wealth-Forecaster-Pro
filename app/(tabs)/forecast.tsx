@@ -109,7 +109,7 @@ export default function ForecastScreen() {
           <LineChart
             data={chartData}
             width={screenWidth - spacing.xl * 2}
-            height={200}
+            height={300}
             color={Colors.primary}
             showGrid
             showLabels
