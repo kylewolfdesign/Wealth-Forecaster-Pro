@@ -60,6 +60,18 @@ export default function BreakdownScreen() {
     }
   };
 
+  const sortedCategories = useMemo(() => {
+    const sorted = [...CATEGORIES].sort((a, b) => {
+      const aVal = Math.abs(getCategoryTotal(a.key));
+      const bVal = Math.abs(getCategoryTotal(b.key));
+      return bVal - aVal;
+    });
+    return sorted.map((cat, i) => ({
+      ...cat,
+      color: Colors.chartPalette[i % Colors.chartPalette.length],
+    }));
+  }, [totals]);
+
   const getItems = (key: string) => {
     switch (key) {
       case 'stocks': return holdings.filter(h => h.type === 'stock');
@@ -180,7 +192,7 @@ export default function BreakdownScreen() {
       <Text style={styles.pageTitle}>Breakdown</Text>
       <Text style={styles.netWorthSub}>Net Worth: {formatCurrency(totals.netWorth)}</Text>
 
-      {CATEGORIES.map((cat) => {
+      {sortedCategories.map((cat) => {
         const items = getItems(cat.key);
         const total = getCategoryTotal(cat.key);
         const isOpen = expanded === cat.key;

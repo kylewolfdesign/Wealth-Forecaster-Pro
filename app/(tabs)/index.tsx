@@ -131,13 +131,25 @@ export default function PortfolioScreen() {
     cashSavings: totals.savings + totals.offset,
   }), [totals]);
 
+  const sortedCategories = useMemo(() => {
+    const sorted = [...CATEGORY_CONFIG].sort((a, b) => {
+      const aVal = Math.abs(categoryValues[a.key] ?? 0);
+      const bVal = Math.abs(categoryValues[b.key] ?? 0);
+      return bVal - aVal;
+    });
+    return sorted.map((cat, i) => ({
+      ...cat,
+      color: Colors.chartPalette[i % Colors.chartPalette.length],
+    }));
+  }, [categoryValues]);
+
   const donutSlices = useMemo(() => {
-    return CATEGORY_CONFIG.map((cat) => ({
+    return sortedCategories.map((cat) => ({
       value: Math.abs(categoryValues[cat.key] ?? 0),
       color: cat.color,
       label: cat.label,
     }));
-  }, [categoryValues]);
+  }, [sortedCategories, categoryValues]);
 
   const getItems = useCallback((key: string): CategoryItem[] => {
     switch (key) {
@@ -297,7 +309,7 @@ export default function PortfolioScreen() {
         <View style={styles.legend}>
           {(() => {
             const totalPositive = Object.values(categoryValues).reduce((s, v) => s + Math.abs(v), 0);
-            return CATEGORY_CONFIG.map((cat) => {
+            return sortedCategories.map((cat) => {
             const val = categoryValues[cat.key] ?? 0;
             if (val === 0) return null;
             const pct = totalPositive > 0 ? Math.round((Math.abs(val) / totalPositive) * 100) : 0;
@@ -314,7 +326,7 @@ export default function PortfolioScreen() {
 
       <Text style={styles.sectionTitle}>Categories</Text>
 
-      {CATEGORY_CONFIG.map((cat) => {
+      {sortedCategories.map((cat) => {
         const items = getItems(cat.key);
         const total = categoryValues[cat.key] ?? 0;
         const isOpen = expandedCategory === cat.key;
@@ -390,7 +402,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'center',
     gap: spacing.sm,
-    marginTop: spacing.lg,
+    marginTop: spacing.lg + 20,
     paddingHorizontal: spacing.md,
   },
   legendItem: {
