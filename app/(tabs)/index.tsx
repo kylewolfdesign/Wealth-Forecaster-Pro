@@ -8,51 +8,48 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useAppStore } from '@/lib/store';
-import { computeCurrentTotals, computeForecast } from '@/lib/calculations';
+import { computeCurrentTotals, computeHoldingValue, computeRSUVesting } from '@/lib/calculations';
+import { getInstantPrice } from '@/lib/price-service';
 import { createSnapshot, shouldTakeSnapshot } from '@/lib/snapshot';
-import { formatCurrency, formatPercent } from '@/lib/format';
+import { formatCurrency, formatPercent, formatShares } from '@/lib/format';
+import { Holding, RSUGrant, CashAccount, Mortgage, OtherAsset } from '@/lib/types';
+import DonutChart from '@/components/DonutChart';
+import TickerLogo from '@/components/TickerLogo';
 import Card from '@/components/Card';
-import LineChart from '@/components/LineChart';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
 
-const DARK_BG = Colors.background;
-const CARD_BG = Colors.surface;
-const BORDER = Colors.border;
-const TEXT_PRIMARY = Colors.text;
-const TEXT_SECONDARY = Colors.textSecondary;
-const TEXT_MUTED = Colors.textTertiary;
+type CategoryItem = Holding | RSUGrant | CashAccount | Mortgage | OtherAsset;
 
-const CATEGORY_CONFIG = [
-  { key: 'stocks', label: 'Stocks/ETFs', color: Colors.categoryStocks, icon: 'trending-up' as const },
-  { key: 'crypto', label: 'Crypto', color: Colors.categoryCrypto, icon: 'logo-bitcoin' as const },
-  { key: 'rsus', label: 'RSUs', color: Colors.categoryRSU, icon: 'layers' as const },
-  { key: 'savings', label: 'Savings', color: Colors.categorySavings, icon: 'wallet' as const },
-  { key: 'offset', label: 'Offset', color: Colors.categoryOffset, icon: 'swap-horizontal' as const },
-  { key: 'otherAssets', label: 'Other', color: Colors.categoryOther, icon: 'diamond' as const },
-  { key: 'mortgage', label: 'Mortgage', color: Colors.categoryMortgage, icon: 'home' as const, isLiability: true },
+interface CategoryConfig {
+  key: string;
+  label: string;
+  color: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  type: string;
+  subType?: string;
+  isLiability?: boolean;
+}
+
+const CATEGORY_CONFIG: CategoryConfig[] = [
+  { key: 'stocks', label: 'Stocks/ETFs', color: Colors.categoryStocks, icon: 'trending-up', type: 'holding', subType: 'stock' },
+  { key: 'crypto', label: 'Crypto', color: Colors.categoryCrypto, icon: 'logo-bitcoin', type: 'holding', subType: 'crypto' },
+  { key: 'rsus', label: 'RSUs', color: Colors.categoryRSU, icon: 'layers', type: 'rsu' },
+  { key: 'savings', label: 'Savings', color: Colors.categorySavings, icon: 'wallet', type: 'cash', subType: 'savings' },
+  { key: 'offset', label: 'Offset', color: Colors.categoryOffset, icon: 'swap-horizontal', type: 'cash', subType: 'offset' },
+  { key: 'otherAssets', label: 'Other', color: Colors.categoryOther, icon: 'diamond', type: 'other' },
+  { key: 'mortgage', label: 'Mortgage', color: Colors.categoryMortgage, icon: 'home', type: 'mortgage', isLiability: true },
 ];
 
-type TimeRange = 'today' | '1y' | '5y' | '10y' | '20y' | '50y';
-
-const TIME_TABS: { key: TimeRange; label: string; years: number }[] = [
-  { key: 'today', label: 'Today', years: 0 },
-  { key: '1y', label: '1 Yr', years: 1 },
-  { key: '5y', label: '5 Yrs', years: 5 },
-  { key: '10y', label: '10 Yrs', years: 10 },
-  { key: '20y', label: '20 Yrs', years: 20 },
-  { key: '50y', label: '50 Yrs', years: 50 },
-];
-
-export default function HomeScreen() {
+export default function PortfolioScreen() {
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
   const {
     onboardingComplete, holdings, rsuGrants, cashAccounts,
-    mortgages, otherAssets, snapshots, addSnapshot, settings, isPro,
+    mortgages, otherAssets, snapshots, addSnapshot,
   } = useAppStore();
 
-  const [selectedRange, setSelectedRange] = useState<TimeRange>('today');
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
   const totals = useMemo(
     () => computeCurrentTotals(holdings, rsuGrants, cashAccounts, mortgages, otherAssets),
@@ -64,38 +61,6 @@ export default function HomeScreen() {
       addSnapshot(createSnapshot(totals));
     }
   }, [onboardingComplete]);
-
-  const selectedTab = TIME_TABS.find((t) => t.key === selectedRange)!;
-
-  const forecast = useMemo(
-    () => computeForecast(
-      holdings, rsuGrants, cashAccounts, mortgages, otherAssets,
-      settings, 50,
-    ),
-    [holdings, rsuGrants, cashAccounts, mortgages, otherAssets, settings]
-  );
-
-  const chartData = useMemo(() => {
-    if (selectedRange === 'today') {
-      if (snapshots.length < 2) {
-        return forecast
-          .filter((p) => p.monthsFromNow <= 12)
-          .map((p) => ({ x: p.monthsFromNow, y: p.netWorth }));
-      }
-      return snapshots.map((s, i) => ({ x: i, y: s.totals.netWorth }));
-    }
-    const maxMonths = selectedTab.years * 12;
-    return forecast
-      .filter((p) => p.monthsFromNow <= maxMonths)
-      .map((p) => ({ x: p.monthsFromNow, y: p.netWorth }));
-  }, [selectedRange, snapshots, forecast, selectedTab]);
-
-  const projectedValue = useMemo(() => {
-    if (selectedRange === 'today') return null;
-    const targetMonths = selectedTab.years * 12;
-    const point = forecast.find((p) => p.monthsFromNow >= targetMonths);
-    return point?.netWorth ?? null;
-  }, [selectedRange, forecast, selectedTab]);
 
   const delta = useMemo(() => {
     if (snapshots.length < 2) return null;
@@ -116,14 +81,44 @@ export default function HomeScreen() {
     mortgage: totals.mortgage,
   }), [totals]);
 
-  const handleAddPress = useCallback(() => {
+  const donutSlices = useMemo(() => {
+    return CATEGORY_CONFIG.map((cat) => ({
+      value: Math.abs(categoryValues[cat.key] ?? 0),
+      color: cat.color,
+      label: cat.label,
+    }));
+  }, [categoryValues]);
+
+  const getItems = useCallback((key: string): CategoryItem[] => {
+    switch (key) {
+      case 'stocks': return holdings.filter(h => h.type === 'stock');
+      case 'crypto': return holdings.filter(h => h.type === 'crypto');
+      case 'rsus': return rsuGrants;
+      case 'savings': return cashAccounts.filter(c => c.type === 'savings');
+      case 'offset': return cashAccounts.filter(c => c.type === 'offset');
+      case 'otherAssets': return otherAssets;
+      case 'mortgage': return mortgages;
+      default: return [];
+    }
+  }, [holdings, rsuGrants, cashAccounts, mortgages, otherAssets]);
+
+  const handleToggle = useCallback((key: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.push('/edit-item?type=holding');
+    setExpandedCategory(prev => prev === key ? null : key);
   }, []);
 
-  const handleTabPress = useCallback((key: TimeRange) => {
+  const handleEdit = useCallback((type: string, id: string, catKey?: string) => {
+    let editType = type;
+    if (catKey === 'stocks' || catKey === 'crypto') editType = 'holding';
+    else if (catKey === 'savings' || catKey === 'offset') editType = 'cash';
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setSelectedRange(key);
+    router.push(`/edit-item?type=${editType}&id=${id}`);
+  }, []);
+
+  const handleAdd = useCallback((type: string, category?: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const params = category ? `type=${type}&category=${category}` : `type=${type}`;
+    router.push(`/edit-item?${params}`);
   }, []);
 
   if (!onboardingComplete) {
@@ -131,8 +126,62 @@ export default function HomeScreen() {
   }
 
   const topInset = Platform.OS === 'web' ? 67 : insets.top;
-  const tileWidth = (screenWidth - spacing.xl * 2 - spacing.md) / 2;
-  const chartWidth = screenWidth - spacing.xl * 2 - spacing.lg * 2;
+  const donutSize = Math.min(screenWidth - spacing.xl * 4, 220);
+
+  const getItemDetails = (catKey: string, item: CategoryItem): { name: string; value: number; subtitle: string; symbol?: string } => {
+    if ((catKey === 'stocks' || catKey === 'crypto') && 'symbol' in item && 'shares' in item) {
+      const h = item as Holding;
+      return { name: h.symbol, value: computeHoldingValue(h), subtitle: `${formatShares(h.shares)} shares`, symbol: h.symbol };
+    }
+    if (catKey === 'rsus' && 'totalShares' in item) {
+      const g = item as RSUGrant;
+      const { vested, unvested } = computeRSUVesting(g, new Date());
+      const price = getInstantPrice(g.symbol, 'stock');
+      return { name: `${g.symbol} RSU`, value: vested * price, subtitle: `${formatShares(vested)} vested / ${formatShares(unvested)} unvested`, symbol: g.symbol };
+    }
+    if ((catKey === 'savings' || catKey === 'offset') && 'balance' in item) {
+      const c = item as CashAccount;
+      return { name: c.name, value: c.balance, subtitle: `+${formatCurrency(c.monthlyContribution)}/mo` };
+    }
+    if (catKey === 'mortgage' && 'principalBalance' in item) {
+      const m = item as Mortgage;
+      return { name: m.name, value: m.principalBalance, subtitle: `${m.annualInterestRate}% rate` };
+    }
+    if (catKey === 'otherAssets' && 'value' in item) {
+      const o = item as OtherAsset;
+      return { name: o.name, value: o.value, subtitle: o.annualGrowthRate ? `${o.annualGrowthRate}% growth/yr` : '' };
+    }
+    return { name: '', value: 0, subtitle: '' };
+  };
+
+  const renderItem = (catKey: string, item: CategoryItem) => {
+    const { name, value, subtitle, symbol } = getItemDetails(catKey, item);
+    const cat = CATEGORY_CONFIG.find(c => c.key === catKey);
+
+    return (
+      <Pressable
+        key={item.id}
+        style={styles.itemRow}
+        onPress={() => handleEdit(cat?.type || 'holding', item.id, catKey)}
+        testID={`item-${item.id}`}
+      >
+        {symbol && (catKey === 'stocks' || catKey === 'crypto' || catKey === 'rsus') && (
+          <TickerLogo
+            symbol={symbol}
+            type={catKey === 'crypto' ? 'crypto' : 'stock'}
+            size={30}
+          />
+        )}
+        <View style={styles.itemInfo}>
+          <Text style={styles.itemName}>{name}</Text>
+          {!!subtitle && <Text style={styles.itemSubtitle}>{subtitle}</Text>}
+        </View>
+        <Text style={[styles.itemValue, catKey === 'mortgage' && styles.liabilityText]}>
+          {catKey === 'mortgage' ? '-' : ''}{formatCurrency(value)}
+        </Text>
+      </Pressable>
+    );
+  };
 
   return (
     <ScrollView
@@ -143,7 +192,7 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <Text style={styles.headerLabel}>Total Net Worth</Text>
         <Text style={styles.netWorthValue}>{formatCurrency(totals.netWorth)}</Text>
-        {delta && selectedRange === 'today' && (
+        {delta && (
           <View style={styles.deltaRow}>
             <View style={[styles.deltaBadge, { backgroundColor: delta.change >= 0 ? 'rgba(18,183,106,0.15)' : 'rgba(240,68,56,0.15)' }]}>
               <Ionicons
@@ -158,82 +207,85 @@ export default function HomeScreen() {
             <Text style={styles.deltaPeriod}>vs last snapshot</Text>
           </View>
         )}
-        {projectedValue !== null && selectedRange !== 'today' && (
-          <View style={styles.projectedRow}>
-            <Text style={styles.projectedLabel}>Projected in {selectedTab.years}yr</Text>
-            <Text style={styles.projectedValue}>{formatCurrency(projectedValue)}</Text>
-          </View>
-        )}
       </View>
 
-      <Card style={styles.chartCard}>
-        <View style={styles.tabBar}>
-          {TIME_TABS.map((tab) => {
-            const active = tab.key === selectedRange;
+      <View style={styles.donutSection}>
+        <DonutChart
+          slices={donutSlices}
+          size={donutSize}
+          strokeWidth={20}
+          centerLabel={formatCurrency(totals.netWorth)}
+          centerSubLabel="Net Worth"
+        />
+        <View style={styles.legend}>
+          {CATEGORY_CONFIG.map((cat) => {
+            const val = categoryValues[cat.key] ?? 0;
+            if (val === 0) return null;
             return (
-              <Pressable
-                key={tab.key}
-                style={[styles.tab, active && styles.tabActive]}
-                onPress={() => handleTabPress(tab.key)}
-              >
-                <Text style={[styles.tabText, active && styles.tabTextActive]}>
-                  {tab.label}
-                </Text>
-              </Pressable>
+              <View key={cat.key} style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: cat.color }]} />
+                <Text style={styles.legendLabel}>{cat.label}</Text>
+              </View>
             );
           })}
         </View>
-
-        {chartData.length >= 2 ? (
-          <LineChart
-            data={chartData}
-            width={chartWidth}
-            height={180}
-            color={selectedRange === 'today' ? (totals.netWorth >= 0 ? Colors.positive : Colors.negative) : Colors.primary}
-            showGrid={selectedRange !== 'today'}
-            showLabels={selectedRange !== 'today'}
-            formatY={(v) => formatCurrency(v)}
-            gridColor={BORDER}
-            labelColor={TEXT_MUTED}
-          />
-        ) : (
-          <View style={[styles.chartPlaceholder, { width: chartWidth, height: 180 }]}>
-            <Ionicons name="analytics-outline" size={32} color={TEXT_MUTED} />
-            <Text style={styles.chartPlaceholderText}>
-              {selectedRange === 'today' ? 'Add assets to see your trend' : 'Add assets to see projections'}
-            </Text>
-          </View>
-        )}
-      </Card>
-
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Categories</Text>
-        <Pressable onPress={handleAddPress} hitSlop={12}>
-          <Ionicons name="add-circle" size={24} color={Colors.primary} />
-        </Pressable>
       </View>
 
-      <View style={styles.tilesGrid}>
-        {CATEGORY_CONFIG.map((cat) => {
-          const val = categoryValues[cat.key] ?? 0;
-          if (val === 0 && cat.key !== 'mortgage') return null;
-          return (
-            <Card
-              key={cat.key}
-              style={[styles.tile, { width: tileWidth }]}
-              onPress={() => router.push(`/breakdown?focus=${cat.key}`)}
+      <Text style={styles.sectionTitle}>Categories</Text>
+
+      {CATEGORY_CONFIG.map((cat) => {
+        const items = getItems(cat.key);
+        const total = categoryValues[cat.key] ?? 0;
+        const isOpen = expandedCategory === cat.key;
+
+        return (
+          <Card key={cat.key} style={styles.categoryCard} noPadding>
+            <Pressable
+              style={styles.categoryHeader}
+              onPress={() => handleToggle(cat.key)}
+              testID={`category-${cat.key}`}
             >
-              <View style={[styles.tileIcon, { backgroundColor: cat.color + '18' }]}>
-                <Ionicons name={cat.icon} size={18} color={cat.color} />
+              <View style={styles.categoryLeft}>
+                <View style={[styles.catIcon, { backgroundColor: cat.color + '18' }]}>
+                  <Ionicons name={cat.icon} size={16} color={cat.color} />
+                </View>
+                <View>
+                  <Text style={styles.categoryLabel}>{cat.label}</Text>
+                  <Text style={styles.categoryCount}>{items.length} item{items.length !== 1 ? 's' : ''}</Text>
+                </View>
               </View>
-              <Text style={styles.tileLabel}>{cat.label}</Text>
-              <Text style={[styles.tileValue, cat.isLiability && styles.liabilityValue]}>
-                {cat.isLiability ? '-' : ''}{formatCurrency(val)}
-              </Text>
-            </Card>
-          );
-        })}
-      </View>
+              <View style={styles.categoryRight}>
+                <Text style={[styles.categoryTotal, cat.isLiability && styles.liabilityText]}>
+                  {cat.isLiability ? '-' : ''}{formatCurrency(total)}
+                </Text>
+                <Ionicons
+                  name={isOpen ? 'chevron-up' : 'chevron-down'}
+                  size={16}
+                  color={Colors.textTertiary}
+                />
+              </View>
+            </Pressable>
+
+            {isOpen && (
+              <View style={styles.categoryBody}>
+                {items.length === 0 ? (
+                  <Text style={styles.emptyText}>No items yet</Text>
+                ) : (
+                  items.map((item) => renderItem(cat.key, item))
+                )}
+                <Pressable
+                  style={styles.addButton}
+                  onPress={() => handleAdd(cat.type, cat.subType)}
+                  testID={`add-${cat.key}`}
+                >
+                  <Ionicons name="add" size={18} color={Colors.primary} />
+                  <Text style={styles.addButtonText}>Add {cat.label}</Text>
+                </Pressable>
+              </View>
+            )}
+          </Card>
+        );
+      })}
     </ScrollView>
   );
 }
@@ -241,7 +293,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DARK_BG,
+    backgroundColor: Colors.background,
   },
   content: {
     paddingHorizontal: spacing.xl,
@@ -254,7 +306,7 @@ const styles = StyleSheet.create({
   headerLabel: {
     fontFamily: fontFamily.medium,
     fontSize: fontSize.xs,
-    color: TEXT_MUTED,
+    color: Colors.textTertiary,
     marginBottom: spacing.xs,
     textTransform: 'uppercase',
     letterSpacing: 1.2,
@@ -262,7 +314,7 @@ const styles = StyleSheet.create({
   netWorthValue: {
     fontFamily: fontFamily.bold,
     fontSize: fontSize.hero,
-    color: TEXT_PRIMARY,
+    color: Colors.text,
     marginBottom: spacing.sm,
   },
   deltaRow: {
@@ -285,111 +337,134 @@ const styles = StyleSheet.create({
   deltaPeriod: {
     fontFamily: fontFamily.regular,
     fontSize: fontSize.xs,
-    color: TEXT_MUTED,
+    color: Colors.textTertiary,
   },
-  projectedRow: {
+  donutSection: {
     alignItems: 'center',
-    gap: 2,
+    marginBottom: spacing.xl,
   },
-  projectedLabel: {
+  legend: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: spacing.md,
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.md,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  legendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  legendLabel: {
     fontFamily: fontFamily.medium,
     fontSize: fontSize.xs,
-    color: TEXT_MUTED,
-  },
-  projectedValue: {
-    fontFamily: fontFamily.bold,
-    fontSize: fontSize.lg,
-    color: Colors.primary,
-  },
-  chartCard: {
-    marginBottom: spacing.xl,
-    paddingBottom: spacing.md,
-    backgroundColor: CARD_BG,
-    borderColor: BORDER,
-  },
-  tabBar: {
-    flexDirection: 'row',
-    backgroundColor: DARK_BG,
-    borderRadius: borderRadius.sm,
-    padding: 3,
-    marginBottom: spacing.lg,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 8,
-    alignItems: 'center',
-    borderRadius: borderRadius.xs,
-  },
-  tabActive: {
-    backgroundColor: BORDER,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  tabText: {
-    fontFamily: fontFamily.medium,
-    fontSize: 11,
-    color: TEXT_MUTED,
-  },
-  tabTextActive: {
-    fontFamily: fontFamily.semibold,
-    color: TEXT_PRIMARY,
-  },
-  chartPlaceholder: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-  },
-  chartPlaceholderText: {
-    fontFamily: fontFamily.regular,
-    fontSize: fontSize.sm,
-    color: TEXT_MUTED,
-    textAlign: 'center',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
+    color: Colors.textSecondary,
   },
   sectionTitle: {
     fontFamily: fontFamily.semibold,
     fontSize: fontSize.md,
-    color: TEXT_PRIMARY,
-    marginBottom: spacing.sm,
+    color: Colors.text,
+    marginBottom: spacing.md,
   },
-  tilesGrid: {
+  categoryCard: {
+    marginBottom: spacing.md,
+  },
+  categoryHeader: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  categoryLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing.md,
   },
-  tile: {
-    padding: spacing.lg,
-    backgroundColor: CARD_BG,
-    borderColor: BORDER,
-  },
-  tileIcon: {
+  catIcon: {
     width: 36,
     height: 36,
-    borderRadius: borderRadius.sm,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.sm,
   },
-  tileLabel: {
-    fontFamily: fontFamily.medium,
+  categoryLabel: {
+    fontFamily: fontFamily.semibold,
+    fontSize: fontSize.md,
+    color: Colors.text,
+  },
+  categoryCount: {
+    fontFamily: fontFamily.regular,
     fontSize: fontSize.xs,
-    color: TEXT_SECONDARY,
-    marginBottom: 2,
+    color: Colors.textTertiary,
   },
-  tileValue: {
+  categoryRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  categoryTotal: {
     fontFamily: fontFamily.bold,
-    fontSize: fontSize.lg,
-    color: TEXT_PRIMARY,
+    fontSize: fontSize.md,
+    color: Colors.text,
   },
-  liabilityValue: {
+  liabilityText: {
     color: Colors.negative,
+  },
+  categoryBody: {
+    borderTopWidth: 1,
+    borderTopColor: Colors.divider,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+  },
+  itemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
+    gap: spacing.sm,
+  },
+  itemInfo: {
+    flex: 1,
+  },
+  itemName: {
+    fontFamily: fontFamily.semibold,
+    fontSize: fontSize.md,
+    color: Colors.text,
+  },
+  itemSubtitle: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.xs,
+    color: Colors.textTertiary,
+    marginTop: 2,
+  },
+  itemValue: {
+    fontFamily: fontFamily.bold,
+    fontSize: fontSize.md,
+    color: Colors.text,
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.md,
+  },
+  addButtonText: {
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.sm,
+    color: Colors.primary,
+  },
+  emptyText: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.sm,
+    color: Colors.textTertiary,
+    textAlign: 'center',
+    paddingVertical: spacing.xl,
   },
 });

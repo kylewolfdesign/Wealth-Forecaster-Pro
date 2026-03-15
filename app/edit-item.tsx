@@ -122,7 +122,7 @@ export default function EditItemScreen() {
 
         {type === 'holding' && <HoldingForm existing={existing as Holding | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} isCrypto={isCrypto} />}
         {type === 'rsu' && <RSUForm existing={existing as RSUGrant | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} />}
-        {type === 'cash' && <CashForm existing={existing as CashAccount | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} />}
+        {type === 'cash' && <CashForm existing={existing as CashAccount | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} defaultCashType={category as 'savings' | 'offset' | undefined} />}
         {type === 'mortgage' && <MortgageForm existing={existing as Mortgage | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} />}
         {type === 'other' && <OtherForm existing={existing as OtherAsset | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} />}
       </KeyboardAwareScrollViewCompat>
@@ -351,8 +351,8 @@ function RSUForm({ existing, isEditing, store, saveAndSnapshot, onAction }: Form
   );
 }
 
-function CashForm({ existing, isEditing, store, saveAndSnapshot, onAction }: FormProps & { existing: CashAccount | null }) {
-  const [cashType, setCashType] = useState<'savings' | 'offset'>(existing?.type ?? 'savings');
+function CashForm({ existing, isEditing, store, saveAndSnapshot, onAction, defaultCashType }: FormProps & { existing: CashAccount | null; defaultCashType?: 'savings' | 'offset' }) {
+  const [cashType, setCashType] = useState<'savings' | 'offset'>(existing?.type ?? defaultCashType ?? 'savings');
   const [name, setName] = useState(existing?.name ?? '');
   const [balance, setBalance] = useState(existing?.balance?.toString() ?? '');
   const [monthly, setMonthly] = useState(existing?.monthlyContribution?.toString() ?? '');

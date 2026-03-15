@@ -11,7 +11,7 @@ function NativeTabLayout() {
     <NativeTabs>
       <NativeTabs.Trigger name="index">
         <Icon sf={{ default: 'house', selected: 'house.fill' }} />
-        <Label>Overview</Label>
+        <Label>Portfolio</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="forecast">
         <Icon sf={{ default: 'chart.line.uptrend.xyaxis', selected: 'chart.line.uptrend.xyaxis' }} />
@@ -53,7 +53,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Overview',
+          title: 'Portfolio',
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons name={focused ? 'home' : 'home-outline'} size={size} color={color} />
           ),
