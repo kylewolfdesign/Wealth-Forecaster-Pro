@@ -10,6 +10,7 @@ import * as Haptics from 'expo-haptics';
 import { useAppStore } from '@/lib/store';
 import { computeCurrentTotals, computeHoldingValue, computeRSUVesting } from '@/lib/calculations';
 import { getInstantPrice } from '@/lib/price-service';
+import { useStockPrices } from '@/hooks/useStockPrices';
 import { createSnapshot, shouldTakeSnapshot } from '@/lib/snapshot';
 import { formatCurrency, formatPercent, formatShares } from '@/lib/format';
 import { Holding, RSUGrant, CashAccount, Mortgage, OtherAsset } from '@/lib/types';
@@ -51,9 +52,18 @@ export default function PortfolioScreen() {
 
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
+  const stockSymbols = useMemo(() => {
+    const syms = new Set<string>();
+    holdings.filter(h => h.type === 'stock').forEach(h => syms.add(h.symbol.toUpperCase()));
+    rsuGrants.forEach(g => syms.add(g.symbol.toUpperCase()));
+    return [...syms];
+  }, [holdings, rsuGrants]);
+
+  const { prices: livePrices } = useStockPrices(stockSymbols);
+
   const totals = useMemo(
     () => computeCurrentTotals(holdings, rsuGrants, cashAccounts, mortgages, otherAssets),
-    [holdings, rsuGrants, cashAccounts, mortgages, otherAssets]
+    [holdings, rsuGrants, cashAccounts, mortgages, otherAssets, livePrices]
   );
 
   useEffect(() => {

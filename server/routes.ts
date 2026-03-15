@@ -55,6 +55,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/price/stock/:symbol", async (req, res) => {
+    const symbol = (req.params.symbol || "").trim().toUpperCase();
+    if (!symbol) {
+      return res.status(400).json({ error: "Symbol is required" });
+    }
+
+    try {
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=1d&interval=1d`;
+
+      const response = await fetch(url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0",
+          Accept: "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        return res.status(404).json({ error: `Price not found for ${symbol}` });
+      }
+
+      const data = await response.json();
+      const meta = data?.chart?.result?.[0]?.meta;
+      const price = meta?.regularMarketPrice;
+
+      if (price == null) {
+        return res.status(404).json({ error: `Price not available for ${symbol}` });
+      }
+
+      return res.json({ symbol, price });
+    } catch {
+      return res.status(500).json({ error: "Failed to fetch price" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

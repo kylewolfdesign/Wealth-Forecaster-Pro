@@ -9,6 +9,7 @@ import * as Haptics from 'expo-haptics';
 import { useAppStore } from '@/lib/store';
 import { computeCurrentTotals, computeHoldingValue, computeRSUVesting } from '@/lib/calculations';
 import { getInstantPrice } from '@/lib/price-service';
+import { useStockPrices } from '@/hooks/useStockPrices';
 import { formatCurrency, formatShares } from '@/lib/format';
 import Card from '@/components/Card';
 import TickerLogo from '@/components/TickerLogo';
@@ -34,9 +35,18 @@ export default function BreakdownScreen() {
     deleteHolding, deleteRSUGrant, deleteCashAccount, deleteMortgage, deleteOtherAsset,
   } = useAppStore();
 
+  const stockSymbols = useMemo(() => {
+    const syms = new Set<string>();
+    holdings.filter(h => h.type === 'stock').forEach(h => syms.add(h.symbol.toUpperCase()));
+    rsuGrants.forEach(g => syms.add(g.symbol.toUpperCase()));
+    return [...syms];
+  }, [holdings, rsuGrants]);
+
+  const { prices: livePrices } = useStockPrices(stockSymbols);
+
   const totals = useMemo(
     () => computeCurrentTotals(holdings, rsuGrants, cashAccounts, mortgages, otherAssets),
-    [holdings, rsuGrants, cashAccounts, mortgages, otherAssets]
+    [holdings, rsuGrants, cashAccounts, mortgages, otherAssets, livePrices]
   );
 
   const getCategoryTotal = (key: string): number => {
