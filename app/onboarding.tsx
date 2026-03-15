@@ -232,10 +232,9 @@ const CATEGORY_OPTIONS = [
   { key: 'investments', label: 'Stocks & ETFs' },
   { key: 'crypto', label: 'Crypto' },
   { key: 'rsus', label: 'RSUs' },
-  { key: 'savings', label: 'Savings' },
-  { key: 'offset', label: 'Offset Account' },
-  { key: 'mortgage', label: 'Mortgage' },
-  { key: 'other', label: 'Other Assets' },
+  { key: 'other', label: 'Assets' },
+  { key: 'realEstate', label: 'Real Estate' },
+  { key: 'cashSavings', label: 'Cash / Savings' },
 ] as const;
 
 type CategoryKey = typeof CATEGORY_OPTIONS[number]['key'];
@@ -306,10 +305,9 @@ export default function OnboardingScreen() {
       case 'investments': type = 'holding'; break;
       case 'crypto': type = 'holding'; category = 'crypto'; break;
       case 'rsus': type = 'rsu'; break;
-      case 'savings': type = 'cash'; category = 'savings'; break;
-      case 'offset': type = 'cash'; category = 'offset'; break;
-      case 'mortgage': type = 'mortgage'; break;
       case 'other': type = 'other'; break;
+      case 'realEstate': type = 'realEstate'; break;
+      case 'cashSavings': type = 'cash'; break;
       default: type = 'holding';
     }
     const params: Record<string, string> = { type };
@@ -340,16 +338,12 @@ export default function OnboardingScreen() {
         return { label: 'Crypto', icon: 'logo-bitcoin', items: items.map(h => ({ id: h.id, name: h.symbol.toUpperCase(), value: formatCurrency((h.manualPrice || 0) * h.shares), editType: 'holding' })), value: formatCurrency(items.reduce((s, h) => s + (h.manualPrice || 0) * h.shares, 0)) };
       }
       case 'rsus': return { label: 'RSUs', icon: 'layers', items: store.rsuGrants.map(r => ({ id: r.id, name: r.symbol.toUpperCase(), value: formatCurrency(r.totalShares * 0), editType: 'rsu' })), value: formatCurrency(0) };
-      case 'savings': {
-        const items = store.cashAccounts.filter(c => c.type === 'savings');
+      case 'other': return { label: 'Assets', icon: 'diamond', items: store.otherAssets.map(a => ({ id: a.id, name: a.name, value: formatCurrency(a.value), editType: 'other' })), value: formatCurrency(store.otherAssets.reduce((s, a) => s + a.value, 0)) };
+      case 'realEstate': return { label: 'Real Estate', icon: 'business', items: store.realEstate.map(r => ({ id: r.id, name: r.name, value: formatCurrency(r.currentValue), editType: 'realEstate' })), value: formatCurrency(store.realEstate.reduce((s, r) => s + r.currentValue, 0)) };
+      case 'cashSavings': {
+        const items = store.cashAccounts;
         return { label: 'Cash / Savings', icon: 'wallet', items: items.map(c => ({ id: c.id, name: c.name, value: formatCurrency(c.balance), editType: 'cash' })), value: formatCurrency(items.reduce((s, c) => s + c.balance, 0)) };
       }
-      case 'offset': {
-        const items = store.cashAccounts.filter(c => c.type === 'offset');
-        return { label: 'Offset Account', icon: 'swap-horizontal', items: items.map(c => ({ id: c.id, name: c.name, value: formatCurrency(c.balance), editType: 'cash' })), value: formatCurrency(items.reduce((s, c) => s + c.balance, 0)) };
-      }
-      case 'mortgage': return { label: 'Mortgage', icon: 'home', items: store.mortgages.map(m => ({ id: m.id, name: m.name, value: formatCurrency(m.principalBalance), editType: 'mortgage' })), value: formatCurrency(store.mortgages.reduce((s, m) => s + m.principalBalance, 0)) };
-      case 'other': return { label: 'Other Assets', icon: 'diamond', items: store.otherAssets.map(a => ({ id: a.id, name: a.name, value: formatCurrency(a.value), editType: 'other' })), value: formatCurrency(store.otherAssets.reduce((s, a) => s + a.value, 0)) };
       default: return { label: '', icon: 'help', items: [], value: '$0' };
     }
   };
@@ -451,9 +445,6 @@ export default function OnboardingScreen() {
                 </Pressable>
               );
             })}
-            <View style={catStyles.chipPlaceholder}>
-              <Text style={catStyles.moreText}>more to come...</Text>
-            </View>
           </View>
         </View>
 
@@ -846,20 +837,6 @@ const catStyles = StyleSheet.create({
   },
   chipTextSelected: {
     color: Colors.white,
-  },
-  chipPlaceholder: {
-    height: 40,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  moreText: {
-    fontFamily: fontFamily.regular,
-    fontSize: 14,
-    color: Colors.textTertiary,
-    letterSpacing: 0.3,
-    lineHeight: 23.8,
   },
   footer: {
     paddingHorizontal: 24,
