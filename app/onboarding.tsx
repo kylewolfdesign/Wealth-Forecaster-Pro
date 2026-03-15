@@ -717,6 +717,8 @@ const introStyles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: 'rgba(107, 57, 244, 0.15)',
+    alignSelf: 'stretch',
+    aspectRatio: 1,
   },
   textSection: {
     gap: spacing.lg,
