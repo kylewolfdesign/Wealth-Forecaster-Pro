@@ -36,17 +36,17 @@ function ClassicTabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: '#6172F3',
-        tabBarInactiveTintColor: '#98A2B3',
+        tabBarInactiveTintColor: '#64748B',
         tabBarStyle: {
           position: 'absolute',
-          backgroundColor: '#FFFFFF',
+          backgroundColor: '#0F172A',
           borderTopWidth: 1,
-          borderTopColor: '#EAECF0',
+          borderTopColor: '#334155',
           elevation: 0,
           ...(isWeb ? { height: 84 } : {}),
         },
         tabBarBackground: () =>
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: '#FFFFFF' }]} />,
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: '#0F172A' }]} />,
         tabBarLabelStyle: {
           fontSize: 10,
           fontWeight: '500',

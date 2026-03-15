@@ -16,6 +16,13 @@ import LineChart from '@/components/LineChart';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
 
+const DARK_BG = '#0F172A';
+const CARD_BG = '#1E293B';
+const BORDER = '#334155';
+const TEXT_PRIMARY = '#F8F9FD';
+const TEXT_SECONDARY = '#94A3B8';
+const TEXT_MUTED = '#64748B';
+
 const CATEGORY_CONFIG = [
   { key: 'stocks', label: 'Stocks/ETFs', color: Colors.categoryStocks, icon: 'trending-up' as const },
   { key: 'crypto', label: 'Crypto', color: Colors.categoryCrypto, icon: 'logo-bitcoin' as const },
@@ -138,7 +145,7 @@ export default function HomeScreen() {
         <Text style={styles.netWorthValue}>{formatCurrency(totals.netWorth)}</Text>
         {delta && selectedRange === 'today' && (
           <View style={styles.deltaRow}>
-            <View style={[styles.deltaBadge, { backgroundColor: delta.change >= 0 ? Colors.positiveLight : Colors.negativeLight }]}>
+            <View style={[styles.deltaBadge, { backgroundColor: delta.change >= 0 ? 'rgba(18,183,106,0.15)' : 'rgba(240,68,56,0.15)' }]}>
               <Ionicons
                 name={delta.change >= 0 ? 'arrow-up' : 'arrow-down'}
                 size={12}
@@ -186,10 +193,12 @@ export default function HomeScreen() {
             showGrid={selectedRange !== 'today'}
             showLabels={selectedRange !== 'today'}
             formatY={(v) => formatCurrency(v)}
+            gridColor={BORDER}
+            labelColor={TEXT_MUTED}
           />
         ) : (
           <View style={[styles.chartPlaceholder, { width: chartWidth, height: 180 }]}>
-            <Ionicons name="analytics-outline" size={32} color={Colors.textTertiary} />
+            <Ionicons name="analytics-outline" size={32} color={TEXT_MUTED} />
             <Text style={styles.chartPlaceholderText}>
               {selectedRange === 'today' ? 'Add assets to see your trend' : 'Add assets to see projections'}
             </Text>
@@ -232,7 +241,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: DARK_BG,
   },
   content: {
     paddingHorizontal: spacing.xl,
@@ -245,7 +254,7 @@ const styles = StyleSheet.create({
   headerLabel: {
     fontFamily: fontFamily.medium,
     fontSize: fontSize.xs,
-    color: Colors.textTertiary,
+    color: TEXT_MUTED,
     marginBottom: spacing.xs,
     textTransform: 'uppercase',
     letterSpacing: 1.2,
@@ -253,7 +262,7 @@ const styles = StyleSheet.create({
   netWorthValue: {
     fontFamily: fontFamily.bold,
     fontSize: fontSize.hero,
-    color: Colors.text,
+    color: TEXT_PRIMARY,
     marginBottom: spacing.sm,
   },
   deltaRow: {
@@ -276,7 +285,7 @@ const styles = StyleSheet.create({
   deltaPeriod: {
     fontFamily: fontFamily.regular,
     fontSize: fontSize.xs,
-    color: Colors.textTertiary,
+    color: TEXT_MUTED,
   },
   projectedRow: {
     alignItems: 'center',
@@ -285,7 +294,7 @@ const styles = StyleSheet.create({
   projectedLabel: {
     fontFamily: fontFamily.medium,
     fontSize: fontSize.xs,
-    color: Colors.textTertiary,
+    color: TEXT_MUTED,
   },
   projectedValue: {
     fontFamily: fontFamily.bold,
@@ -295,10 +304,12 @@ const styles = StyleSheet.create({
   chartCard: {
     marginBottom: spacing.xl,
     paddingBottom: spacing.md,
+    backgroundColor: CARD_BG,
+    borderColor: BORDER,
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: Colors.surfaceSecondary,
+    backgroundColor: DARK_BG,
     borderRadius: borderRadius.sm,
     padding: 3,
     marginBottom: spacing.lg,
@@ -310,21 +321,21 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.xs,
   },
   tabActive: {
-    backgroundColor: Colors.card,
+    backgroundColor: BORDER,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.2,
     shadowRadius: 2,
     elevation: 1,
   },
   tabText: {
     fontFamily: fontFamily.medium,
     fontSize: 11,
-    color: Colors.textTertiary,
+    color: TEXT_MUTED,
   },
   tabTextActive: {
     fontFamily: fontFamily.semibold,
-    color: Colors.text,
+    color: TEXT_PRIMARY,
   },
   chartPlaceholder: {
     alignItems: 'center',
@@ -334,7 +345,7 @@ const styles = StyleSheet.create({
   chartPlaceholderText: {
     fontFamily: fontFamily.regular,
     fontSize: fontSize.sm,
-    color: Colors.textTertiary,
+    color: TEXT_MUTED,
     textAlign: 'center',
   },
   sectionHeader: {
@@ -346,7 +357,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontFamily: fontFamily.semibold,
     fontSize: fontSize.md,
-    color: Colors.text,
+    color: TEXT_PRIMARY,
     marginBottom: spacing.sm,
   },
   tilesGrid: {
@@ -356,6 +367,8 @@ const styles = StyleSheet.create({
   },
   tile: {
     padding: spacing.lg,
+    backgroundColor: CARD_BG,
+    borderColor: BORDER,
   },
   tileIcon: {
     width: 36,
@@ -368,13 +381,13 @@ const styles = StyleSheet.create({
   tileLabel: {
     fontFamily: fontFamily.medium,
     fontSize: fontSize.xs,
-    color: Colors.textSecondary,
+    color: TEXT_SECONDARY,
     marginBottom: 2,
   },
   tileValue: {
     fontFamily: fontFamily.bold,
     fontSize: fontSize.lg,
-    color: Colors.text,
+    color: TEXT_PRIMARY,
   },
   liabilityValue: {
     color: Colors.negative,

@@ -19,6 +19,8 @@ interface LineChartProps {
   showLabels?: boolean;
   formatY?: (val: number) => string;
   compact?: boolean;
+  gridColor?: string;
+  labelColor?: string;
 }
 
 export default function LineChart({
@@ -30,6 +32,8 @@ export default function LineChart({
   showLabels = false,
   formatY,
   compact = false,
+  gridColor,
+  labelColor,
 }: LineChartProps) {
   if (data.length < 2) {
     return (
@@ -93,7 +97,7 @@ export default function LineChart({
                 y1={toY(yVal)}
                 x2={width - padding.right}
                 y2={toY(yVal)}
-                stroke={Colors.borderLight}
+                stroke={gridColor || Colors.borderLight}
                 strokeWidth={1}
               />
               {showLabels && formatY && (
@@ -101,7 +105,7 @@ export default function LineChart({
                   x={padding.left - 8}
                   y={toY(yVal) + 4}
                   textAnchor="end"
-                  fill={Colors.textTertiary}
+                  fill={labelColor || Colors.textTertiary}
                   fontSize={10}
                   fontFamily={fontFamily.regular}
                 >
