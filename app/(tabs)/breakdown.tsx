@@ -87,13 +87,17 @@ export default function BreakdownScreen() {
     else if (catKey === 'crypto') editType = 'holding';
     else if (catKey === 'savings' || catKey === 'offset') editType = 'cash';
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.push(`/edit-item?type=${editType}&id=${id}`);
+    const category = catKey === 'crypto' ? 'crypto' : catKey === 'stocks' ? 'stocks' : '';
+    const categoryParam = category ? `&category=${category}` : '';
+    router.push(`/edit-item?type=${editType}&id=${id}${categoryParam}`);
   }, []);
 
-  const handleAdd = useCallback((type: string) => {
+  const handleAdd = useCallback((type: string, catKey?: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     let addType = type;
-    router.push(`/edit-item?type=${addType}`);
+    const category = catKey === 'crypto' ? 'crypto' : catKey === 'stocks' ? 'stocks' : '';
+    const categoryParam = category ? `&category=${category}` : '';
+    router.push(`/edit-item?type=${addType}${categoryParam}`);
   }, []);
 
   const topInset = Platform.OS === 'web' ? 67 : insets.top;
@@ -210,7 +214,7 @@ export default function BreakdownScreen() {
                 )}
                 <Pressable
                   style={styles.addButton}
-                  onPress={() => handleAdd(cat.type)}
+                  onPress={() => handleAdd(cat.type, cat.key)}
                 >
                   <Ionicons name="add" size={18} color={Colors.primary} />
                   <Text style={styles.addButtonText}>Add {cat.label}</Text>

@@ -45,7 +45,7 @@ interface FormProps {
 }
 
 export default function EditItemScreen() {
-  const { type: rawType, id } = useLocalSearchParams<{ type: string; id?: string }>();
+  const { type: rawType, id, category } = useLocalSearchParams<{ type: string; id?: string; category?: string }>();
   const type = (rawType || 'holding') as EditType;
   const insets = useSafeAreaInsets();
   const store = useAppStore();
@@ -65,6 +65,7 @@ export default function EditItemScreen() {
   }, [type, id, store.holdings, store.rsuGrants, store.cashAccounts, store.mortgages, store.otherAssets]);
 
   const isEditing = !!existing;
+  const isCrypto = existing && 'type' in existing ? (existing as Holding).type === 'crypto' : category === 'crypto';
 
   const saveAndSnapshot = () => {
     const totals = computeCurrentTotals(
@@ -77,7 +78,7 @@ export default function EditItemScreen() {
   const getTitle = () => {
     if (isEditing) return 'Edit';
     switch (type) {
-      case 'holding': return 'Add stock';
+      case 'holding': return isCrypto ? 'Add crypto currencies' : 'Add stock';
       case 'rsu': return 'Add RSU grant';
       case 'cash': return 'Add account';
       case 'mortgage': return 'Add mortgage';
@@ -119,7 +120,7 @@ export default function EditItemScreen() {
         <Text style={s.heading}>{getTitle()}</Text>
         <Text style={s.subtitle}>{getSubtitle()}</Text>
 
-        {type === 'holding' && <HoldingForm existing={existing as Holding | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} />}
+        {type === 'holding' && <HoldingForm existing={existing as Holding | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} isCrypto={isCrypto} />}
         {type === 'rsu' && <RSUForm existing={existing as RSUGrant | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} />}
         {type === 'cash' && <CashForm existing={existing as CashAccount | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} />}
         {type === 'mortgage' && <MortgageForm existing={existing as Mortgage | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} />}
@@ -151,7 +152,7 @@ function useFormAction(
   }, [label, disabled, onAction]);
 }
 
-function HoldingForm({ existing, isEditing, store, saveAndSnapshot, onAction }: FormProps & { existing: Holding | null }) {
+function HoldingForm({ existing, isEditing, store, saveAndSnapshot, onAction, isCrypto }: FormProps & { existing: Holding | null; isCrypto: boolean }) {
   const [symbol, setSymbol] = useState(existing?.symbol ?? '');
   const [shares, setShares] = useState(existing?.shares?.toString() ?? '');
   const [pricePerShare, setPricePerShare] = useState(existing?.manualPrice?.toString() ?? '');
@@ -168,14 +169,14 @@ function HoldingForm({ existing, isEditing, store, saveAndSnapshot, onAction }: 
     }
     setFetchingPrice(true);
     try {
-      const quote = await priceService.getQuote(trimmed, 'stock');
+      const quote = await priceService.getQuote(trimmed, isCrypto ? 'crypto' : 'stock');
       setPricePerShare(quote.price.toString());
     } catch {
       setPricePerShare('');
     } finally {
       setFetchingPrice(false);
     }
-  }, []);
+  }, [isCrypto]);
 
   useEffect(() => {
     if (symbol.trim().length >= 1) {
@@ -198,7 +199,7 @@ function HoldingForm({ existing, isEditing, store, saveAndSnapshot, onAction }: 
     }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     const data: Partial<Holding> = {
-      type: 'stock' as const,
+      type: isCrypto ? 'crypto' as const : 'stock' as const,
       symbol: symbol.toUpperCase().trim(),
       shares: parsedShares,
       manualPrice: parsedPrice,
@@ -216,24 +217,24 @@ function HoldingForm({ existing, isEditing, store, saveAndSnapshot, onAction }: 
     router.back();
   };
 
-  useFormAction(onAction, isEditing ? 'Save changes' : 'Add stock', !symbol.trim() || !shares.trim() || !pricePerShare.trim() || fetchingPrice, handleSave);
+  useFormAction(onAction, isEditing ? 'Save changes' : (isCrypto ? 'Add crypto' : 'Add stock'), !symbol.trim() || !shares.trim() || !pricePerShare.trim() || fetchingPrice, handleSave);
 
   return (
     <View>
-      <FieldLabel label="Stock ticker" />
+      <FieldLabel label={isCrypto ? "Coin ticker" : "Stock ticker"} />
       <TickerInput
         value={symbol}
         onChangeText={setSymbol}
         onSelect={setSymbol}
-        type="stock"
-        placeholder="AAPL"
+        type={isCrypto ? "crypto" : "stock"}
+        placeholder={isCrypto ? "BTC" : "AAPL"}
         darkMode
       />
 
-      <FieldLabel label="Number of shares" />
-      <DarkInput value={shares} onChangeText={setShares} keyboardType="numeric" placeholder="350" />
+      <FieldLabel label={isCrypto ? "Number of coins" : "Number of shares"} />
+      <DarkInput value={shares} onChangeText={setShares} keyboardType="numeric" placeholder={isCrypto ? "2.5" : "350"} />
 
-      <FieldLabel label={fetchingPrice ? "Price per share ($) — loading..." : "Price per share ($)"} />
+      <FieldLabel label={fetchingPrice ? (isCrypto ? "Price per coin ($) — loading..." : "Price per share ($) — loading...") : (isCrypto ? "Price per coin ($)" : "Price per share ($)")} />
       <DarkInput value={pricePerShare} onChangeText={setPricePerShare} keyboardType="numeric" placeholder="—" editable={false} />
 
       <View style={s.toggleSection}>
@@ -253,7 +254,7 @@ function HoldingForm({ existing, isEditing, store, saveAndSnapshot, onAction }: 
 
       {addingMore && (
         <View>
-          <FieldLabel label="Number of shares" />
+          <FieldLabel label={isCrypto ? "Number of coins" : "Number of shares"} />
           <DarkInput value={recurringShares} onChangeText={setRecurringShares} keyboardType="numeric" placeholder="100" />
 
           <FieldLabel label="Cadence" />
