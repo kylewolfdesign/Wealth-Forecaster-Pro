@@ -19,7 +19,7 @@ export default function ForecastScreen() {
   const { width: screenWidth } = useWindowDimensions();
   const {
     holdings, rsuGrants, cashAccounts, mortgages,
-    otherAssets, realEstate, settings, setSettings, isPro,
+    otherAssets, realEstate, settings, setSettings,
   } = useAppStore();
 
   const [localSettings, setLocalSettings] = useState({ ...settings });
@@ -27,9 +27,9 @@ export default function ForecastScreen() {
   const forecast = useMemo(
     () => computeForecast(
       holdings, rsuGrants, cashAccounts, mortgages, otherAssets,
-      localSettings, isPro ? 50 : 10, realEstate,
+      localSettings, 50, realEstate,
     ),
-    [holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate, localSettings, isPro]
+    [holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate, localSettings]
   );
 
   const chartData = useMemo(() => {
@@ -46,10 +46,9 @@ export default function ForecastScreen() {
       return {
         year: yr,
         value: point?.netWorth ?? null,
-        locked: !isPro && yr > 10,
       };
     });
-  }, [forecast, isPro]);
+  }, [forecast]);
 
   const handleSettingChange = (key: string, text: string) => {
     const val = parseFloat(text);
@@ -94,13 +93,9 @@ export default function ForecastScreen() {
             <Text style={styles.milestoneLabel}>
               {m.year} {m.year === 1 ? 'Year' : 'Years'}
             </Text>
-            {m.locked ? (
-              <Text style={styles.lockedText}>Pro</Text>
-            ) : (
-              <Text style={styles.milestoneValue}>
-                {m.value != null ? formatCurrency(m.value) : '--'}
-              </Text>
-            )}
+            <Text style={styles.milestoneValue}>
+              {m.value != null ? formatCurrency(m.value) : '--'}
+            </Text>
           </View>
         ))}
       </Card>
@@ -247,16 +242,6 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bold,
     fontSize: fontSize.lg,
     color: Colors.text,
-  },
-  lockedText: {
-    fontFamily: fontFamily.semibold,
-    fontSize: fontSize.sm,
-    color: Colors.primary,
-    backgroundColor: Colors.primaryLight,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: borderRadius.sm,
-    overflow: 'hidden',
   },
   assumptionsCard: { marginBottom: spacing.xl },
 });

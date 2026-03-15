@@ -14,7 +14,7 @@ import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
-  const { settings, setSettings, loadDemoData, clearAllData, isPro } = useAppStore();
+  const { settings, setSettings, loadDemoData, clearAllData } = useAppStore();
 
   const handleLoadDemo = () => {
     Alert.alert(
@@ -66,25 +66,6 @@ export default function SettingsScreen() {
       showsVerticalScrollIndicator={false}
     >
       <Text style={styles.pageTitle}>Settings</Text>
-
-      {!isPro && (
-        <Card style={styles.proCard}>
-          <View style={styles.proContent}>
-            <View style={styles.proBadge}>
-              <Ionicons name="star" size={16} color={Colors.white} />
-            </View>
-            <View style={styles.proText}>
-              <Text style={styles.proTitle}>Upgrade to Pro</Text>
-              <Text style={styles.proDesc}>
-                Unlock 50-year forecasts, multiple portfolios, and CSV export
-              </Text>
-            </View>
-          </View>
-          <Pressable style={styles.proButton}>
-            <Text style={styles.proButtonText}>Coming Soon</Text>
-          </Pressable>
-        </Card>
-      )}
 
       <Text style={styles.sectionTitle}>Default Growth Rates</Text>
       <Card style={styles.settingsCard}>
@@ -265,49 +246,6 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.medium,
     fontSize: fontSize.md,
     color: Colors.primary,
-  },
-  proCard: {
-    backgroundColor: Colors.primaryDark,
-    marginBottom: spacing.xl,
-  },
-  proContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    marginBottom: spacing.md,
-  },
-  proBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  proText: { flex: 1 },
-  proTitle: {
-    fontFamily: fontFamily.bold,
-    fontSize: fontSize.lg,
-    color: Colors.white,
-  },
-  proDesc: {
-    fontFamily: fontFamily.regular,
-    fontSize: fontSize.xs,
-    color: 'rgba(255,255,255,0.7)',
-    marginTop: 2,
-  },
-  proButton: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: borderRadius.sm,
-    paddingVertical: spacing.sm,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
-  },
-  proButtonText: {
-    fontFamily: fontFamily.semibold,
-    fontSize: fontSize.sm,
-    color: Colors.white,
   },
   versionText: {
     fontFamily: fontFamily.regular,
