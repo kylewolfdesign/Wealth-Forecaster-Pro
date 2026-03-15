@@ -288,6 +288,7 @@ function RSUForm({ existing, isEditing, store, saveAndSnapshot, onAction }: Form
 
   const [sharesPerVest, setSharesPerVest] = useState(existing ? existingSpv.toString() : '');
   const [vestCount, setVestCount] = useState(existing ? existingVests.toString() : '');
+  const [alreadyVested, setAlreadyVested] = useState(existing ? (existing.alreadyVestedShares ?? 0).toString() : '');
   const [nextVestDate, setNextVestDate] = useState(() => {
     if (existing?.vest?.startDate) return existing.vest.startDate;
     const d = new Date();
@@ -308,12 +309,13 @@ function RSUForm({ existing, isEditing, store, saveAndSnapshot, onAction }: Form
     }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     const intervalMonths = freq === 'monthly' ? 1 : freq === 'quarterly' ? 3 : 12;
-    const totalShares = spv * vc + (existing?.alreadyVestedShares ?? 0);
+    const avs = alreadyVested.trim() ? parseInt(alreadyVested) : 0;
+    const totalShares = spv * vc + (isNaN(avs) ? 0 : avs);
     const durationMonths = intervalMonths * vc;
     const data = {
       symbol: symbol.toUpperCase().trim(),
       totalShares,
-      alreadyVestedShares: existing?.alreadyVestedShares ?? 0,
+      alreadyVestedShares: isNaN(avs) ? 0 : avs,
       vest: {
         startDate: nextVestDate,
         cliffMonths: 0,
@@ -350,6 +352,8 @@ function RSUForm({ existing, isEditing, store, saveAndSnapshot, onAction }: Form
       />
       <FieldLabel label="Remaining vests" />
       <DarkInput value={vestCount} onChangeText={setVestCount} keyboardType="numeric" placeholder="e.g. 16" />
+      <FieldLabel label="Already vested shares" />
+      <DarkInput value={alreadyVested} onChangeText={setAlreadyVested} keyboardType="numeric" placeholder="0" />
       <FieldLabel label="Next vest date" />
       <DarkInput value={nextVestDate} onChangeText={setNextVestDate} placeholder="YYYY-MM-DD" />
     </View>

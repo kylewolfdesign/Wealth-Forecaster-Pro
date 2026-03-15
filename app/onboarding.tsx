@@ -1103,6 +1103,7 @@ function RSUStep({ items, setItems }: { items: RSUGrant[]; setItems: (r: RSUGran
   const [sharesPerVest, setSharesPerVest] = useState('');
   const [cadence, setCadence] = useState<'monthly' | 'quarterly' | 'yearly'>('quarterly');
   const [vestCount, setVestCount] = useState('');
+  const [alreadyVested, setAlreadyVested] = useState('');
   const [nextVestDate, setNextVestDate] = useState(() => {
     const d = new Date();
     d.setMonth(d.getMonth() + 1);
@@ -1117,14 +1118,15 @@ function RSUStep({ items, setItems }: { items: RSUGrant[]; setItems: (r: RSUGran
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     const intervalMonths = cadence === 'monthly' ? 1 : cadence === 'quarterly' ? 3 : 12;
-    const totalShares = spv * vc;
+    const avs = alreadyVested.trim() ? parseInt(alreadyVested) : 0;
+    const totalShares = spv * vc + (isNaN(avs) ? 0 : avs);
     const durationMonths = intervalMonths * vc;
 
     setItems([...items, {
       id: Crypto.randomUUID(),
       symbol: symbol.toUpperCase().trim(),
       totalShares,
-      alreadyVestedShares: 0,
+      alreadyVestedShares: isNaN(avs) ? 0 : avs,
       vest: {
         startDate: nextVestDate,
         cliffMonths: 0,
@@ -1135,6 +1137,7 @@ function RSUStep({ items, setItems }: { items: RSUGrant[]; setItems: (r: RSUGran
     setSymbol('');
     setSharesPerVest('');
     setVestCount('');
+    setAlreadyVested('');
   };
 
   const handleRemove = (id: string) => setItems(items.filter(r => r.id !== id));
@@ -1188,6 +1191,16 @@ function RSUStep({ items, setItems }: { items: RSUGrant[]; setItems: (r: RSUGran
         placeholderTextColor={Colors.textTertiary}
       />
 
+      <Text style={formStyles.fieldLabel}>Already vested shares</Text>
+      <TextInput
+        style={formStyles.input}
+        placeholder="0"
+        value={alreadyVested}
+        onChangeText={setAlreadyVested}
+        keyboardType="numeric"
+        placeholderTextColor={Colors.textTertiary}
+      />
+
       <Text style={formStyles.fieldLabel}>Next vest date</Text>
       <TextInput
         style={formStyles.input}
@@ -1205,7 +1218,7 @@ function RSUStep({ items, setItems }: { items: RSUGrant[]; setItems: (r: RSUGran
       {items.map((r) => {
         const intervalMonths = r.vest.frequency === 'monthly' ? 1 : r.vest.frequency === 'quarterly' ? 3 : 12;
         const numVests = Math.round(r.vest.durationMonths / intervalMonths);
-        const spv = numVests > 0 ? Math.round(r.totalShares / numVests) : r.totalShares;
+        const spv = numVests > 0 ? Math.round((r.totalShares - (r.alreadyVestedShares ?? 0)) / numVests) : r.totalShares;
         return (
           <View key={r.id} style={formStyles.itemRow}>
             <TickerLogo
