@@ -297,12 +297,12 @@ export default function PortfolioScreen() {
       contentContainerStyle={[styles.content, { paddingTop: topInset + spacing.sm, paddingBottom: Platform.OS === 'web' ? 84 : 100 }]}
       showsVerticalScrollIndicator={false}
     >
+      <Text style={styles.pageTitle}>Portfolio</Text>
       <View style={styles.donutSection}>
         <DonutChart
           slices={donutSlices}
           size={donutSize}
           strokeWidth={17}
-          segmentStrokeWidth={8}
           centerLabel={formatCurrency(totals.netWorth)}
           centerSubLabel="Net Worth"
         />
@@ -385,6 +385,13 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: spacing.xl,
+  },
+  pageTitle: {
+    fontFamily: fontFamily.bold,
+    fontSize: fontSize.xl,
+    color: Colors.text,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
   },
   donutSection: {
     alignItems: 'center',

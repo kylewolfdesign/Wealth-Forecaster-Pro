@@ -14,7 +14,6 @@ interface DonutChartProps {
   slices: DonutSlice[];
   size: number;
   strokeWidth: number;
-  segmentStrokeWidth?: number;
   centerLabel: string;
   centerSubLabel?: string;
 }
@@ -47,7 +46,7 @@ function describeArc(cx: number, cy: number, r: number, startAngle: number, endA
   return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 1 ${end.x} ${end.y}`;
 }
 
-export default function DonutChart({ slices, size, strokeWidth, segmentStrokeWidth, centerLabel, centerSubLabel }: DonutChartProps) {
+export default function DonutChart({ slices, size, strokeWidth, centerLabel, centerSubLabel }: DonutChartProps) {
   const radius = (size - strokeWidth) / 2;
   const cx = size / 2;
   const cy = size / 2;
@@ -56,11 +55,10 @@ export default function DonutChart({ slices, size, strokeWidth, segmentStrokeWid
   const activeSlices = slices
     .filter(s => Math.abs(s.value) > 0)
     .sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
-  const GAP_DEGREES = activeSlices.length > 1 ? 2.5 : 0;
+  const GAP_DEGREES = activeSlices.length > 1 ? 5 : 0;
   const totalGap = GAP_DEGREES * activeSlices.length;
   const availableDegrees = 360 - totalGap;
 
-  const segmentStroke = segmentStrokeWidth ?? strokeWidth;
   let currentAngle = 0;
 
   return (
@@ -86,9 +84,9 @@ export default function DonutChart({ slices, size, strokeWidth, segmentStrokeWid
                   key={`${slice.label}-${i}`}
                   d={describeArc(cx, cy, radius, startAngle, endAngle)}
                   stroke={slice.color}
-                  strokeWidth={segmentStroke}
+                  strokeWidth={strokeWidth}
                   fill="none"
-                  strokeLinecap="round"
+                  strokeLinecap="butt"
                 />
               );
             })}
