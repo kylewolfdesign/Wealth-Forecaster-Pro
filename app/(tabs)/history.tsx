@@ -1,11 +1,12 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, Platform,
-  Pressable, useWindowDimensions,
+  View, Text, StyleSheet, FlatList, ScrollView, Platform,
+  Pressable, useWindowDimensions, RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '@/lib/store';
+import { useStockPrices } from '@/hooks/useStockPrices';
 import { formatCurrency, formatDate, formatPercent } from '@/lib/format';
 import Card from '@/components/Card';
 import LineChart from '@/components/LineChart';
@@ -18,8 +19,40 @@ type TimeRange = '30d' | '90d' | '365d' | 'all';
 export default function HistoryScreen() {
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
-  const { snapshots } = useAppStore();
+  const { snapshots, holdings, rsuGrants } = useAppStore();
   const [range, setRange] = useState<TimeRange>('30d');
+
+  const { stockSymbols, typedSymbols } = useMemo(() => {
+    const syms = new Set<string>();
+    const typed: { symbol: string; type: 'stock' | 'crypto' }[] = [];
+    holdings.forEach(h => {
+      const upper = h.symbol.toUpperCase();
+      if (!syms.has(upper)) {
+        syms.add(upper);
+        typed.push({ symbol: upper, type: h.type === 'crypto' ? 'crypto' : 'stock' });
+      }
+    });
+    rsuGrants.forEach(g => {
+      const upper = g.symbol.toUpperCase();
+      if (!syms.has(upper)) {
+        syms.add(upper);
+        typed.push({ symbol: upper, type: 'stock' });
+      }
+    });
+    return { stockSymbols: [...syms], typedSymbols: typed };
+  }, [holdings, rsuGrants]);
+
+  const { refetch: refetchPrices } = useStockPrices(stockSymbols, typedSymbols);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refetchPrices();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetchPrices]);
 
   const filteredSnapshots = useMemo(() => {
     const sorted = [...snapshots].sort(
@@ -104,11 +137,23 @@ export default function HistoryScreen() {
       </View>
 
       {filteredSnapshots.length === 0 ? (
-        <View style={styles.emptyState}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={styles.emptyState}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              title="Syncing latest market data..."
+              tintColor={Colors.primary}
+              colors={[Colors.primary]}
+            />
+          }
+        >
           <Ionicons name="time-outline" size={48} color={Colors.textTertiary} />
           <Text style={styles.emptyTitle}>No History Yet</Text>
           <Text style={styles.emptyText}>Snapshots are recorded daily when you open the app</Text>
-        </View>
+        </ScrollView>
       ) : (
         <FlatList
           data={[...filteredSnapshots].reverse()}
@@ -117,6 +162,15 @@ export default function HistoryScreen() {
           contentContainerStyle={[styles.listContent, { paddingBottom: Platform.OS === 'web' ? 84 : 100 }]}
           scrollEnabled={!!filteredSnapshots.length}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              title="Syncing latest market data..."
+              tintColor={Colors.primary}
+              colors={[Colors.primary]}
+            />
+          }
         />
       )}
     </View>

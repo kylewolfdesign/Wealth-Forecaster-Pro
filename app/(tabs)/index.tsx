@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useCallback, useState, useRef } from 'react'
 import {
   View, Text, StyleSheet, ScrollView, Platform,
   Pressable, useWindowDimensions, Alert, Animated, PanResponder,
+  RefreshControl,
 } from 'react-native';
 import { Redirect, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -102,14 +103,37 @@ export default function PortfolioScreen() {
 
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
-  const stockSymbols = useMemo(() => {
+  const { stockSymbols, typedSymbols } = useMemo(() => {
     const syms = new Set<string>();
-    holdings.filter(h => h.type === 'stock').forEach(h => syms.add(h.symbol.toUpperCase()));
-    rsuGrants.forEach(g => syms.add(g.symbol.toUpperCase()));
-    return [...syms];
+    const typed: { symbol: string; type: 'stock' | 'crypto' }[] = [];
+    holdings.forEach(h => {
+      const upper = h.symbol.toUpperCase();
+      if (!syms.has(upper)) {
+        syms.add(upper);
+        typed.push({ symbol: upper, type: h.type === 'crypto' ? 'crypto' : 'stock' });
+      }
+    });
+    rsuGrants.forEach(g => {
+      const upper = g.symbol.toUpperCase();
+      if (!syms.has(upper)) {
+        syms.add(upper);
+        typed.push({ symbol: upper, type: 'stock' });
+      }
+    });
+    return { stockSymbols: [...syms], typedSymbols: typed };
   }, [holdings, rsuGrants]);
 
-  const { prices: livePrices } = useStockPrices(stockSymbols);
+  const { prices: livePrices, refetch: refetchPrices } = useStockPrices(stockSymbols, typedSymbols);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refetchPrices();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetchPrices]);
 
   const totals = useMemo(
     () => computeCurrentTotals(holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate),
@@ -296,6 +320,15 @@ export default function PortfolioScreen() {
       style={styles.container}
       contentContainerStyle={[styles.content, { paddingTop: topInset + spacing.sm, paddingBottom: Platform.OS === 'web' ? 84 : 100 }]}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          title="Syncing latest market data..."
+          tintColor={Colors.primary}
+          colors={[Colors.primary]}
+        />
+      }
     >
       <Text style={styles.pageTitle}>Portfolio</Text>
       <View style={styles.donutSection}>

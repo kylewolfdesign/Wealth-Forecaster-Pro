@@ -33,11 +33,18 @@ const COINGECKO_IDS: Record<string, string> = {
 };
 
 const stockPriceCache = new Map<string, { price: number; fetchedAt: number }>();
+const cryptoPriceCache = new Map<string, { price: number; fetchedAt: number }>();
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
 async function fetchCryptoPrice(symbol: string): Promise<number | null> {
-  const coinId = COINGECKO_IDS[symbol.toUpperCase()];
+  const upper = symbol.toUpperCase();
+  const coinId = COINGECKO_IDS[upper];
   if (!coinId) return null;
+
+  const cached = cryptoPriceCache.get(upper);
+  if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
+    return cached.price;
+  }
 
   try {
     const resp = await fetch(
@@ -46,7 +53,11 @@ async function fetchCryptoPrice(symbol: string): Promise<number | null> {
     );
     if (!resp.ok) return null;
     const data = await resp.json();
-    return data[coinId]?.usd ?? null;
+    const price = data[coinId]?.usd ?? null;
+    if (price !== null) {
+      cryptoPriceCache.set(upper, { price, fetchedAt: Date.now() });
+    }
+    return price;
   } catch {
     return null;
   }
@@ -102,6 +113,30 @@ export async function fetchMultipleStockPrices(symbols: string[]): Promise<Recor
   return results;
 }
 
+export async function fetchMultiplePrices(
+  symbols: { symbol: string; type: 'stock' | 'crypto' }[]
+): Promise<Record<string, number>> {
+  const results: Record<string, number> = {};
+
+  const fetches = symbols.map(async ({ symbol, type }) => {
+    const upper = symbol.toUpperCase();
+    if (type === 'crypto') {
+      const price = await fetchCryptoPrice(upper);
+      if (price != null) {
+        results[upper] = price;
+      }
+    } else {
+      const price = await fetchStockPrice(upper);
+      if (price != null) {
+        results[upper] = price;
+      }
+    }
+  });
+
+  await Promise.all(fetches);
+  return results;
+}
+
 export const priceService: PriceService = {
   async getQuote(symbol: string, type: 'stock' | 'crypto'): Promise<PriceQuote> {
     const now = new Date().toISOString();
@@ -128,13 +163,18 @@ export function getInstantPrice(symbol: string, type: 'stock' | 'crypto', manual
   if (manualPrice != null && manualPrice > 0) return manualPrice;
 
   if (type === 'crypto') {
+    const upper = symbol.toUpperCase();
+    const cached = cryptoPriceCache.get(upper);
+    if (cached) {
+      return cached.price;
+    }
     const coinPrices: Record<string, number> = {
       BTC: 67500, ETH: 3450, SOL: 175, DOGE: 0.165, ADA: 0.62,
       DOT: 7.8, XRP: 0.58, BNB: 605, LTC: 82, LINK: 18.5,
       AVAX: 38, UNI: 12.5, ATOM: 9.2, NEAR: 7.5, APT: 9.8,
       ARB: 1.15, OP: 2.4, SUI: 1.65,
     };
-    return coinPrices[symbol.toUpperCase()] ?? 10;
+    return coinPrices[upper] ?? 10;
   }
 
   const cached = stockPriceCache.get(symbol.toUpperCase());
