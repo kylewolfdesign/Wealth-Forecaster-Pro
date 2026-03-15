@@ -7,6 +7,7 @@ import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
 import TickerLogo from '@/components/TickerLogo';
 import { getApiUrl } from '@/lib/query-client';
+import { US_TICKERS } from '@/data/tickers';
 
 const CRYPTO_TICKERS = [
   { symbol: 'BTC', name: 'Bitcoin' },
@@ -65,6 +66,25 @@ const DARK = {
   dropdownBg: '#1E293B',
 };
 
+function filterLocalTickers(query: string): TickerResult[] {
+  if (!query) return [];
+  const upper = query.toUpperCase().trim();
+  if (!upper) return [];
+
+  const prefixMatches: TickerResult[] = [];
+  const nameMatches: TickerResult[] = [];
+
+  for (const t of US_TICKERS) {
+    if (t.symbol.startsWith(upper)) {
+      prefixMatches.push(t);
+    } else if (t.name.toUpperCase().includes(upper)) {
+      nameMatches.push(t);
+    }
+  }
+
+  return [...prefixMatches, ...nameMatches].slice(0, 8);
+}
+
 function useDebouncedStockSearch(query: string, enabled: boolean) {
   const [results, setResults] = useState<TickerResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -108,7 +128,7 @@ function useDebouncedStockSearch(query: string, enabled: boolean) {
         setResults([]);
         setIsLoading(false);
       }
-    }, 300);
+    }, 400);
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
@@ -131,10 +151,16 @@ export default function TickerInput({
   const [isFocused, setIsFocused] = useState(false);
 
   const needsStockSearch = type === 'stock' || type === 'all';
-  const { results: stockResults, isLoading: stockLoading } = useDebouncedStockSearch(
+  const { results: yahooResults, isLoading: yahooLoading } = useDebouncedStockSearch(
     value,
-    needsStockSearch && isFocused && value.trim().length >= 1
+    needsStockSearch && isFocused && value.trim().length >= 2
   );
+
+  const localStockResults = useMemo(() => {
+    if (type === 'crypto') return [];
+    if (!value.trim() || value.length < 1) return [];
+    return filterLocalTickers(value.trim());
+  }, [value, type]);
 
   const cryptoSuggestions = useMemo(() => {
     if (type === 'stock') return [];
@@ -147,19 +173,41 @@ export default function TickerInput({
     ).slice(0, 6);
   }, [value, type]);
 
+  const stockSuggestions = useMemo(() => {
+    if (type === 'crypto') return [];
+    const seenSymbols = new Set<string>();
+    const merged: TickerResult[] = [];
+
+    for (const item of localStockResults) {
+      if (!seenSymbols.has(item.symbol)) {
+        seenSymbols.add(item.symbol);
+        merged.push(item);
+      }
+    }
+
+    for (const item of yahooResults) {
+      if (!seenSymbols.has(item.symbol)) {
+        seenSymbols.add(item.symbol);
+        merged.push(item);
+      }
+    }
+
+    return merged.slice(0, 8);
+  }, [type, localStockResults, yahooResults]);
+
   const suggestions = useMemo(() => {
     if (type === 'crypto') return cryptoSuggestions;
-    if (type === 'stock') return stockResults;
-    const combined = [...stockResults];
+    if (type === 'stock') return stockSuggestions;
+    const combined = [...stockSuggestions];
     for (const c of cryptoSuggestions) {
       if (!combined.some(s => s.symbol === c.symbol)) {
         combined.push(c);
       }
     }
     return combined.slice(0, 8);
-  }, [type, stockResults, cryptoSuggestions]);
+  }, [type, stockSuggestions, cryptoSuggestions]);
 
-  const isLoading = needsStockSearch && stockLoading && value.trim().length >= 1;
+  const isLoading = needsStockSearch && yahooLoading && value.trim().length >= 2 && localStockResults.length === 0;
   const showSuggestions = isFocused && (suggestions.length > 0 || isLoading);
   const showEmpty = isFocused && !isLoading && value.trim().length >= 1 && suggestions.length === 0;
 
