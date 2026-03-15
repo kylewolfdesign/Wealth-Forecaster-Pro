@@ -33,7 +33,7 @@ interface CategoryConfig {
 }
 
 const CATEGORY_CONFIG: CategoryConfig[] = [
-  { key: 'stocks', label: 'Stocks & ETFs', color: Colors.categoryStocks, icon: 'trending-up', type: 'holding', subType: 'stock' },
+  { key: 'stocks', label: 'Stocks', color: Colors.categoryStocks, icon: 'trending-up', type: 'holding', subType: 'stock' },
   { key: 'crypto', label: 'Crypto', color: Colors.categoryCrypto, icon: 'logo-bitcoin', type: 'holding', subType: 'crypto' },
   { key: 'rsus', label: 'RSUs', color: Colors.categoryRSU, icon: 'layers', type: 'rsu' },
   { key: 'otherAssets', label: 'Assets', color: Colors.categoryOther, icon: 'diamond', type: 'other' },
@@ -285,25 +285,30 @@ export default function PortfolioScreen() {
       contentContainerStyle={[styles.content, { paddingTop: topInset + spacing.sm, paddingBottom: Platform.OS === 'web' ? 84 : 100 }]}
       showsVerticalScrollIndicator={false}
     >
+      <Text style={styles.pageTitle}>Portfolio</Text>
       <View style={styles.donutSection}>
         <DonutChart
           slices={donutSlices}
           size={donutSize}
-          strokeWidth={20}
+          strokeWidth={34}
           centerLabel={formatCurrency(totals.netWorth)}
           centerSubLabel="Net Worth"
         />
         <View style={styles.legend}>
-          {CATEGORY_CONFIG.map((cat) => {
+          {(() => {
+            const totalPositive = Object.values(categoryValues).reduce((s, v) => s + Math.abs(v), 0);
+            return CATEGORY_CONFIG.map((cat) => {
             const val = categoryValues[cat.key] ?? 0;
             if (val === 0) return null;
+            const pct = totalPositive > 0 ? Math.round((Math.abs(val) / totalPositive) * 100) : 0;
             return (
               <View key={cat.key} style={styles.legendItem}>
                 <View style={[styles.legendDot, { backgroundColor: cat.color }]} />
-                <Text style={styles.legendLabel}>{cat.label}</Text>
+                <Text style={styles.legendLabel}>{cat.label} {pct}%</Text>
               </View>
             );
-          })}
+          });
+          })()}
         </View>
       </View>
 
@@ -315,20 +320,14 @@ export default function PortfolioScreen() {
         const isOpen = expandedCategory === cat.key;
 
         return (
-          <Card key={cat.key} style={styles.categoryCard} noPadding>
+          <Card key={cat.key} style={[styles.categoryCard, { borderLeftWidth: 4, borderLeftColor: cat.color }]} noPadding>
             <Pressable
               style={styles.categoryHeader}
               onPress={() => handleToggle(cat.key)}
               testID={`category-${cat.key}`}
             >
               <View style={styles.categoryLeft}>
-                <View style={[styles.catIcon, { backgroundColor: cat.color + '18' }]}>
-                  <Ionicons name={cat.icon} size={16} color={cat.color} />
-                </View>
-                <View>
-                  <Text style={styles.categoryLabel}>{cat.label}</Text>
-                  <Text style={styles.categoryCount}>{items.length} item{items.length !== 1 ? 's' : ''}</Text>
-                </View>
+                <Text style={styles.categoryLabel}>{cat.label}</Text>
               </View>
               <View style={styles.categoryRight}>
                 <Text style={styles.categoryTotal}>
@@ -375,6 +374,13 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: spacing.xl,
   },
+  pageTitle: {
+    fontFamily: fontFamily.bold,
+    fontSize: fontSize.xl,
+    color: Colors.text,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+  },
   donutSection: {
     alignItems: 'center',
     marginBottom: spacing.xl,
@@ -383,7 +389,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: spacing.md,
+    gap: spacing.sm,
     marginTop: spacing.lg,
     paddingHorizontal: spacing.md,
   },
@@ -391,11 +397,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
+    backgroundColor: Colors.surface,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 6,
   },
   legendDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   legendLabel: {
     fontFamily: fontFamily.medium,
@@ -420,24 +430,11 @@ const styles = StyleSheet.create({
   categoryLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-  },
-  catIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   categoryLabel: {
     fontFamily: fontFamily.semibold,
     fontSize: fontSize.md,
     color: Colors.text,
-  },
-  categoryCount: {
-    fontFamily: fontFamily.regular,
-    fontSize: fontSize.xs,
-    color: Colors.textTertiary,
   },
   categoryRight: {
     flexDirection: 'row',

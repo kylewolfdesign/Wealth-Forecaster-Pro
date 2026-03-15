@@ -52,8 +52,8 @@ export default function DonutChart({ slices, size, strokeWidth, centerLabel, cen
   const cy = size / 2;
 
   const total = slices.reduce((sum, s) => sum + Math.abs(s.value), 0);
-  const GAP_DEGREES = slices.filter(s => Math.abs(s.value) > 0).length > 1 ? 2 : 0;
   const activeSlices = slices.filter(s => Math.abs(s.value) > 0);
+  const GAP_DEGREES = activeSlices.length > 1 ? 4 : 0;
   const totalGap = GAP_DEGREES * activeSlices.length;
   const availableDegrees = 360 - totalGap;
 
@@ -63,15 +63,13 @@ export default function DonutChart({ slices, size, strokeWidth, centerLabel, cen
     <View style={[styles.container, { width: size, height: size }]}>
       <Svg width={size} height={size}>
         <G>
-          {total === 0 ? (
-            <Path
-              d={describeArc(cx, cy, radius, 0, 359.99)}
-              stroke={Colors.border}
-              strokeWidth={strokeWidth}
-              fill="none"
-              strokeLinecap="round"
-            />
-          ) : (
+          <Path
+            d={describeArc(cx, cy, radius, 0, 359.99)}
+            stroke={Colors.border}
+            strokeWidth={strokeWidth}
+            fill="none"
+          />
+          {total > 0 &&
             activeSlices.map((slice, i) => {
               const proportion = Math.abs(slice.value) / total;
               const sweepAngle = proportion * availableDegrees;
@@ -89,8 +87,7 @@ export default function DonutChart({ slices, size, strokeWidth, centerLabel, cen
                   strokeLinecap="round"
                 />
               );
-            })
-          )}
+            })}
         </G>
       </Svg>
       <View style={styles.centerContent}>
