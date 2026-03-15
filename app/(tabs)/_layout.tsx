@@ -10,19 +10,15 @@ function NativeTabLayout() {
     <NativeTabs>
       <NativeTabs.Trigger name="index">
         <Icon sf={{ default: 'house', selected: 'house.fill' }} />
-        <Label>Home</Label>
+        <Label>Overview</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="breakdown">
-        <Icon sf={{ default: 'chart.pie', selected: 'chart.pie.fill' }} />
-        <Label>Breakdown</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="history">
-        <Icon sf={{ default: 'clock', selected: 'clock.fill' }} />
-        <Label>History</Label>
+      <NativeTabs.Trigger name="forecast">
+        <Icon sf={{ default: 'chart.line.uptrend.xyaxis', selected: 'chart.line.uptrend.xyaxis' }} />
+        <Label>Forecast</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="settings">
-        <Icon sf={{ default: 'gearshape', selected: 'gearshape.fill' }} />
-        <Label>Settings</Label>
+        <Icon sf={{ default: 'person', selected: 'person.fill' }} />
+        <Label>Profile</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );
@@ -56,7 +52,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: 'Overview',
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons name={focused ? 'home' : 'home-outline'} size={size} color={color} />
           ),
@@ -65,33 +61,30 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="breakdown"
         options={{
-          title: 'Breakdown',
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? 'pie-chart' : 'pie-chart-outline'} size={size} color={color} />
-          ),
+          href: null,
         }}
       />
       <Tabs.Screen
         name="forecast"
         options={{
-          href: null,
+          title: 'Forecast',
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'trending-up' : 'trending-up-outline'} size={size} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="history"
         options={{
-          title: 'History',
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? 'time' : 'time-outline'} size={size} color={color} />
-          ),
+          href: null,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'Settings',
+          title: 'Profile',
           tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? 'settings' : 'settings-outline'} size={size} color={color} />
+            <Ionicons name={focused ? 'person' : 'person-outline'} size={size} color={color} />
           ),
         }}
       />
