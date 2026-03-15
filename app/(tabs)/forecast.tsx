@@ -19,7 +19,7 @@ export default function ForecastScreen() {
   const { width: screenWidth } = useWindowDimensions();
   const {
     holdings, rsuGrants, cashAccounts, mortgages,
-    otherAssets, settings, setSettings, isPro,
+    otherAssets, realEstate, settings, setSettings, isPro,
   } = useAppStore();
 
   const [localSettings, setLocalSettings] = useState({ ...settings });
@@ -27,9 +27,9 @@ export default function ForecastScreen() {
   const forecast = useMemo(
     () => computeForecast(
       holdings, rsuGrants, cashAccounts, mortgages, otherAssets,
-      localSettings, isPro ? 50 : 10,
+      localSettings, isPro ? 50 : 10, realEstate,
     ),
-    [holdings, rsuGrants, cashAccounts, mortgages, otherAssets, localSettings, isPro]
+    [holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate, localSettings, isPro]
   );
 
   const chartData = useMemo(() => {
@@ -109,7 +109,7 @@ export default function ForecastScreen() {
         <Text style={styles.cardTitle}>Growth Assumptions</Text>
 
         <AssumptionRow
-          label="Stocks/ETFs"
+          label="Stocks & ETFs"
           value={localSettings.stockGrowthPct}
           onChangeText={(t) => handleSettingChange('stockGrowthPct', t)}
           color={Colors.categoryStocks}
@@ -127,7 +127,7 @@ export default function ForecastScreen() {
           color={Colors.categoryRSU}
         />
         <AssumptionRow
-          label="Cash/Savings"
+          label="Cash / Savings"
           value={localSettings.cashGrowthPct}
           onChangeText={(t) => handleSettingChange('cashGrowthPct', t)}
           color={Colors.categorySavings}

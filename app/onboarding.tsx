@@ -322,7 +322,7 @@ export default function OnboardingScreen() {
     store.completeOnboarding();
     const totals = computeCurrentTotals(
       store.holdings, store.rsuGrants, store.cashAccounts,
-      store.mortgages, store.otherAssets,
+      store.mortgages, store.otherAssets, store.realEstate,
     );
     store.addSnapshot(createSnapshot(totals));
     router.replace('/(tabs)');

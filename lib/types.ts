@@ -49,6 +49,13 @@ export interface OtherAsset {
   annualGrowthRate?: number;
 }
 
+export interface RealEstate {
+  id: string;
+  name: string;
+  currentValue: number;
+  annualGrowthRate?: number;
+}
+
 export interface Settings {
   stockGrowthPct: number;
   cryptoGrowthPct: number;
@@ -67,6 +74,7 @@ export interface SnapshotTotals {
   savings: number;
   offset: number;
   otherAssets: number;
+  realEstate: number;
   mortgage: number;
 }
 
@@ -88,11 +96,12 @@ export interface ForecastPoint {
     savings: number;
     offset: number;
     otherAssets: number;
+    realEstate: number;
     mortgage: number;
   };
 }
 
-export type ItemType = 'holding' | 'rsu' | 'cash' | 'mortgage' | 'other';
+export type ItemType = 'holding' | 'rsu' | 'cash' | 'mortgage' | 'other' | 'realEstate';
 
 export const DEFAULT_SETTINGS: Settings = {
   stockGrowthPct: 10,

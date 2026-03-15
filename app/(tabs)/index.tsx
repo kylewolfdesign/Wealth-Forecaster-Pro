@@ -13,14 +13,14 @@ import { getInstantPrice } from '@/lib/price-service';
 import { useStockPrices } from '@/hooks/useStockPrices';
 import { createSnapshot, shouldTakeSnapshot } from '@/lib/snapshot';
 import { formatCurrency, formatPercent, formatShares } from '@/lib/format';
-import { Holding, RSUGrant, CashAccount, Mortgage, OtherAsset } from '@/lib/types';
+import { Holding, RSUGrant, CashAccount, Mortgage, OtherAsset, RealEstate } from '@/lib/types';
 import DonutChart from '@/components/DonutChart';
 import TickerLogo from '@/components/TickerLogo';
 import Card from '@/components/Card';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
 
-type CategoryItem = Holding | RSUGrant | CashAccount | Mortgage | OtherAsset;
+type CategoryItem = Holding | RSUGrant | CashAccount | Mortgage | OtherAsset | RealEstate;
 
 interface CategoryConfig {
   key: string;
@@ -33,13 +33,12 @@ interface CategoryConfig {
 }
 
 const CATEGORY_CONFIG: CategoryConfig[] = [
-  { key: 'stocks', label: 'Stocks/ETFs', color: Colors.categoryStocks, icon: 'trending-up', type: 'holding', subType: 'stock' },
+  { key: 'stocks', label: 'Stocks & ETFs', color: Colors.categoryStocks, icon: 'trending-up', type: 'holding', subType: 'stock' },
   { key: 'crypto', label: 'Crypto', color: Colors.categoryCrypto, icon: 'logo-bitcoin', type: 'holding', subType: 'crypto' },
   { key: 'rsus', label: 'RSUs', color: Colors.categoryRSU, icon: 'layers', type: 'rsu' },
-  { key: 'savings', label: 'Savings', color: Colors.categorySavings, icon: 'wallet', type: 'cash', subType: 'savings' },
-  { key: 'offset', label: 'Offset', color: Colors.categoryOffset, icon: 'swap-horizontal', type: 'cash', subType: 'offset' },
-  { key: 'otherAssets', label: 'Other', color: Colors.categoryOther, icon: 'diamond', type: 'other' },
-  { key: 'mortgage', label: 'Mortgage', color: Colors.categoryMortgage, icon: 'home', type: 'mortgage', isLiability: true },
+  { key: 'otherAssets', label: 'Assets', color: Colors.categoryOther, icon: 'diamond', type: 'other' },
+  { key: 'realEstate', label: 'Real Estate', color: Colors.categoryRealEstate, icon: 'business', type: 'realEstate' },
+  { key: 'cashSavings', label: 'Cash / Savings', color: Colors.categorySavings, icon: 'wallet', type: 'cash' },
 ];
 
 export default function PortfolioScreen() {
@@ -47,7 +46,7 @@ export default function PortfolioScreen() {
   const { width: screenWidth } = useWindowDimensions();
   const {
     onboardingComplete, holdings, rsuGrants, cashAccounts,
-    mortgages, otherAssets, snapshots, addSnapshot,
+    mortgages, otherAssets, realEstate, snapshots, addSnapshot,
   } = useAppStore();
 
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
@@ -62,8 +61,8 @@ export default function PortfolioScreen() {
   const { prices: livePrices } = useStockPrices(stockSymbols);
 
   const totals = useMemo(
-    () => computeCurrentTotals(holdings, rsuGrants, cashAccounts, mortgages, otherAssets),
-    [holdings, rsuGrants, cashAccounts, mortgages, otherAssets, livePrices]
+    () => computeCurrentTotals(holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate),
+    [holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate, livePrices]
   );
 
   useEffect(() => {
@@ -85,10 +84,9 @@ export default function PortfolioScreen() {
     stocks: totals.stocks,
     crypto: totals.crypto,
     rsus: totals.rsusVested + totals.rsusUnvested,
-    savings: totals.savings,
-    offset: totals.offset,
     otherAssets: totals.otherAssets,
-    mortgage: totals.mortgage,
+    realEstate: totals.realEstate,
+    cashSavings: totals.savings + totals.offset,
   }), [totals]);
 
   const donutSlices = useMemo(() => {
@@ -104,13 +102,12 @@ export default function PortfolioScreen() {
       case 'stocks': return holdings.filter(h => h.type === 'stock');
       case 'crypto': return holdings.filter(h => h.type === 'crypto');
       case 'rsus': return rsuGrants;
-      case 'savings': return cashAccounts.filter(c => c.type === 'savings');
-      case 'offset': return cashAccounts.filter(c => c.type === 'offset');
       case 'otherAssets': return otherAssets;
-      case 'mortgage': return mortgages;
+      case 'realEstate': return realEstate;
+      case 'cashSavings': return cashAccounts;
       default: return [];
     }
-  }, [holdings, rsuGrants, cashAccounts, mortgages, otherAssets]);
+  }, [holdings, rsuGrants, cashAccounts, otherAssets, realEstate]);
 
   const handleToggle = useCallback((key: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -120,7 +117,7 @@ export default function PortfolioScreen() {
   const handleEdit = useCallback((type: string, id: string, catKey?: string) => {
     let editType = type;
     if (catKey === 'stocks' || catKey === 'crypto') editType = 'holding';
-    else if (catKey === 'savings' || catKey === 'offset') editType = 'cash';
+    else if (catKey === 'cashSavings') editType = 'cash';
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push(`/edit-item?type=${editType}&id=${id}`);
   }, []);
@@ -149,13 +146,13 @@ export default function PortfolioScreen() {
       const price = getInstantPrice(g.symbol, 'stock');
       return { name: `${g.symbol} RSU`, value: vested * price, subtitle: `${formatShares(vested)} vested / ${formatShares(unvested)} unvested`, symbol: g.symbol };
     }
-    if ((catKey === 'savings' || catKey === 'offset') && 'balance' in item) {
+    if (catKey === 'cashSavings' && 'balance' in item) {
       const c = item as CashAccount;
       return { name: c.name, value: c.balance, subtitle: `+${formatCurrency(c.monthlyContribution)}/mo` };
     }
-    if (catKey === 'mortgage' && 'principalBalance' in item) {
-      const m = item as Mortgage;
-      return { name: m.name, value: m.principalBalance, subtitle: `${m.annualInterestRate}% rate` };
+    if (catKey === 'realEstate' && 'currentValue' in item) {
+      const r = item as RealEstate;
+      return { name: r.name, value: r.currentValue, subtitle: r.annualGrowthRate ? `${r.annualGrowthRate}% growth/yr` : '' };
     }
     if (catKey === 'otherAssets' && 'value' in item) {
       const o = item as OtherAsset;
@@ -186,8 +183,8 @@ export default function PortfolioScreen() {
           <Text style={styles.itemName}>{name}</Text>
           {!!subtitle && <Text style={styles.itemSubtitle}>{subtitle}</Text>}
         </View>
-        <Text style={[styles.itemValue, catKey === 'mortgage' && styles.liabilityText]}>
-          {catKey === 'mortgage' ? '-' : ''}{formatCurrency(value)}
+        <Text style={styles.itemValue}>
+          {formatCurrency(value)}
         </Text>
       </Pressable>
     );
@@ -265,8 +262,8 @@ export default function PortfolioScreen() {
                 </View>
               </View>
               <View style={styles.categoryRight}>
-                <Text style={[styles.categoryTotal, cat.isLiability && styles.liabilityText]}>
-                  {cat.isLiability ? '-' : ''}{formatCurrency(total)}
+                <Text style={styles.categoryTotal}>
+                  {formatCurrency(total)}
                 </Text>
                 <Ionicons
                   name={isOpen ? 'chevron-up' : 'chevron-down'}

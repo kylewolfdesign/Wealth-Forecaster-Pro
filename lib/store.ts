@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  Holding, RSUGrant, CashAccount, Mortgage, OtherAsset,
+  Holding, RSUGrant, CashAccount, Mortgage, OtherAsset, RealEstate,
   Settings, Snapshot, DEFAULT_SETTINGS,
 } from './types';
 import { generateDemoData } from './demo-data';
@@ -13,6 +13,7 @@ export interface AppState {
   cashAccounts: CashAccount[];
   mortgages: Mortgage[];
   otherAssets: OtherAsset[];
+  realEstate: RealEstate[];
   snapshots: Snapshot[];
   settings: Settings;
   onboardingComplete: boolean;
@@ -38,6 +39,10 @@ export interface AppState {
   updateOtherAsset: (id: string, a: Partial<OtherAsset>) => void;
   deleteOtherAsset: (id: string) => void;
 
+  addRealEstate: (r: RealEstate) => void;
+  updateRealEstate: (id: string, r: Partial<RealEstate>) => void;
+  deleteRealEstate: (id: string) => void;
+
   addSnapshot: (s: Snapshot) => void;
 
   setSettings: (s: Partial<Settings>) => void;
@@ -54,6 +59,7 @@ export const useAppStore = create<AppState>()(
       cashAccounts: [],
       mortgages: [],
       otherAssets: [],
+      realEstate: [],
       snapshots: [],
       settings: { ...DEFAULT_SETTINGS },
       onboardingComplete: false,
@@ -96,6 +102,14 @@ export const useAppStore = create<AppState>()(
       deleteOtherAsset: (id) =>
         set((s) => ({ otherAssets: s.otherAssets.filter((a) => a.id !== id) })),
 
+      addRealEstate: (r) => set((s) => ({ realEstate: [...s.realEstate, r] })),
+      updateRealEstate: (id, updates) =>
+        set((s) => ({
+          realEstate: s.realEstate.map((r) => (r.id === id ? { ...r, ...updates } : r)),
+        })),
+      deleteRealEstate: (id) =>
+        set((s) => ({ realEstate: s.realEstate.filter((r) => r.id !== id) })),
+
       addSnapshot: (snapshot) =>
         set((s) => {
           const existing = s.snapshots.filter(
@@ -117,6 +131,7 @@ export const useAppStore = create<AppState>()(
           cashAccounts: demo.cashAccounts,
           mortgages: demo.mortgages,
           otherAssets: demo.otherAssets,
+          realEstate: demo.realEstate,
           snapshots: demo.snapshots,
           onboardingComplete: true,
         });
@@ -129,6 +144,7 @@ export const useAppStore = create<AppState>()(
           cashAccounts: [],
           mortgages: [],
           otherAssets: [],
+          realEstate: [],
           snapshots: [],
           settings: { ...DEFAULT_SETTINGS },
           onboardingComplete: false,

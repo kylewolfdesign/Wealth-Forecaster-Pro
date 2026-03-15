@@ -1,5 +1,5 @@
 import * as Crypto from 'expo-crypto';
-import { Holding, RSUGrant, CashAccount, Mortgage, OtherAsset, Snapshot } from './types';
+import { Holding, RSUGrant, CashAccount, Mortgage, OtherAsset, RealEstate, Snapshot } from './types';
 
 function uid(): string {
   return Crypto.randomUUID();
@@ -55,6 +55,11 @@ export function generateDemoData() {
     { id: uid(), name: 'Art Collection', value: 15000, annualGrowthRate: 5 },
   ];
 
+  const realEstate: RealEstate[] = [
+    { id: uid(), name: 'Primary Residence', currentValue: 750000, annualGrowthRate: 4 },
+    { id: uid(), name: 'Rental Property', currentValue: 420000, annualGrowthRate: 5 },
+  ];
+
   const snapshots: Snapshot[] = [];
   for (let i = 30; i >= 0; i--) {
     const d = new Date(now);
@@ -73,10 +78,11 @@ export function generateDemoData() {
         savings: 37000,
         offset: 35000,
         otherAssets: 43000,
+        realEstate: 1170000,
         mortgage: 450000,
       },
     });
   }
 
-  return { holdings, rsuGrants, cashAccounts, mortgages, otherAssets, snapshots };
+  return { holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate, snapshots };
 }

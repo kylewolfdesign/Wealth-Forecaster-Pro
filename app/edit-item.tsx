@@ -10,7 +10,7 @@ import * as Haptics from 'expo-haptics';
 import * as Crypto from 'expo-crypto';
 import { Picker } from '@react-native-picker/picker';
 import { useAppStore, AppState } from '@/lib/store';
-import { Holding, RSUGrant, CashAccount, Mortgage, OtherAsset } from '@/lib/types';
+import { Holding, RSUGrant, CashAccount, Mortgage, OtherAsset, RealEstate } from '@/lib/types';
 import { computeCurrentTotals } from '@/lib/calculations';
 import { createSnapshot } from '@/lib/snapshot';
 import { priceService } from '@/lib/price-service';
@@ -28,7 +28,7 @@ const TEXT_PRIMARY = Colors.text;
 const TEXT_SECONDARY = Colors.textSecondary;
 const TEXT_MUTED = Colors.textTertiary;
 
-type EditType = 'holding' | 'rsu' | 'cash' | 'mortgage' | 'other';
+type EditType = 'holding' | 'rsu' | 'cash' | 'mortgage' | 'other' | 'realEstate';
 type AppStore = AppState;
 
 interface FormAction {
@@ -60,9 +60,10 @@ export default function EditItemScreen() {
       case 'cash': return store.cashAccounts.find(c => c.id === id);
       case 'mortgage': return store.mortgages.find(m => m.id === id);
       case 'other': return store.otherAssets.find(a => a.id === id);
+      case 'realEstate': return store.realEstate.find(r => r.id === id);
       default: return null;
     }
-  }, [type, id, store.holdings, store.rsuGrants, store.cashAccounts, store.mortgages, store.otherAssets]);
+  }, [type, id, store.holdings, store.rsuGrants, store.cashAccounts, store.mortgages, store.otherAssets, store.realEstate]);
 
   const isEditing = !!existing;
   const normalizedCategory = Array.isArray(category) ? category[0] : category;
@@ -71,7 +72,7 @@ export default function EditItemScreen() {
   const saveAndSnapshot = () => {
     const totals = computeCurrentTotals(
       store.holdings, store.rsuGrants, store.cashAccounts,
-      store.mortgages, store.otherAssets
+      store.mortgages, store.otherAssets, store.realEstate
     );
     store.addSnapshot(createSnapshot(totals, 'Manual update'));
   };
@@ -84,6 +85,7 @@ export default function EditItemScreen() {
       case 'cash': return 'Add account';
       case 'mortgage': return 'Add mortgage';
       case 'other': return 'Add asset';
+      case 'realEstate': return 'Add real estate';
     }
   };
 
@@ -94,6 +96,7 @@ export default function EditItemScreen() {
       case 'cash': return 'Enter your account details';
       case 'mortgage': return 'Enter your loan details';
       case 'other': return 'Enter your asset details';
+      case 'realEstate': return 'Enter your property details';
     }
   };
 
@@ -126,6 +129,7 @@ export default function EditItemScreen() {
         {type === 'cash' && <CashForm existing={existing as CashAccount | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} defaultCashType={normalizedCategory as 'savings' | 'offset' | undefined} />}
         {type === 'mortgage' && <MortgageForm existing={existing as Mortgage | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} />}
         {type === 'other' && <OtherForm existing={existing as OtherAsset | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} />}
+        {type === 'realEstate' && <RealEstateForm existing={existing as RealEstate | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} />}
       </KeyboardAwareScrollViewCompat>
 
       <View style={[s.footer, { paddingBottom: bottomInset + 16 }]}>
@@ -488,6 +492,50 @@ function OtherForm({ existing, isEditing, store, saveAndSnapshot, onAction }: Fo
       <DarkInput value={value} onChangeText={setValue} keyboardType="numeric" placeholder="0" />
       <FieldLabel label="Annual growth rate % (optional)" />
       <DarkInput value={growth} onChangeText={setGrowth} keyboardType="numeric" placeholder="e.g. -10 for depreciation" />
+    </View>
+  );
+}
+
+function RealEstateForm({ existing, isEditing, store, saveAndSnapshot, onAction }: FormProps & { existing: RealEstate | null }) {
+  const [name, setName] = useState(existing?.name ?? '');
+  const [currentValue, setCurrentValue] = useState(existing?.currentValue?.toString() ?? '');
+  const [growth, setGrowth] = useState(existing?.annualGrowthRate?.toString() ?? '');
+
+  const handleSave = () => {
+    if (!name.trim() || !currentValue.trim()) {
+      Alert.alert('Required', 'Name and current value are required');
+      return;
+    }
+    const parsedValue = parseFloat(currentValue);
+    if (!isFinite(parsedValue) || parsedValue <= 0) {
+      Alert.alert('Invalid', 'Please enter a valid current value');
+      return;
+    }
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const data = {
+      name: name.trim(),
+      currentValue: parsedValue,
+      annualGrowthRate: growth ? parseFloat(growth) : undefined,
+    };
+    if (isEditing && existing) {
+      store.updateRealEstate(existing.id, data);
+    } else {
+      store.addRealEstate({ id: Crypto.randomUUID(), ...data } as RealEstate);
+    }
+    saveAndSnapshot();
+    router.back();
+  };
+
+  useFormAction(onAction, isEditing ? 'Save changes' : 'Add property', !name.trim() || !currentValue.trim(), handleSave);
+
+  return (
+    <View>
+      <FieldLabel label="Property name" />
+      <DarkInput value={name} onChangeText={setName} placeholder="e.g. Primary Residence" />
+      <FieldLabel label="Current value ($)" />
+      <DarkInput value={currentValue} onChangeText={setCurrentValue} keyboardType="numeric" placeholder="0" />
+      <FieldLabel label="Annual growth rate % (optional)" />
+      <DarkInput value={growth} onChangeText={setGrowth} keyboardType="numeric" placeholder="e.g. 4" />
     </View>
   );
 }

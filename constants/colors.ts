@@ -31,6 +31,7 @@ const Colors = {
   categorySavings: '#12B76A',
   categoryOffset: '#36BFFA',
   categoryOther: '#EE46BC',
+  categoryRealEstate: '#F59E0B',
   categoryMortgage: '#F04438',
 
   tabIconDefault: '#64748B',

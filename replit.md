@@ -57,10 +57,19 @@ constants/
 - Holding: stocks/crypto with symbol, shares, optional manual price
 - RSUGrant: vesting schedule with cliff, duration, frequency
 - CashAccount: savings/offset with balance, monthly contributions, interest rate
-- Mortgage: principal, rate, payment, optional annual payment increase
-- OtherAsset: name, value, optional growth rate
+- Mortgage: principal, rate, payment, optional annual payment increase (liability, not shown in category grid)
+- OtherAsset: name, value, optional growth rate (displayed as "Assets")
+- RealEstate: name, currentValue, optional annualGrowthRate
 - Settings: growth rate assumptions, inflation, real/nominal toggle
-- Snapshot: daily net worth and category totals
+- Snapshot: daily net worth and category totals (includes realEstate field)
+
+## Asset Categories (6 visible)
+1. Stocks & ETFs - stock holdings
+2. Crypto - crypto holdings
+3. RSUs - RSU grants
+4. Assets - other assets (cars, art, etc.)
+5. Real Estate - property entries
+6. Cash / Savings - all cash accounts (savings + offset types merged)
 
 ## Extension Points
 - **Real stock prices**: Replace mock provider in `lib/price-service.ts` with a real API (Alpha Vantage, Finnhub, etc.)
@@ -69,6 +78,7 @@ constants/
 - **CSV export**: Pro feature, export snapshots/holdings
 
 ## Recent Changes
+- 2026-03-15: Restructured asset categories from 7 to 6: added Real Estate, merged Offset into Cash / Savings, removed Mortgage from grid, renamed "Stocks/ETFs" to "Stocks & ETFs", renamed "Other" to "Assets"
 - 2026-02-25: Animated splash screen from Figma design — dark navy bg (#0F172A), SVG chart with purple gradient animates upward, "Wealth Forecaster" text fades in, displays for 3000ms then fades out
 - 2026-02-20: Merged Forecast tab into Home screen with time-range chart tabs (Today, 1Y, 5Y, 10Y, 20Y, 50Y). Removed Forecast from bottom tab bar.
 - 2026-02-20: Paychain design system overhaul (indigo primary, bordered cards, Inter font)

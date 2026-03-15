@@ -17,13 +17,12 @@ import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
 
 const CATEGORIES = [
-  { key: 'stocks', label: 'Stocks/ETFs', color: Colors.categoryStocks, icon: 'trending-up' as const, type: 'holding' },
+  { key: 'stocks', label: 'Stocks & ETFs', color: Colors.categoryStocks, icon: 'trending-up' as const, type: 'holding' },
   { key: 'crypto', label: 'Crypto', color: Colors.categoryCrypto, icon: 'logo-bitcoin' as const, type: 'holding' },
   { key: 'rsus', label: 'RSUs', color: Colors.categoryRSU, icon: 'layers' as const, type: 'rsu' },
-  { key: 'savings', label: 'Savings', color: Colors.categorySavings, icon: 'wallet' as const, type: 'cash' },
-  { key: 'offset', label: 'Offset Accounts', color: Colors.categoryOffset, icon: 'swap-horizontal' as const, type: 'cash' },
-  { key: 'other', label: 'Other Assets', color: Colors.categoryOther, icon: 'diamond' as const, type: 'other' },
-  { key: 'mortgage', label: 'Mortgages', color: Colors.categoryMortgage, icon: 'home' as const, type: 'mortgage', isLiability: true },
+  { key: 'other', label: 'Assets', color: Colors.categoryOther, icon: 'diamond' as const, type: 'other' },
+  { key: 'realEstate', label: 'Real Estate', color: Colors.categoryRealEstate, icon: 'business' as const, type: 'realEstate' },
+  { key: 'cashSavings', label: 'Cash / Savings', color: Colors.categorySavings, icon: 'wallet' as const, type: 'cash' },
 ];
 
 export default function BreakdownScreen() {
@@ -31,8 +30,8 @@ export default function BreakdownScreen() {
   const params = useLocalSearchParams<{ focus?: string }>();
   const [expanded, setExpanded] = useState<string | null>(params.focus ?? null);
   const {
-    holdings, rsuGrants, cashAccounts, mortgages, otherAssets,
-    deleteHolding, deleteRSUGrant, deleteCashAccount, deleteMortgage, deleteOtherAsset,
+    holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate,
+    deleteHolding, deleteRSUGrant, deleteCashAccount, deleteMortgage, deleteOtherAsset, deleteRealEstate,
   } = useAppStore();
 
   const stockSymbols = useMemo(() => {
@@ -45,8 +44,8 @@ export default function BreakdownScreen() {
   const { prices: livePrices } = useStockPrices(stockSymbols);
 
   const totals = useMemo(
-    () => computeCurrentTotals(holdings, rsuGrants, cashAccounts, mortgages, otherAssets),
-    [holdings, rsuGrants, cashAccounts, mortgages, otherAssets, livePrices]
+    () => computeCurrentTotals(holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate),
+    [holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate, livePrices]
   );
 
   const getCategoryTotal = (key: string): number => {
@@ -54,10 +53,9 @@ export default function BreakdownScreen() {
       case 'stocks': return totals.stocks;
       case 'crypto': return totals.crypto;
       case 'rsus': return totals.rsusVested + totals.rsusUnvested;
-      case 'savings': return totals.savings;
-      case 'offset': return totals.offset;
       case 'other': return totals.otherAssets;
-      case 'mortgage': return totals.mortgage;
+      case 'realEstate': return totals.realEstate;
+      case 'cashSavings': return totals.savings + totals.offset;
       default: return 0;
     }
   };
@@ -67,10 +65,9 @@ export default function BreakdownScreen() {
       case 'stocks': return holdings.filter(h => h.type === 'stock');
       case 'crypto': return holdings.filter(h => h.type === 'crypto');
       case 'rsus': return rsuGrants;
-      case 'savings': return cashAccounts.filter(c => c.type === 'savings');
-      case 'offset': return cashAccounts.filter(c => c.type === 'offset');
       case 'other': return otherAssets;
-      case 'mortgage': return mortgages;
+      case 'realEstate': return realEstate;
+      case 'cashSavings': return cashAccounts;
       default: return [];
     }
   };
@@ -83,8 +80,8 @@ export default function BreakdownScreen() {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           if (catKey === 'stocks' || catKey === 'crypto') deleteHolding(itemId);
           else if (catKey === 'rsus') deleteRSUGrant(itemId);
-          else if (catKey === 'savings' || catKey === 'offset') deleteCashAccount(itemId);
-          else if (catKey === 'mortgage') deleteMortgage(itemId);
+          else if (catKey === 'cashSavings') deleteCashAccount(itemId);
+          else if (catKey === 'realEstate') deleteRealEstate(itemId);
           else if (catKey === 'other') deleteOtherAsset(itemId);
         },
       },
@@ -95,7 +92,7 @@ export default function BreakdownScreen() {
     let editType = type;
     if (catKey === 'stocks') editType = 'holding';
     else if (catKey === 'crypto') editType = 'holding';
-    else if (catKey === 'savings' || catKey === 'offset') editType = 'cash';
+    else if (catKey === 'cashSavings') editType = 'cash';
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const category = catKey === 'crypto' ? 'crypto' : catKey === 'stocks' ? 'stocks' : '';
     const categoryParam = category ? `&category=${category}` : '';
@@ -127,14 +124,14 @@ export default function BreakdownScreen() {
       name = `${item.symbol} RSU`;
       value = vested * price;
       subtitle = `${formatShares(vested)} vested / ${formatShares(unvested)} unvested`;
-    } else if (catKey === 'savings' || catKey === 'offset') {
+    } else if (catKey === 'cashSavings') {
       name = item.name;
       value = item.balance;
       subtitle = `+${formatCurrency(item.monthlyContribution)}/mo`;
-    } else if (catKey === 'mortgage') {
+    } else if (catKey === 'realEstate') {
       name = item.name;
-      value = item.principalBalance;
-      subtitle = `${item.annualInterestRate}% rate`;
+      value = item.currentValue;
+      subtitle = item.annualGrowthRate ? `${item.annualGrowthRate}% growth/yr` : '';
     } else if (catKey === 'other') {
       name = item.name;
       value = item.value;
@@ -204,8 +201,8 @@ export default function BreakdownScreen() {
                 </View>
               </View>
               <View style={styles.categoryRight}>
-                <Text style={[styles.categoryTotal, cat.isLiability && styles.liabilityText]}>
-                  {cat.isLiability ? '-' : ''}{formatCurrency(total)}
+                <Text style={styles.categoryTotal}>
+                  {formatCurrency(total)}
                 </Text>
                 <Ionicons
                   name={isOpen ? 'chevron-up' : 'chevron-down'}

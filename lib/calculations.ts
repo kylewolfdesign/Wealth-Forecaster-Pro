@@ -1,5 +1,5 @@
 import {
-  Holding, RSUGrant, CashAccount, Mortgage, OtherAsset,
+  Holding, RSUGrant, CashAccount, Mortgage, OtherAsset, RealEstate,
   Settings, SnapshotTotals, ForecastPoint,
 } from './types';
 import { getInstantPrice } from './price-service';
@@ -78,6 +78,7 @@ export function computeCurrentTotals(
   cashAccounts: CashAccount[],
   mortgages: Mortgage[],
   otherAssets: OtherAsset[],
+  realEstate: RealEstate[] = [],
 ): SnapshotTotals {
   const now = new Date();
 
@@ -101,9 +102,10 @@ export function computeCurrentTotals(
   const savings = savingsAccounts.reduce((sum, c) => sum + c.balance, 0);
   const offset = offsetAccounts.reduce((sum, c) => sum + c.balance, 0);
   const otherTotal = otherAssets.reduce((sum, a) => sum + a.value, 0);
+  const realEstateTotal = realEstate.reduce((sum, r) => sum + r.currentValue, 0);
   const mortgageTotal = mortgages.reduce((sum, m) => sum + m.principalBalance, 0);
 
-  const totalAssets = stocks + crypto + rsusVested + rsusUnvested + savings + offset + otherTotal;
+  const totalAssets = stocks + crypto + rsusVested + rsusUnvested + savings + offset + otherTotal + realEstateTotal;
   const netWorth = totalAssets - mortgageTotal;
 
   return {
@@ -115,6 +117,7 @@ export function computeCurrentTotals(
     savings,
     offset,
     otherAssets: otherTotal,
+    realEstate: realEstateTotal,
     mortgage: mortgageTotal,
   };
 }
@@ -146,10 +149,11 @@ export function computeForecast(
   otherAssets: OtherAsset[],
   settings: Settings,
   maxYears: number = 50,
+  realEstate: RealEstate[] = [],
 ): ForecastPoint[] {
   const points: ForecastPoint[] = [];
   const now = new Date();
-  const totals = computeCurrentTotals(holdings, rsuGrants, cashAccounts, mortgages, otherAssets);
+  const totals = computeCurrentTotals(holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate);
   const inflationMultiplier = (months: number) =>
     settings.showRealReturns
       ? 1 / Math.pow(1 + settings.inflationPct / 100, months / 12)
@@ -166,6 +170,7 @@ export function computeForecast(
       savings: totals.savings,
       offset: totals.offset,
       otherAssets: totals.otherAssets,
+      realEstate: totals.realEstate,
       mortgage: totals.mortgage,
     },
   });
@@ -222,12 +227,18 @@ export function computeForecast(
       otherVal += growMonthly(a.value, rate, months);
     }
 
+    let realEstateVal = 0;
+    for (const r of realEstate) {
+      const rate = r.annualGrowthRate ?? 0;
+      realEstateVal += growMonthly(r.currentValue, rate, months);
+    }
+
     let mortgageVal = 0;
     for (const m of mortgages) {
       mortgageVal += computeMortgageBalance(m, months);
     }
 
-    const totalAssets = stocksVal + cryptoVal + rsusVal + savingsVal + offsetVal + otherVal;
+    const totalAssets = stocksVal + cryptoVal + rsusVal + savingsVal + offsetVal + otherVal + realEstateVal;
     const netWorth = (totalAssets - mortgageVal) * realAdj;
 
     points.push({
@@ -241,6 +252,7 @@ export function computeForecast(
         savings: savingsVal * realAdj,
         offset: offsetVal * realAdj,
         otherAssets: otherVal * realAdj,
+        realEstate: realEstateVal * realAdj,
         mortgage: mortgageVal * realAdj,
       },
     });
