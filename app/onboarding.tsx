@@ -1,8 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, Pressable, TextInput, FlatList,
   KeyboardAvoidingView, Platform, ScrollView, Alert,
-  Image, useWindowDimensions,
+  Animated, useWindowDimensions,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,21 +19,212 @@ import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
 import type { Holding, RSUGrant, CashAccount, Mortgage, OtherAsset } from '@/lib/types';
 
+function OnboardingGraphicPrivacy() {
+  const pulse = useRef(new Animated.Value(1)).current;
+  const glowScale = useRef(new Animated.Value(0.8)).current;
+  const glowOpacity = useRef(new Animated.Value(0.6)).current;
+
+  useEffect(() => {
+    const pulseAnim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1.08, duration: 1500, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 1500, useNativeDriver: true }),
+      ])
+    );
+    const glowAnim = Animated.loop(
+      Animated.sequence([
+        Animated.parallel([
+          Animated.timing(glowScale, { toValue: 1.6, duration: 3000, useNativeDriver: true }),
+          Animated.timing(glowOpacity, { toValue: 0, duration: 3000, useNativeDriver: true }),
+        ]),
+        Animated.parallel([
+          Animated.timing(glowScale, { toValue: 0.8, duration: 0, useNativeDriver: true }),
+          Animated.timing(glowOpacity, { toValue: 0.6, duration: 0, useNativeDriver: true }),
+        ]),
+      ])
+    );
+    pulseAnim.start();
+    glowAnim.start();
+    return () => { pulseAnim.stop(); glowAnim.stop(); };
+  }, []);
+
+  return (
+    <View style={graphicStyles.container}>
+      <View style={graphicStyles.phoneFrame}>
+        <View style={graphicStyles.phoneNotch} />
+        <View style={graphicStyles.phoneScreen}>
+          <Animated.View style={[graphicStyles.glowRing, { transform: [{ scale: glowScale }], opacity: glowOpacity }]} />
+          <Animated.View style={[graphicStyles.shieldOuter, { transform: [{ scale: pulse }] }]}>
+            <View style={graphicStyles.shieldInner}>
+              <Ionicons name="shield-checkmark" size={36} color="#6B39F4" />
+            </View>
+          </Animated.View>
+        </View>
+        <View style={graphicStyles.phoneHomeBar} />
+      </View>
+    </View>
+  );
+}
+
+function OnboardingGraphicGrowth() {
+  const lineProgress = useRef(new Animated.Value(0)).current;
+  const dotOpacities = useRef([0, 1, 2, 3, 4].map(() => new Animated.Value(0))).current;
+
+  useEffect(() => {
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(lineProgress, { toValue: 1, duration: 2000, useNativeDriver: false }),
+        ...dotOpacities.map((dot, i) =>
+          Animated.timing(dot, { toValue: 1, duration: 200, delay: i * 50, useNativeDriver: false })
+        ),
+        Animated.delay(1500),
+        Animated.parallel([
+          Animated.timing(lineProgress, { toValue: 0, duration: 0, useNativeDriver: false }),
+          ...dotOpacities.map(dot =>
+            Animated.timing(dot, { toValue: 0, duration: 0, useNativeDriver: false })
+          ),
+        ]),
+      ])
+    );
+    anim.start();
+    return () => anim.stop();
+  }, []);
+
+  const chartPoints = [
+    { x: 0, y: 80 },
+    { x: 40, y: 70 },
+    { x: 80, y: 55 },
+    { x: 120, y: 40 },
+    { x: 160, y: 15 },
+  ];
+
+  return (
+    <View style={graphicStyles.container}>
+      <View style={graphicStyles.chartArea}>
+        <View style={graphicStyles.gridLine} />
+        <View style={[graphicStyles.gridLine, { top: '33%' }]} />
+        <View style={[graphicStyles.gridLine, { top: '66%' }]} />
+        <View style={[graphicStyles.gridLine, { top: '100%' }]} />
+        {chartPoints.map((point, i) => {
+          if (i === 0) return null;
+          const prev = chartPoints[i - 1];
+          const dx = point.x - prev.x;
+          const dy = point.y - prev.y;
+          const length = Math.sqrt(dx * dx + dy * dy);
+          const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+          return (
+            <Animated.View
+              key={`line-${i}`}
+              style={{
+                position: 'absolute' as const,
+                left: prev.x + 20,
+                top: prev.y + 10,
+                width: lineProgress.interpolate({
+                  inputRange: [(i - 1) / chartPoints.length, i / chartPoints.length],
+                  outputRange: [0, length],
+                  extrapolate: 'clamp' as const,
+                }),
+                height: 3,
+                backgroundColor: '#6B39F4',
+                borderRadius: 1.5,
+                transform: [{ rotate: `${angle}deg` }],
+                transformOrigin: 'left center' as any,
+              }}
+            />
+          );
+        })}
+        {chartPoints.map((point, i) => (
+          <Animated.View
+            key={`dot-${i}`}
+            style={[
+              graphicStyles.chartDot,
+              { left: point.x + 16, top: point.y + 6, opacity: dotOpacities[i] },
+            ]}
+          />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function OnboardingGraphicAssets() {
+  const assetIcons: Array<{ name: keyof typeof Ionicons.glyphMap; color: string }> = [
+    { name: 'trending-up', color: '#6172F3' },
+    { name: 'logo-bitcoin', color: '#F79009' },
+    { name: 'wallet', color: '#12B76A' },
+    { name: 'home', color: '#36BFFA' },
+    { name: 'layers', color: '#7A5AF8' },
+    { name: 'diamond', color: '#EE46BC' },
+    { name: 'cash', color: '#12B76A' },
+  ];
+
+  const fadeAnims = useRef(assetIcons.map(() => new Animated.Value(0))).current;
+  const floatAnims = useRef(assetIcons.map(() => new Animated.Value(0))).current;
+
+  useEffect(() => {
+    const staggerIn = Animated.stagger(
+      150,
+      fadeAnims.map(anim =>
+        Animated.timing(anim, { toValue: 1, duration: 500, useNativeDriver: true })
+      )
+    );
+
+    const floatLoops = floatAnims.map((anim, i) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(anim, { toValue: -4, duration: 1500 + i * 200, useNativeDriver: true }),
+          Animated.timing(anim, { toValue: 4, duration: 1500 + i * 200, useNativeDriver: true }),
+        ])
+      )
+    );
+
+    staggerIn.start(() => {
+      floatLoops.forEach(l => l.start());
+    });
+
+    return () => {
+      staggerIn.stop();
+      floatLoops.forEach(l => l.stop());
+    };
+  }, []);
+
+  return (
+    <View style={graphicStyles.container}>
+      <View style={graphicStyles.assetGrid}>
+        {assetIcons.map((icon, i) => (
+          <Animated.View
+            key={i}
+            style={[
+              graphicStyles.assetIcon,
+              {
+                opacity: fadeAnims[i],
+                transform: [{ translateY: floatAnims[i] }],
+              },
+            ]}
+          >
+            <Ionicons name={icon.name} size={28} color={icon.color} />
+          </Animated.View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 const VALUE_PROP_PAGES = [
   {
-    image: require('@/assets/images/onboarding-networth.png'),
-    title: 'Know Your\nNet Worth',
-    subtitle: 'See all your assets and liabilities in one place — stocks, crypto, RSUs, savings, property and more.',
+    graphic: OnboardingGraphicPrivacy,
+    title: 'Zero logins.\nZero exposure.',
+    subtitle: 'Your financial data lives on your device only — no accounts, no cloud, no risk.',
   },
   {
-    image: require('@/assets/images/onboarding-forecast.png'),
-    title: 'Watch It\nGrow Over Time',
-    subtitle: 'Project how your portfolio will compound over 1, 5, 10 or even 50 years with personalised growth assumptions.',
+    graphic: OnboardingGraphicGrowth,
+    title: 'See your future,\nnot just today.',
+    subtitle: 'Model how your portfolio and contributions grow over 1, 5, 10 or 50 years.',
   },
   {
-    image: require('@/assets/images/onboarding-private.png'),
-    title: '100% Private\n& On-Device',
-    subtitle: 'Your financial data never leaves your phone. No accounts, no cloud — just you and your numbers.',
+    graphic: OnboardingGraphicAssets,
+    title: 'ETFs, crypto, RSUs,\nproperty & more.',
+    subtitle: 'Track everything you own across every asset class — all in one clear overview.',
   },
 ];
 
@@ -161,9 +352,8 @@ export default function OnboardingScreen() {
   };
 
   if (phase === 'intro') {
-    const imageSize = screenWidth * 0.55;
     return (
-      <View style={[styles.container, { paddingTop: topInset }]}>
+      <View style={[introStyles.darkContainer, { paddingTop: topInset }]}>
         <View style={introStyles.skipRow}>
           <Pressable onPress={handleIntroSkip} hitSlop={16}>
             <Text style={introStyles.skipText}>Skip</Text>
@@ -182,23 +372,22 @@ export default function OnboardingScreen() {
             setIntroPage(idx);
           }}
           keyExtractor={(_, i) => i.toString()}
-          renderItem={({ item }) => (
-            <View style={[introStyles.page, { width: screenWidth }]}>
-              <View style={introStyles.imageSection}>
-                <View style={introStyles.imageCard}>
-                  <Image
-                    source={item.image}
-                    style={{ width: imageSize, height: imageSize }}
-                    resizeMode="contain"
-                  />
+          renderItem={({ item }) => {
+            const GraphicComponent = item.graphic;
+            return (
+              <View style={[introStyles.page, { width: screenWidth }]}>
+                <View style={introStyles.imageSection}>
+                  <View style={introStyles.graphicCard}>
+                    <GraphicComponent />
+                  </View>
+                </View>
+                <View style={introStyles.textSection}>
+                  <Text style={introStyles.titleDark}>{item.title}</Text>
+                  <Text style={introStyles.subtitleDark}>{item.subtitle}</Text>
                 </View>
               </View>
-              <View style={introStyles.textSection}>
-                <Text style={introStyles.title}>{item.title}</Text>
-                <Text style={introStyles.subtitle}>{item.subtitle}</Text>
-              </View>
-            </View>
-          )}
+            );
+          }}
         />
 
         <View style={[introStyles.footer, { paddingBottom: bottomInset + spacing.lg }]}>
@@ -207,14 +396,14 @@ export default function OnboardingScreen() {
               <View
                 key={i}
                 style={[
-                  introStyles.dot,
-                  i === introPage && introStyles.dotActive,
+                  introStyles.dotDark,
+                  i === introPage && introStyles.dotDarkActive,
                 ]}
               />
             ))}
           </View>
 
-          <Pressable style={introStyles.continueBtn} onPress={handleIntroNext}>
+          <Pressable style={introStyles.continueBtnDark} onPress={handleIntroNext}>
             <Text style={introStyles.continueBtnText}>
               {introPage === VALUE_PROP_PAGES.length - 1 ? 'Get Started' : 'Continue'}
             </Text>
@@ -396,7 +585,110 @@ export default function OnboardingScreen() {
   );
 }
 
+const graphicStyles = StyleSheet.create({
+  container: {
+    width: 200,
+    height: 200,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  phoneFrame: {
+    width: 120,
+    height: 180,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: '#334155',
+    backgroundColor: '#1E293B',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  phoneNotch: {
+    width: 40,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#334155',
+    marginTop: 8,
+  },
+  phoneScreen: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  glowRing: {
+    position: 'absolute',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 2,
+    borderColor: '#6B39F4',
+  },
+  shieldOuter: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(107, 57, 244, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shieldInner: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(107, 57, 244, 0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  phoneHomeBar: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#334155',
+    marginBottom: 8,
+  },
+  chartArea: {
+    width: 200,
+    height: 110,
+    position: 'relative',
+  },
+  gridLine: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: 'rgba(51, 65, 85, 0.5)',
+  },
+  chartDot: {
+    position: 'absolute',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#6B39F4',
+  },
+  assetGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 16,
+    width: 200,
+  },
+  assetIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: '#1E293B',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+});
+
 const introStyles = StyleSheet.create({
+  darkContainer: {
+    flex: 1,
+    backgroundColor: '#0F172A',
+  },
   skipRow: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
@@ -406,7 +698,7 @@ const introStyles = StyleSheet.create({
   skipText: {
     fontFamily: fontFamily.semibold,
     fontSize: fontSize.md,
-    color: Colors.textSecondary,
+    color: '#6B39F4',
   },
   page: {
     flex: 1,
@@ -417,29 +709,31 @@ const introStyles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.xxxl,
   },
-  imageCard: {
-    backgroundColor: Colors.surface,
+  graphicCard: {
+    backgroundColor: 'rgba(107, 57, 244, 0.08)',
     borderRadius: borderRadius.xl,
     padding: spacing.xxl,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(107, 57, 244, 0.15)',
   },
   textSection: {
     gap: spacing.lg,
     paddingHorizontal: spacing.sm,
   },
-  title: {
+  titleDark: {
     fontFamily: fontFamily.bold,
     fontSize: 32,
     lineHeight: 40,
-    color: Colors.text,
+    color: '#F8F9FD',
     letterSpacing: -0.5,
   },
-  subtitle: {
+  subtitleDark: {
     fontFamily: fontFamily.regular,
     fontSize: 17,
     lineHeight: 26,
-    color: Colors.textSecondary,
+    color: '#94A3B8',
   },
   footer: {
     paddingHorizontal: spacing.xxl,
@@ -449,23 +743,23 @@ const introStyles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
   },
-  dot: {
+  dotDark: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: Colors.border,
+    backgroundColor: '#334155',
   },
-  dotActive: {
+  dotDarkActive: {
     width: 24,
-    backgroundColor: Colors.primary,
+    backgroundColor: '#6B39F4',
     borderRadius: 4,
   },
-  continueBtn: {
+  continueBtnDark: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
-    backgroundColor: Colors.primary,
+    backgroundColor: '#6B39F4',
     paddingVertical: 16,
     borderRadius: borderRadius.lg,
     width: '100%',
