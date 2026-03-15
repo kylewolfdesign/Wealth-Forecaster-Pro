@@ -83,7 +83,7 @@ function SwipeableRow({ children, onDelete }: { children: React.ReactNode; onDel
         </Pressable>
       </View>
       <Animated.View
-        style={{ transform: [{ translateX }], backgroundColor: Colors.surface }}
+        style={{ transform: [{ translateX }], backgroundColor: '#131C2E' }}
         {...panResponder.panHandlers}
       >
         {children}
@@ -337,7 +337,7 @@ export default function PortfolioScreen() {
           size={donutSize}
           strokeWidth={17}
           centerLabel={formatCurrency(totals.netWorth)}
-          centerSubLabel="Net Worth"
+          centerSubLabel="NET WORTH"
         />
         <View style={styles.legend}>
           {(() => {
@@ -365,13 +365,16 @@ export default function PortfolioScreen() {
         const isOpen = expandedCategory === cat.key;
 
         return (
-          <Card key={cat.key} style={[styles.categoryCard, { borderLeftWidth: 4, borderLeftColor: cat.color }]} noPadding>
+          <Card key={cat.key} style={styles.categoryCard} noPadding>
             <Pressable
               style={styles.categoryHeader}
               onPress={() => handleToggle(cat.key)}
               testID={`category-${cat.key}`}
             >
               <View style={styles.categoryLeft}>
+                <View style={styles.categoryIconCircle}>
+                  <Ionicons name={cat.icon} size={20} color={cat.color} />
+                </View>
                 <Text style={styles.categoryLabel}>{cat.label}</Text>
               </View>
               <View style={styles.categoryRight}>
@@ -465,6 +468,7 @@ const styles = StyleSheet.create({
   },
   categoryCard: {
     marginBottom: spacing.md,
+    backgroundColor: '#131C2E',
   },
   categoryHeader: {
     flexDirection: 'row',
@@ -475,6 +479,15 @@ const styles = StyleSheet.create({
   categoryLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.md,
+  },
+  categoryIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#1E293B',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   categoryLabel: {
     fontFamily: fontFamily.semibold,
