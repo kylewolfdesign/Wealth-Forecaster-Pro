@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TextInput, Pressable,
   Alert, Platform, Switch, Modal,
@@ -13,6 +13,7 @@ import { useAppStore, AppState } from '@/lib/store';
 import { Holding, RSUGrant, CashAccount, Mortgage, OtherAsset } from '@/lib/types';
 import { computeCurrentTotals } from '@/lib/calculations';
 import { createSnapshot } from '@/lib/snapshot';
+import { priceService } from '@/lib/price-service';
 import TickerInput from '@/components/TickerInput';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { fontFamily } from '@/constants/theme';
@@ -151,20 +152,79 @@ function useFormAction(
 function HoldingForm({ existing, isEditing, store, saveAndSnapshot, onAction }: FormProps & { existing: Holding | null }) {
   const [symbol, setSymbol] = useState(existing?.symbol ?? '');
   const [shares, setShares] = useState(existing?.shares?.toString() ?? '');
+  const [pricePerShare, setPricePerShare] = useState(existing?.manualPrice?.toString() ?? '');
+  const [fetchingPrice, setFetchingPrice] = useState(false);
   const [addingMore, setAddingMore] = useState(!!existing?.recurringShares);
   const [recurringShares, setRecurringShares] = useState(existing?.recurringShares?.toString() ?? '');
   const [cadence, setCadence] = useState<'monthly' | 'quarterly' | 'yearly'>(existing?.recurringCadence ?? 'monthly');
 
+  const fetchPrice = useCallback(async (ticker: string) => {
+    const trimmed = ticker.trim().toUpperCase();
+    if (!trimmed) {
+      setPricePerShare('');
+      return;
+    }
+    setFetchingPrice(true);
+    try {
+      const quote = await priceService.getQuote(trimmed, 'stock');
+      setPricePerShare(quote.price.toString());
+    } catch {
+      setPricePerShare('');
+    } finally {
+      setFetchingPrice(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (symbol.trim().length >= 1) {
+      fetchPrice(symbol);
+    } else {
+      setPricePerShare('');
+    }
+  }, [symbol]);
+
+  const fetchPrice = useCallback(async (ticker: string) => {
+    const trimmed = ticker.trim().toUpperCase();
+    if (!trimmed) {
+      setPricePerShare('');
+      return;
+    }
+    setFetchingPrice(true);
+    try {
+      const quote = await priceService.getQuote(trimmed, 'stock');
+      setPricePerShare(quote.price.toString());
+    } catch {
+      setPricePerShare('');
+    } finally {
+      setFetchingPrice(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (symbol.trim().length >= 1) {
+      fetchPrice(symbol);
+    } else {
+      setPricePerShare('');
+    }
+  }, [symbol]);
+
   const handleSave = () => {
-    if (!symbol.trim() || !shares.trim()) {
+    if (!symbol.trim() || !shares.trim() || !pricePerShare.trim()) {
       Alert.alert('Required', 'Symbol and shares are required');
+      return;
+    }
+    const parsedShares = parseFloat(shares);
+    const parsedPrice = parseFloat(pricePerShare);
+    if (!isFinite(parsedShares) || parsedShares <= 0 || !isFinite(parsedPrice) || parsedPrice <= 0) {
+      Alert.alert('Invalid', 'Please enter a valid number of shares');
       return;
     }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     const data: Partial<Holding> = {
       type: 'stock' as const,
       symbol: symbol.toUpperCase().trim(),
-      shares: parseFloat(shares),
+      shares: parsedShares,
+      manualPrice: parsedPrice,
     };
     if (addingMore && recurringShares) {
       data.recurringShares = parseFloat(recurringShares);
@@ -179,7 +239,7 @@ function HoldingForm({ existing, isEditing, store, saveAndSnapshot, onAction }: 
     router.back();
   };
 
-  useFormAction(onAction, isEditing ? 'Save changes' : 'Add stock', !symbol.trim() || !shares.trim(), handleSave);
+  useFormAction(onAction, isEditing ? 'Save changes' : 'Add stock', !symbol.trim() || !shares.trim() || !pricePerShare.trim() || fetchingPrice, handleSave);
 
   return (
     <View>
@@ -195,6 +255,9 @@ function HoldingForm({ existing, isEditing, store, saveAndSnapshot, onAction }: 
 
       <FieldLabel label="Number of shares" />
       <DarkInput value={shares} onChangeText={setShares} keyboardType="numeric" placeholder="350" />
+
+      <FieldLabel label={fetchingPrice ? "Price per share ($) — loading..." : "Price per share ($)"} />
+      <DarkInput value={pricePerShare} onChangeText={setPricePerShare} keyboardType="numeric" placeholder="—" editable={false} />
 
       <View style={s.toggleSection}>
         <View style={s.toggleHeader}>
@@ -454,16 +517,17 @@ function FieldLabel({ label }: { label: string }) {
   return <Text style={s.fieldLabel}>{label}</Text>;
 }
 
-function DarkInput({ value, onChangeText, placeholder, keyboardType }: {
+function DarkInput({ value, onChangeText, placeholder, keyboardType, editable = true }: {
   value: string;
   onChangeText: (t: string) => void;
   placeholder?: string;
   keyboardType?: 'numeric' | 'default';
+  editable?: boolean;
 }) {
   const [focused, setFocused] = useState(false);
   return (
     <TextInput
-      style={[s.input, focused && s.inputFocused]}
+      style={[s.input, focused && s.inputFocused, !editable && s.inputDisabled]}
       value={value}
       onChangeText={onChangeText}
       placeholder={placeholder}
@@ -471,6 +535,7 @@ function DarkInput({ value, onChangeText, placeholder, keyboardType }: {
       keyboardType={keyboardType || 'default'}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
+      editable={editable}
     />
   );
 }
@@ -619,6 +684,9 @@ const s = StyleSheet.create({
   },
   inputFocused: {
     borderColor: PURPLE,
+  },
+  inputDisabled: {
+    opacity: 0.6,
   },
   toggleSection: {
     marginTop: 28,
