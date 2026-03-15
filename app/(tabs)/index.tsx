@@ -290,7 +290,7 @@ export default function PortfolioScreen() {
         <DonutChart
           slices={donutSlices}
           size={donutSize}
-          strokeWidth={34}
+          strokeWidth={17}
           centerLabel={formatCurrency(totals.netWorth)}
           centerSubLabel="Net Worth"
         />

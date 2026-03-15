@@ -52,8 +52,10 @@ export default function DonutChart({ slices, size, strokeWidth, centerLabel, cen
   const cy = size / 2;
 
   const total = slices.reduce((sum, s) => sum + Math.abs(s.value), 0);
-  const activeSlices = slices.filter(s => Math.abs(s.value) > 0);
-  const GAP_DEGREES = activeSlices.length > 1 ? 4 : 0;
+  const activeSlices = slices
+    .filter(s => Math.abs(s.value) > 0)
+    .sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
+  const GAP_DEGREES = activeSlices.length > 1 ? 5 : 0;
   const totalGap = GAP_DEGREES * activeSlices.length;
   const availableDegrees = 360 - totalGap;
 
@@ -65,7 +67,7 @@ export default function DonutChart({ slices, size, strokeWidth, centerLabel, cen
         <G>
           <Path
             d={describeArc(cx, cy, radius, 0, 359.99)}
-            stroke={Colors.border}
+            stroke={Colors.background}
             strokeWidth={strokeWidth}
             fill="none"
           />
@@ -84,7 +86,7 @@ export default function DonutChart({ slices, size, strokeWidth, centerLabel, cen
                   stroke={slice.color}
                   strokeWidth={strokeWidth}
                   fill="none"
-                  strokeLinecap="round"
+                  strokeLinecap="butt"
                 />
               );
             })}
