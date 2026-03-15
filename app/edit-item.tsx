@@ -130,6 +130,47 @@ export default function EditItemScreen() {
         {type === 'mortgage' && <MortgageForm existing={existing as Mortgage | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} />}
         {type === 'other' && <OtherForm existing={existing as OtherAsset | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} />}
         {type === 'realEstate' && <RealEstateForm existing={existing as RealEstate | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} />}
+
+        {isEditing && id && (
+          <Pressable
+            style={s.deleteEntryBtn}
+            onPress={() => {
+              Alert.alert(
+                'Delete',
+                'Are you sure you want to delete this entry? This cannot be undone.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: () => {
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                      switch (type) {
+                        case 'holding': store.deleteHolding(id); break;
+                        case 'rsu': store.deleteRSUGrant(id); break;
+                        case 'cash': store.deleteCashAccount(id); break;
+                        case 'mortgage': store.deleteMortgage(id); break;
+                        case 'other': store.deleteOtherAsset(id); break;
+                        case 'realEstate': store.deleteRealEstate(id); break;
+                      }
+                      const fresh = useAppStore.getState();
+                      const totals = computeCurrentTotals(
+                        fresh.holdings, fresh.rsuGrants, fresh.cashAccounts,
+                        fresh.mortgages, fresh.otherAssets, fresh.realEstate
+                      );
+                      fresh.addSnapshot(createSnapshot(totals, 'Deleted item'));
+                      router.back();
+                    },
+                  },
+                ]
+              );
+            }}
+            testID="delete-entry-btn"
+          >
+            <Ionicons name="trash-outline" size={18} color={Colors.negative} />
+            <Text style={s.deleteEntryBtnText}>Delete this entry</Text>
+          </Pressable>
+        )}
       </KeyboardAwareScrollViewCompat>
 
       <View style={[s.footer, { paddingBottom: bottomInset + 16 }]}>
@@ -854,5 +895,21 @@ const s = StyleSheet.create({
   },
   actionBtnTextDisabled: {
     color: TEXT_MUTED,
+  },
+  deleteEntryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 32,
+    paddingVertical: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.negative,
+  },
+  deleteEntryBtnText: {
+    fontFamily: fontFamily.semibold,
+    fontSize: 15,
+    color: Colors.negative,
   },
 });
