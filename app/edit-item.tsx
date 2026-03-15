@@ -183,31 +183,6 @@ function HoldingForm({ existing, isEditing, store, saveAndSnapshot, onAction }: 
     }
   }, [symbol]);
 
-  const fetchPrice = useCallback(async (ticker: string) => {
-    const trimmed = ticker.trim().toUpperCase();
-    if (!trimmed) {
-      setPricePerShare('');
-      return;
-    }
-    setFetchingPrice(true);
-    try {
-      const quote = await priceService.getQuote(trimmed, 'stock');
-      setPricePerShare(quote.price.toString());
-    } catch {
-      setPricePerShare('');
-    } finally {
-      setFetchingPrice(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (symbol.trim().length >= 1) {
-      fetchPrice(symbol);
-    } else {
-      setPricePerShare('');
-    }
-  }, [symbol]);
-
   const handleSave = () => {
     if (!symbol.trim() || !shares.trim() || !pricePerShare.trim()) {
       Alert.alert('Required', 'Symbol and shares are required');
