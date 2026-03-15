@@ -16,12 +16,12 @@ import LineChart from '@/components/LineChart';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
 
-const DARK_BG = '#0F172A';
-const CARD_BG = '#1E293B';
-const BORDER = '#334155';
-const TEXT_PRIMARY = '#F8F9FD';
-const TEXT_SECONDARY = '#94A3B8';
-const TEXT_MUTED = '#64748B';
+const DARK_BG = Colors.background;
+const CARD_BG = Colors.surface;
+const BORDER = Colors.border;
+const TEXT_PRIMARY = Colors.text;
+const TEXT_SECONDARY = Colors.textSecondary;
+const TEXT_MUTED = Colors.textTertiary;
 
 const CATEGORY_CONFIG = [
   { key: 'stocks', label: 'Stocks/ETFs', color: Colors.categoryStocks, icon: 'trending-up' as const },

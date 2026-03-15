@@ -406,7 +406,7 @@ const introStyles = StyleSheet.create({
   skipText: {
     fontFamily: fontFamily.semibold,
     fontSize: fontSize.md,
-    color: Colors.primary,
+    color: Colors.textSecondary,
   },
   page: {
     flex: 1,
@@ -418,7 +418,7 @@ const introStyles = StyleSheet.create({
     marginBottom: spacing.xxxl,
   },
   imageCard: {
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: Colors.surface,
     borderRadius: borderRadius.xl,
     padding: spacing.xxl,
     alignItems: 'center',
@@ -453,7 +453,7 @@ const introStyles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: Colors.borderLight,
+    backgroundColor: Colors.border,
   },
   dotActive: {
     width: 24,
@@ -480,7 +480,7 @@ const introStyles = StyleSheet.create({
 const catStyles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: Colors.background,
   },
   content: {
     flex: 1,
@@ -496,10 +496,10 @@ const catStyles = StyleSheet.create({
     width: 18,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#334155',
+    backgroundColor: Colors.border,
   },
   dotActive: {
-    backgroundColor: '#6B39F4',
+    backgroundColor: Colors.primary,
   },
   textBlock: {
     gap: 8,
@@ -508,13 +508,13 @@ const catStyles = StyleSheet.create({
     fontFamily: fontFamily.bold,
     fontSize: 24,
     lineHeight: 36,
-    color: '#F8F9FD',
+    color: Colors.text,
   },
   subheading: {
     fontFamily: fontFamily.regular,
     fontSize: 14,
     lineHeight: 23.8,
-    color: '#94A3B8',
+    color: Colors.textSecondary,
     letterSpacing: 0.3,
     maxWidth: 301,
   },
@@ -528,25 +528,25 @@ const catStyles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 10,
-    backgroundColor: '#1E293B',
+    backgroundColor: Colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: 'transparent',
   },
   chipSelected: {
-    borderColor: '#6B39F4',
+    borderColor: Colors.primary,
   },
   chipText: {
     fontFamily: fontFamily.bold,
     fontSize: 12,
-    color: '#94A3B8',
+    color: Colors.textSecondary,
     letterSpacing: 0.2,
     lineHeight: 20.4,
     textAlign: 'center',
   },
   chipTextSelected: {
-    color: '#FFFFFF',
+    color: Colors.white,
   },
   chipPlaceholder: {
     height: 40,
@@ -558,7 +558,7 @@ const catStyles = StyleSheet.create({
   moreText: {
     fontFamily: fontFamily.regular,
     fontSize: 14,
-    color: '#64748B',
+    color: Colors.textTertiary,
     letterSpacing: 0.3,
     lineHeight: 23.8,
   },
@@ -569,22 +569,22 @@ const catStyles = StyleSheet.create({
   continueBtn: {
     height: 56,
     borderRadius: 12,
-    backgroundColor: '#6B39F4',
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
   },
   continueBtnDisabled: {
-    backgroundColor: '#334155',
+    backgroundColor: Colors.border,
   },
   continueBtnText: {
     fontFamily: fontFamily.bold,
     fontSize: 16,
-    color: '#FFFFFF',
+    color: Colors.white,
     letterSpacing: 0.4,
   },
   continueBtnTextDisabled: {
-    color: '#64748B',
+    color: Colors.textTertiary,
   },
 });
 
@@ -604,9 +604,9 @@ const setupStyles = StyleSheet.create({
     paddingBottom: 16,
   },
   card: {
-    backgroundColor: '#0F172A',
+    backgroundColor: Colors.background,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: Colors.border,
     borderRadius: 12,
     padding: 16,
     gap: 16,
@@ -628,14 +628,14 @@ const setupStyles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#1E293B',
+    backgroundColor: Colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cardLabel: {
     fontFamily: fontFamily.bold,
     fontSize: 14,
-    color: '#F8F9FD',
+    color: Colors.text,
     letterSpacing: 0.3,
   },
   cardValueRow: {
@@ -646,12 +646,12 @@ const setupStyles = StyleSheet.create({
   cardValue: {
     fontFamily: fontFamily.bold,
     fontSize: 14,
-    color: '#F8F9FD',
+    color: Colors.text,
     letterSpacing: 0.3,
   },
   divider: {
     height: 1,
-    backgroundColor: '#334155',
+    backgroundColor: Colors.border,
   },
   itemsList: {
     gap: 0,
@@ -672,19 +672,19 @@ const setupStyles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#1E293B',
+    backgroundColor: Colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
   itemIconText: {
     fontFamily: fontFamily.bold,
     fontSize: 16,
-    color: '#FFFFFF',
+    color: Colors.white,
   },
   itemName: {
     fontFamily: fontFamily.bold,
     fontSize: 14,
-    color: '#F8F9FD',
+    color: Colors.text,
     letterSpacing: 0.3,
   },
   itemValueRow: {
@@ -695,7 +695,7 @@ const setupStyles = StyleSheet.create({
   itemValue: {
     fontFamily: fontFamily.semibold,
     fontSize: 14,
-    color: '#F8F9FD',
+    color: Colors.text,
     letterSpacing: 0.3,
   },
   cardFooter: {
@@ -703,7 +703,7 @@ const setupStyles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   addBtn: {
-    backgroundColor: '#6B39F4',
+    backgroundColor: Colors.primary,
     height: 32,
     width: 64,
     borderRadius: 8,
@@ -713,7 +713,7 @@ const setupStyles = StyleSheet.create({
   addBtnText: {
     fontFamily: fontFamily.bold,
     fontSize: 12,
-    color: '#FFFFFF',
+    color: Colors.white,
     letterSpacing: 0.2,
   },
   footerBar: {
@@ -727,7 +727,7 @@ const setupStyles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 12,
-    backgroundColor: '#1E293B',
+    backgroundColor: Colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -735,14 +735,14 @@ const setupStyles = StyleSheet.create({
     flex: 1,
     height: 56,
     borderRadius: 12,
-    backgroundColor: '#6B39F4',
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   createBtnText: {
     fontFamily: fontFamily.semibold,
     fontSize: 16,
-    color: '#FFFFFF',
+    color: Colors.white,
     letterSpacing: 0.4,
   },
 });
@@ -1167,7 +1167,7 @@ const formStyles = StyleSheet.create({
   },
   toggleRow: {
     flexDirection: 'row',
-    backgroundColor: Colors.surfaceSecondary,
+    backgroundColor: Colors.surface,
     borderRadius: borderRadius.sm,
     padding: 2,
     marginBottom: spacing.lg,
@@ -1179,7 +1179,7 @@ const formStyles = StyleSheet.create({
     borderRadius: borderRadius.sm - 2,
   },
   toggleActive: {
-    backgroundColor: Colors.surface,
+    backgroundColor: Colors.border,
   },
   toggleText: {
     fontFamily: fontFamily.medium,
@@ -1228,13 +1228,13 @@ const formStyles = StyleSheet.create({
     gap: spacing.md,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
+    borderBottomColor: Colors.border,
   },
   itemBadge: {
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: Colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1269,7 +1269,7 @@ const formStyles = StyleSheet.create({
     borderRadius: borderRadius.sm - 2,
   },
   toggleBtnActive: {
-    backgroundColor: Colors.surface,
+    backgroundColor: Colors.border,
   },
   toggleBtnText: {
     fontFamily: fontFamily.medium,
@@ -1300,7 +1300,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: Colors.borderLight,
+    backgroundColor: Colors.border,
   },
   dotActive: {
     backgroundColor: Colors.primary,
@@ -1317,14 +1317,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: Colors.divider,
+    borderTopColor: Colors.border,
     backgroundColor: Colors.background,
   },
   backBtn: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: Colors.surfaceSecondary,
+    backgroundColor: Colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },

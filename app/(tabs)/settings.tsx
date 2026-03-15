@@ -297,15 +297,17 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   proButton: {
-    backgroundColor: Colors.white,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     borderRadius: borderRadius.sm,
     paddingVertical: spacing.sm,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
   },
   proButtonText: {
     fontFamily: fontFamily.semibold,
     fontSize: fontSize.sm,
-    color: Colors.primaryDark,
+    color: Colors.white,
   },
   versionText: {
     fontFamily: fontFamily.regular,

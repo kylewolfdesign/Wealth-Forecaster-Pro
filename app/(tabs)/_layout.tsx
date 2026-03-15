@@ -4,6 +4,7 @@ import { NativeTabs, Icon, Label } from 'expo-router/unstable-native-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { Platform, StyleSheet, View } from 'react-native';
 import React from 'react';
+import Colors from '@/constants/colors';
 
 function NativeTabLayout() {
   return (
@@ -31,18 +32,18 @@ function ClassicTabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#6172F3',
-        tabBarInactiveTintColor: '#64748B',
+        tabBarActiveTintColor: Colors.primary,
+        tabBarInactiveTintColor: Colors.textTertiary,
         tabBarStyle: {
           position: 'absolute',
-          backgroundColor: '#0F172A',
+          backgroundColor: Colors.background,
           borderTopWidth: 1,
-          borderTopColor: '#334155',
+          borderTopColor: Colors.border,
           elevation: 0,
           ...(isWeb ? { height: 84 } : {}),
         },
         tabBarBackground: () =>
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: '#0F172A' }]} />,
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: Colors.background }]} />,
         tabBarLabelStyle: {
           fontSize: 10,
           fontWeight: '500',

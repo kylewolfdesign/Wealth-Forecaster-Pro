@@ -1,26 +1,26 @@
 const Colors = {
-  primary: '#6172F3',
-  primaryLight: '#EEF0FF',
-  primaryDark: '#4A5AD8',
-  accent: '#FDE272',
-  accentLight: '#FFFCEB',
+  primary: '#6B39F4',
+  primaryLight: '#1E293B',
+  primaryDark: '#5A2ED4',
+  accent: '#6B39F4',
+  accentLight: '#1E293B',
 
-  background: '#FFFFFF',
-  surface: '#FFFFFF',
-  surfaceSecondary: '#F9FAFB',
+  background: '#0F172A',
+  surface: '#1E293B',
+  surfaceSecondary: '#1E293B',
 
-  text: '#101828',
-  textSecondary: '#475467',
-  textTertiary: '#667085',
+  text: '#F8F9FD',
+  textSecondary: '#94A3B8',
+  textTertiary: '#64748B',
 
   positive: '#12B76A',
-  positiveLight: '#ECFDF3',
+  positiveLight: 'rgba(18,183,106,0.15)',
   negative: '#F04438',
-  negativeLight: '#FEF3F2',
+  negativeLight: 'rgba(240,68,56,0.15)',
 
-  border: '#EAECF0',
-  borderLight: '#F2F4F7',
-  divider: '#EAECF0',
+  border: '#334155',
+  borderLight: '#334155',
+  divider: '#334155',
 
   white: '#FFFFFF',
   black: '#000000',
@@ -33,8 +33,8 @@ const Colors = {
   categoryOther: '#EE46BC',
   categoryMortgage: '#F04438',
 
-  tabIconDefault: '#98A2B3',
-  tint: '#6172F3',
+  tabIconDefault: '#64748B',
+  tint: '#6B39F4',
 };
 
 export default Colors;

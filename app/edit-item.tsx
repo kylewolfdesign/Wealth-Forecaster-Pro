@@ -18,13 +18,15 @@ import TickerInput from '@/components/TickerInput';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { fontFamily } from '@/constants/theme';
 
-const DARK_BG = '#0F172A';
-const CARD_BG = '#1E293B';
-const BORDER = '#334155';
-const PURPLE = '#6B39F4';
-const TEXT_PRIMARY = '#F8F9FD';
-const TEXT_SECONDARY = '#94A3B8';
-const TEXT_MUTED = '#64748B';
+import Colors from '@/constants/colors';
+
+const DARK_BG = Colors.background;
+const CARD_BG = Colors.surface;
+const BORDER = Colors.border;
+const PURPLE = Colors.primary;
+const TEXT_PRIMARY = Colors.text;
+const TEXT_SECONDARY = Colors.textSecondary;
+const TEXT_MUTED = Colors.textTertiary;
 
 type EditType = 'holding' | 'rsu' | 'cash' | 'mortgage' | 'other';
 type AppStore = AppState;
@@ -704,7 +706,7 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
   pickerModalContent: {
-    backgroundColor: '#1C1C1E',
+    backgroundColor: CARD_BG,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
   },
@@ -714,7 +716,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#3A3A3C',
+    borderBottomColor: BORDER,
   },
   pickerModalDone: {
     fontFamily: fontFamily.semibold,
@@ -722,7 +724,7 @@ const s = StyleSheet.create({
     color: PURPLE,
   },
   nativePicker: {
-    backgroundColor: '#1C1C1E',
+    backgroundColor: CARD_BG,
   },
   nativePickerItem: {
     color: TEXT_PRIMARY,
@@ -758,15 +760,15 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   actionBtnDisabled: {
-    backgroundColor: '#1E293B',
+    backgroundColor: CARD_BG,
   },
   actionBtnText: {
     fontFamily: fontFamily.bold,
     fontSize: 16,
-    color: '#FFFFFF',
+    color: Colors.white,
     letterSpacing: 0.4,
   },
   actionBtnTextDisabled: {
-    color: '#475569',
+    color: TEXT_MUTED,
   },
 });
