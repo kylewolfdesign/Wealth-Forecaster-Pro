@@ -83,7 +83,7 @@ function SwipeableRow({ children, onDelete }: { children: React.ReactNode; onDel
         </Pressable>
       </View>
       <Animated.View
-        style={{ transform: [{ translateX }], backgroundColor: Colors.surface }}
+        style={{ transform: [{ translateX }], backgroundColor: Colors.backgroundFlat }}
         {...panResponder.panHandlers}
       >
         {children}
