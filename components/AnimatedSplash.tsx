@@ -33,14 +33,14 @@ function SplashChart() {
     >
       <Defs>
         <LinearGradient id="chartGrad" x1="58.25" y1="0.75" x2="58.25" y2="102.25" gradientUnits="userSpaceOnUse">
-          <Stop offset="0" stopColor="#8A38F5" stopOpacity="1" />
-          <Stop offset="1" stopColor="#51218F" stopOpacity="0" />
+          <Stop offset="0" stopColor="#8b5cf6" stopOpacity="1" />
+          <Stop offset="1" stopColor="#4c1d95" stopOpacity="0" />
         </LinearGradient>
       </Defs>
       <Path d={CHART_FILL_PATH} fill="url(#chartGrad)" />
       <Path
         d={CHART_LINE_PATH}
-        stroke="#1DCE5C"
+        stroke="#8b5cf6"
         strokeWidth="1.5"
         strokeLinecap="round"
         fill="none"

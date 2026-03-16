@@ -60,7 +60,7 @@ interface TickerInputProps {
 const DARK = {
   bg: '#1E293B',
   border: '#334155',
-  focusBorder: '#6B39F4',
+  focusBorder: Colors.primary,
   text: '#F8F9FD',
   muted: '#64748B',
   dropdownBg: '#1E293B',

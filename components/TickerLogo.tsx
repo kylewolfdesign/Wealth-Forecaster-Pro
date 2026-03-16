@@ -36,8 +36,8 @@ const CRYPTO_LOGO_MAP: Record<string, string> = {
 };
 
 const FALLBACK_COLORS = [
-  '#6172F3', '#F79009', '#7A5AF8', '#12B76A', '#36BFFA',
-  '#EE46BC', '#F04438', '#4A5AD8', '#FDE272', '#667085',
+  '#8b5cf6', '#0ea5e9', '#10b981', '#6366f1', '#d946ef',
+  '#f59e0b', '#f43f5e', '#06b6d4', '#F04438', '#667085',
 ];
 
 function getColorForSymbol(symbol: string): string {

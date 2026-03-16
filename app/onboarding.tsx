@@ -56,7 +56,7 @@ function OnboardingGraphicPrivacy() {
           <Animated.View style={[graphicStyles.glowRing, { transform: [{ scale: glowScale }], opacity: glowOpacity }]} />
           <Animated.View style={[graphicStyles.shieldOuter, { transform: [{ scale: pulse }] }]}>
             <View style={graphicStyles.shieldInner}>
-              <Ionicons name="shield-checkmark" size={36} color="#6B39F4" />
+              <Ionicons name="shield-checkmark" size={36} color={Colors.primary} />
             </View>
           </Animated.View>
         </View>
@@ -125,7 +125,7 @@ function OnboardingGraphicGrowth() {
                   extrapolate: 'clamp' as const,
                 }),
                 height: 3,
-                backgroundColor: '#6B39F4',
+                backgroundColor: Colors.primary,
                 borderRadius: 1.5,
                 transform: [{ rotate: `${angle}deg` }],
                 transformOrigin: 'left center' as any,
@@ -149,13 +149,13 @@ function OnboardingGraphicGrowth() {
 
 function OnboardingGraphicAssets() {
   const assetIcons: Array<{ name: keyof typeof Ionicons.glyphMap; color: string }> = [
-    { name: 'trending-up', color: '#6172F3' },
-    { name: 'logo-bitcoin', color: '#F79009' },
-    { name: 'wallet', color: '#12B76A' },
-    { name: 'home', color: '#36BFFA' },
-    { name: 'layers', color: '#7A5AF8' },
-    { name: 'diamond', color: '#EE46BC' },
-    { name: 'cash', color: '#12B76A' },
+    { name: 'trending-up', color: Colors.categoryStocks },
+    { name: 'logo-bitcoin', color: Colors.categoryCrypto },
+    { name: 'wallet', color: Colors.categorySavings },
+    { name: 'home', color: Colors.categoryRealEstate },
+    { name: 'layers', color: Colors.categoryRSU },
+    { name: 'diamond', color: Colors.categoryOther },
+    { name: 'cash', color: Colors.categorySavings },
   ];
 
   const fadeAnims = useRef(assetIcons.map(() => new Animated.Value(0))).current;
@@ -614,13 +614,13 @@ const graphicStyles = StyleSheet.create({
     height: 80,
     borderRadius: 40,
     borderWidth: 2,
-    borderColor: '#6B39F4',
+    borderColor: Colors.primary,
   },
   shieldOuter: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: 'rgba(107, 57, 244, 0.15)',
+    backgroundColor: 'rgba(139, 92, 246, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -628,7 +628,7 @@ const graphicStyles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: 'rgba(107, 57, 244, 0.25)',
+    backgroundColor: 'rgba(139, 92, 246, 0.25)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -657,7 +657,7 @@ const graphicStyles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#6B39F4',
+    backgroundColor: Colors.primary,
   },
   assetGrid: {
     flexDirection: 'row',
@@ -692,7 +692,7 @@ const introStyles = StyleSheet.create({
   skipText: {
     fontFamily: fontFamily.semibold,
     fontSize: fontSize.md,
-    color: '#6B39F4',
+    color: Colors.primary,
   },
   page: {
     flex: 1,
@@ -747,7 +747,7 @@ const introStyles = StyleSheet.create({
   },
   dotDarkActive: {
     width: 24,
-    backgroundColor: '#6B39F4',
+    backgroundColor: Colors.primary,
     borderRadius: 4,
   },
   continueBtnDark: {
@@ -755,7 +755,7 @@ const introStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
-    backgroundColor: '#6B39F4',
+    backgroundColor: Colors.primary,
     paddingVertical: 16,
     borderRadius: borderRadius.lg,
     width: '100%',
