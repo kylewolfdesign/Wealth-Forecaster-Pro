@@ -55,7 +55,7 @@ export default function DonutChart({ slices, size, strokeWidth, centerLabel, cen
   const activeSlices = slices
     .filter(s => Math.abs(s.value) > 0)
     .sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
-  const GAP_DEGREES = activeSlices.length > 1 ? 5 : 0;
+  const GAP_DEGREES = activeSlices.length > 1 ? 2.5 : 0;
   const totalGap = GAP_DEGREES * activeSlices.length;
   const availableDegrees = 360 - totalGap;
 
