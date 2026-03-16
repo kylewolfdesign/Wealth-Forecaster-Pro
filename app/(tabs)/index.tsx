@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useCallback, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useCallback, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Platform,
-  Pressable, useWindowDimensions, Alert, Animated, PanResponder,
+  Pressable, useWindowDimensions,
   RefreshControl,
 } from 'react-native';
 import { Redirect, router } from 'expo-router';
@@ -41,56 +41,6 @@ const CATEGORY_CONFIG: CategoryConfig[] = [
   { key: 'realEstate', label: 'Real Estate', color: Colors.categoryRealEstate, icon: 'business', type: 'realEstate' },
   { key: 'cashSavings', label: 'Cash / Savings', color: Colors.categorySavings, icon: 'wallet', type: 'cash' },
 ];
-
-const DELETE_BUTTON_WIDTH = 80;
-const SWIPE_THRESHOLD = -40;
-
-function SwipeableRow({ children, onDelete }: { children: React.ReactNode; onDelete: () => void }) {
-  const translateX = useRef(new Animated.Value(0)).current;
-  const panResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gestureState) =>
-        Math.abs(gestureState.dx) > 10 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy),
-      onPanResponderMove: (_, gestureState) => {
-        if (gestureState.dx < 0) {
-          translateX.setValue(Math.max(gestureState.dx, -DELETE_BUTTON_WIDTH));
-        }
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        if (gestureState.dx < SWIPE_THRESHOLD) {
-          Animated.spring(translateX, {
-            toValue: -DELETE_BUTTON_WIDTH,
-            useNativeDriver: true,
-            bounciness: 0,
-          }).start();
-        } else {
-          Animated.spring(translateX, {
-            toValue: 0,
-            useNativeDriver: true,
-            bounciness: 0,
-          }).start();
-        }
-      },
-    })
-  ).current;
-
-  return (
-    <View style={styles.swipeContainer}>
-      <View style={styles.deleteAction}>
-        <Pressable style={styles.deleteButton} onPress={onDelete} testID="swipe-delete-btn">
-          <Ionicons name="trash-outline" size={20} color="#FFFFFF" />
-          <Text style={styles.deleteButtonText}>Delete</Text>
-        </Pressable>
-      </View>
-      <Animated.View
-        style={{ transform: [{ translateX }], backgroundColor: Colors.backgroundFlat }}
-        {...panResponder.panHandlers}
-      >
-        {children}
-      </Animated.View>
-    </View>
-  );
-}
 
 export default function PortfolioScreen() {
   const insets = useSafeAreaInsets();
@@ -206,45 +156,6 @@ export default function PortfolioScreen() {
     router.push(`/edit-item?${params}`);
   }, []);
 
-  const handleDelete = useCallback((catKey: string, itemId: string, itemName: string) => {
-    const doDelete = () => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      switch (catKey) {
-        case 'stocks':
-        case 'crypto':
-          store.deleteHolding(itemId);
-          break;
-        case 'rsus':
-          store.deleteRSUGrant(itemId);
-          break;
-        case 'cashSavings':
-          store.deleteCashAccount(itemId);
-          break;
-        case 'otherAssets':
-          store.deleteOtherAsset(itemId);
-          break;
-        case 'realEstate':
-          store.deleteRealEstate(itemId);
-          break;
-      }
-      const fresh = useAppStore.getState();
-      const t = computeCurrentTotals(
-        fresh.holdings, fresh.rsuGrants, fresh.cashAccounts,
-        fresh.mortgages, fresh.otherAssets, fresh.realEstate
-      );
-      fresh.addSnapshot(createSnapshot(t, 'Deleted item'));
-    };
-
-    Alert.alert(
-      'Delete',
-      `Are you sure you want to delete "${itemName}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: doDelete },
-      ]
-    );
-  }, [store]);
-
   if (!onboardingComplete) {
     return <Redirect href="/onboarding" />;
   }
@@ -287,31 +198,27 @@ export default function PortfolioScreen() {
     const cat = CATEGORY_CONFIG.find(c => c.key === catKey);
 
     return (
-      <SwipeableRow
+      <Pressable
         key={item.id}
-        onDelete={() => handleDelete(catKey, item.id, name)}
+        style={styles.itemRow}
+        onPress={() => handleEdit(cat?.type || 'holding', item.id, catKey)}
+        testID={`item-${item.id}`}
       >
-        <Pressable
-          style={styles.itemRow}
-          onPress={() => handleEdit(cat?.type || 'holding', item.id, catKey)}
-          testID={`item-${item.id}`}
-        >
-          {symbol && (catKey === 'stocks' || catKey === 'crypto' || catKey === 'rsus') && (
-            <TickerLogo
-              symbol={symbol}
-              type={catKey === 'crypto' ? 'crypto' : 'stock'}
-              size={30}
-            />
-          )}
-          <View style={styles.itemInfo}>
-            <Text style={styles.itemName}>{name}</Text>
-            {!!subtitle && <Text style={styles.itemSubtitle}>{subtitle}</Text>}
-          </View>
-          <Text style={styles.itemValue}>
-            {formatCurrency(value)}
-          </Text>
-        </Pressable>
-      </SwipeableRow>
+        {symbol && (catKey === 'stocks' || catKey === 'crypto' || catKey === 'rsus') && (
+          <TickerLogo
+            symbol={symbol}
+            type={catKey === 'crypto' ? 'crypto' : 'stock'}
+            size={30}
+          />
+        )}
+        <View style={styles.itemInfo}>
+          <Text style={styles.itemName}>{name}</Text>
+          {!!subtitle && <Text style={styles.itemSubtitle}>{subtitle}</Text>}
+        </View>
+        <Text style={styles.itemValue}>
+          {formatCurrency(value)}
+        </Text>
+      </Pressable>
     );
   };
 
@@ -553,31 +460,5 @@ const styles = StyleSheet.create({
     color: Colors.textTertiary,
     textAlign: 'center',
     paddingVertical: spacing.xl,
-  },
-  swipeContainer: {
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  deleteAction: {
-    position: 'absolute',
-    right: 0,
-    top: 0,
-    bottom: 0,
-    width: DELETE_BUTTON_WIDTH,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  deleteButton: {
-    backgroundColor: Colors.negative,
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 2,
-  },
-  deleteButtonText: {
-    fontFamily: fontFamily.medium,
-    fontSize: 11,
-    color: '#FFFFFF',
   },
 });
