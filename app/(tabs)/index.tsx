@@ -330,7 +330,6 @@ export default function PortfolioScreen() {
         />
       }
     >
-      <Text style={styles.pageTitle}>Portfolio</Text>
       <View style={styles.donutSection}>
         <DonutChart
           slices={donutSlices}
@@ -421,13 +420,6 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: spacing.xl,
-  },
-  pageTitle: {
-    fontFamily: fontFamily.bold,
-    fontSize: fontSize.xl,
-    color: Colors.text,
-    textAlign: 'center',
-    marginBottom: spacing.lg,
   },
   donutSection: {
     alignItems: 'center',
