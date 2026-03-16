@@ -58,12 +58,12 @@ interface TickerInputProps {
 }
 
 const DARK = {
-  bg: '#1E293B',
-  border: '#334155',
+  bg: Colors.surfaceFlat,
+  border: Colors.border,
   focusBorder: Colors.primary,
   text: '#F8F9FD',
   muted: '#64748B',
-  dropdownBg: '#1E293B',
+  dropdownBg: Colors.surfaceFlat,
 };
 
 function filterLocalTickers(query: string): TickerResult[] {

@@ -501,7 +501,7 @@ export default function OnboardingScreen() {
               <View style={setupStyles.cardHeader}>
                 <View style={setupStyles.cardNameRow}>
                   <View style={setupStyles.iconCircle}>
-                    <Ionicons name={info.icon} size={20} color="#94A3B8" />
+                    <Ionicons name={info.icon} size={20} color={Colors.textSecondary} />
                   </View>
                   <Text style={setupStyles.cardLabel}>{info.label}</Text>
                 </View>
@@ -510,7 +510,7 @@ export default function OnboardingScreen() {
                   <Ionicons
                     name={isExpanded ? 'chevron-up' : 'chevron-down'}
                     size={24}
-                    color="#94A3B8"
+                    color={Colors.textSecondary}
                   />
                 </View>
               </View>
@@ -546,7 +546,7 @@ export default function OnboardingScreen() {
                           </View>
                           <View style={setupStyles.itemValueRow}>
                             <Text style={setupStyles.itemValue}>{item.value}</Text>
-                            <Ionicons name="chevron-forward" size={20} color="#64748B" />
+                            <Ionicons name="chevron-forward" size={20} color={Colors.textTertiary} />
                           </View>
                         </Pressable>
                       ))}
@@ -591,8 +591,8 @@ const graphicStyles = StyleSheet.create({
     height: 180,
     borderRadius: 20,
     borderWidth: 2,
-    borderColor: '#334155',
-    backgroundColor: '#1E293B',
+    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: Colors.surfaceFlat,
     alignItems: 'center',
     overflow: 'hidden',
   },
@@ -600,7 +600,7 @@ const graphicStyles = StyleSheet.create({
     width: 40,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#334155',
+    backgroundColor: 'rgba(255,255,255,0.08)',
     marginTop: 8,
   },
   phoneScreen: {
@@ -636,7 +636,7 @@ const graphicStyles = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#334155',
+    backgroundColor: 'rgba(255,255,255,0.08)',
     marginBottom: 8,
   },
   chartArea: {
@@ -650,7 +650,7 @@ const graphicStyles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 1,
-    backgroundColor: 'rgba(51, 65, 85, 0.5)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
   },
   chartDot: {
     position: 'absolute',
@@ -670,18 +670,18 @@ const graphicStyles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 14,
-    backgroundColor: '#1E293B',
+    backgroundColor: Colors.surfaceFlat,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.08)',
   },
 });
 
 const introStyles = StyleSheet.create({
   darkContainer: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: Colors.background,
   },
   skipRow: {
     flexDirection: 'row',
@@ -722,14 +722,14 @@ const introStyles = StyleSheet.create({
     fontFamily: fontFamily.bold,
     fontSize: 32,
     lineHeight: 40,
-    color: '#F8F9FD',
+    color: Colors.text,
     letterSpacing: -0.5,
   },
   subtitleDark: {
     fontFamily: fontFamily.regular,
     fontSize: 17,
     lineHeight: 26,
-    color: '#94A3B8',
+    color: Colors.textSecondary,
   },
   footer: {
     paddingHorizontal: spacing.xxl,
@@ -743,7 +743,7 @@ const introStyles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#334155',
+    backgroundColor: 'rgba(255,255,255,0.08)',
   },
   dotDarkActive: {
     width: 24,
@@ -880,7 +880,7 @@ const setupStyles = StyleSheet.create({
     paddingBottom: 16,
   },
   card: {
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,
     borderRadius: 12,

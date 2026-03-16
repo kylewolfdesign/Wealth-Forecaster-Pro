@@ -9,7 +9,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg';
 
-const SPLASH_BG = '#0F172A';
+const SPLASH_BG = '#121422';
 const DISPLAY_DURATION = 3000;
 const FADE_OUT_DURATION = 400;
 const CHART_ANIM_DURATION = 900;

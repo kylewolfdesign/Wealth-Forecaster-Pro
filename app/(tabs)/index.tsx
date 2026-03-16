@@ -83,7 +83,7 @@ function SwipeableRow({ children, onDelete }: { children: React.ReactNode; onDel
         </Pressable>
       </View>
       <Animated.View
-        style={{ transform: [{ translateX }], backgroundColor: '#131C2E' }}
+        style={{ transform: [{ translateX }], backgroundColor: Colors.backgroundFlat }}
         {...panResponder.panHandlers}
       >
         {children}
@@ -468,7 +468,6 @@ const styles = StyleSheet.create({
   },
   categoryCard: {
     marginBottom: spacing.md,
-    backgroundColor: '#131C2E',
   },
   categoryHeader: {
     flexDirection: 'row',
@@ -485,7 +484,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#1E293B',
+    backgroundColor: Colors.surfaceFlat,
     alignItems: 'center',
     justifyContent: 'center',
   },

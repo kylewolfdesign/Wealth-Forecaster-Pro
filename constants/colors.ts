@@ -1,13 +1,15 @@
 const Colors = {
   primary: '#8b5cf6',
-  primaryLight: '#1E293B',
+  primaryLight: '#212330',
   primaryDark: '#8b5cf6',
   accent: '#8b5cf6',
-  accentLight: '#1E293B',
+  accentLight: '#212330',
 
-  background: '#0F172A',
-  surface: '#1E293B',
-  surfaceSecondary: '#1E293B',
+  background: '#121422',
+  backgroundFlat: '#141624',
+  surface: 'rgba(255,255,255,0.03)',
+  surfaceFlat: '#212330',
+  surfaceSecondary: 'rgba(255,255,255,0.03)',
 
   text: '#F8F9FD',
   textSecondary: '#94A3B8',
@@ -18,9 +20,9 @@ const Colors = {
   negative: '#F04438',
   negativeLight: 'rgba(240,68,56,0.15)',
 
-  border: '#334155',
-  borderLight: '#334155',
-  divider: '#334155',
+  border: 'rgba(255,255,255,0.08)',
+  borderLight: 'rgba(255,255,255,0.08)',
+  divider: 'rgba(255,255,255,0.08)',
 
   white: '#FFFFFF',
   black: '#000000',
