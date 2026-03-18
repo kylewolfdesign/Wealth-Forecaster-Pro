@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "NetWorth",
-    "slug": "networth-app",
+    "name": "Wealth forecaster",
+    "slug": "wealthforecaster",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    "scheme": "wealthforecaster",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
@@ -15,10 +15,10 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.myapp"
+      "bundleIdentifier": "com.wealthforecaster.app"
     },
     "android": {
-      "package": "com.myapp",
+      "package": "com.wealthforecaster.app",
       "adaptiveIcon": {
         "backgroundColor": "#0F172A",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
