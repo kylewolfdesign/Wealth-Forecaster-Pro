@@ -1,8 +1,17 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Platform,
   TextInput, useWindowDimensions, TouchableOpacity, Alert,
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSequence,
+  Easing,
+  useAnimatedReaction,
+  runOnJS,
+} from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '@/lib/store';
@@ -23,6 +32,8 @@ const TIME_HORIZONS = [
 
 const MILESTONE_YEARS = [1, 5, 10, 20, 50];
 
+const ANIM_DURATION = 350;
+
 export default function ForecastScreen() {
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
@@ -33,7 +44,11 @@ export default function ForecastScreen() {
 
   const [selectedHorizon, setSelectedHorizon] = useState<string>('10Y');
   const [touchValue, setTouchValue] = useState<number | null>(null);
+  const [displayMonths, setDisplayMonths] = useState(10 * 12);
 
+  const animatedMonths = useSharedValue(10 * 12);
+  const chartOpacity = useSharedValue(1);
+  const chartScaleX = useSharedValue(1);
 
   const forecast = useMemo(
     () => computeForecast(
@@ -43,7 +58,7 @@ export default function ForecastScreen() {
     [holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate, settings]
   );
 
-  const chartData = useMemo(() => {
+  const allChartData = useMemo(() => {
     return forecast.map((p) => ({
       x: p.monthsFromNow,
       y: p.netWorth,
@@ -56,6 +71,35 @@ export default function ForecastScreen() {
   }, [selectedHorizon]);
 
   const selectedMonths = selectedYears * 12;
+
+  useEffect(() => {
+    const easing = Easing.out(Easing.cubic);
+    animatedMonths.value = withTiming(selectedMonths, { duration: ANIM_DURATION, easing });
+
+    chartOpacity.value = withSequence(
+      withTiming(0.4, { duration: ANIM_DURATION * 0.3, easing: Easing.out(Easing.quad) }),
+      withTiming(1, { duration: ANIM_DURATION * 0.7, easing: Easing.in(Easing.quad) }),
+    );
+
+    const isZoomingIn = selectedMonths < displayMonths;
+    chartScaleX.value = withSequence(
+      withTiming(isZoomingIn ? 1.03 : 0.97, { duration: ANIM_DURATION * 0.3, easing: Easing.out(Easing.quad) }),
+      withTiming(1, { duration: ANIM_DURATION * 0.7, easing }),
+    );
+  }, [selectedMonths]);
+
+  useAnimatedReaction(
+    () => Math.round(animatedMonths.value),
+    (current, previous) => {
+      if (current !== previous) {
+        runOnJS(setDisplayMonths)(current);
+      }
+    },
+  );
+
+  const chartData = useMemo(() => {
+    return allChartData.filter((d) => d.x <= displayMonths);
+  }, [allChartData, displayMonths]);
 
   const headlineValue = useMemo(() => {
     const point = forecast.find((p) => p.monthsFromNow >= selectedMonths);
@@ -86,10 +130,26 @@ export default function ForecastScreen() {
     setSelectedHorizon(key);
   };
 
+  const formatXLabel = (months: number) => {
+    if (months <= 0) return 'Now';
+    if (selectedYears <= 2) {
+      const mo = Math.round(months);
+      if (mo < 12) return `${mo}mo`;
+      const yrs = Math.floor(mo / 12);
+      const rem = mo % 12;
+      if (rem === 0) return `${yrs}Y`;
+      return `${yrs}Y${rem}m`;
+    }
+    const years = Math.round(months / 12);
+    return `${years}Y`;
+  };
+
   const topInset = Platform.OS === 'web' ? 67 : insets.top;
 
-  const maxDataMonths = forecast.length > 0 ? forecast[forecast.length - 1].monthsFromNow : 0;
-  const showHighlight = selectedMonths < maxDataMonths;
+  const chartAnimStyle = useAnimatedStyle(() => ({
+    opacity: chartOpacity.value,
+    transform: [{ scaleX: chartScaleX.value }],
+  }));
 
   return (
     <ScrollView
@@ -113,18 +173,20 @@ export default function ForecastScreen() {
               <Text style={styles.touchLabel}>{formatCurrency(touchValue)}</Text>
             </View>
           )}
-          <LineChart
-            data={chartData}
-            width={screenWidth - spacing.xl * 2}
-            height={300}
-            color={Colors.primary}
-            showGrid
-            showLabels
-            formatY={(v) => formatCurrency(v)}
-            highlightEndX={showHighlight ? selectedMonths : undefined}
-            onTouch={(point) => setTouchValue(point.y)}
-            onTouchEnd={() => setTouchValue(null)}
-          />
+          <Animated.View style={chartAnimStyle}>
+            <LineChart
+              data={chartData}
+              width={screenWidth - spacing.xl * 2}
+              height={300}
+              color={Colors.primary}
+              showGrid
+              showLabels
+              formatY={(v) => formatCurrency(v)}
+              formatX={formatXLabel}
+              onTouch={(point) => setTouchValue(point.y)}
+              onTouchEnd={() => setTouchValue(null)}
+            />
+          </Animated.View>
         </View>
       )}
 

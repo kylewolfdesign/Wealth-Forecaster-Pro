@@ -1,6 +1,6 @@
 import React, { useRef, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, PanResponder } from 'react-native';
-import Svg, { Path, Defs, LinearGradient, Stop, Line, Text as SvgText, ClipPath, Rect, Circle } from 'react-native-svg';
+import Svg, { Path, Defs, LinearGradient, Stop, Line, Text as SvgText, Circle } from 'react-native-svg';
 import Colors from '@/constants/colors';
 import { fontFamily, fontSize } from '@/constants/theme';
 
@@ -18,11 +18,10 @@ interface LineChartProps {
   showGrid?: boolean;
   showLabels?: boolean;
   formatY?: (val: number) => string;
+  formatX?: (val: number) => string;
   compact?: boolean;
   gridColor?: string;
   labelColor?: string;
-  highlightEndX?: number;
-  dimmedColor?: string;
   onTouch?: (point: DataPoint) => void;
   onTouchEnd?: () => void;
   touchIndicatorColor?: string;
@@ -36,11 +35,10 @@ export default function LineChart({
   showGrid = false,
   showLabels = false,
   formatY,
+  formatX,
   compact = false,
   gridColor,
   labelColor,
-  highlightEndX,
-  dimmedColor,
   onTouch,
   onTouchEnd,
   touchIndicatorColor,
@@ -193,9 +191,13 @@ export default function LineChart({
     gridYValues.push(yMin - yPad + ((yRange + 2 * yPad) * i) / (gridLines || 1));
   }
 
-  const hasHighlight = highlightEndX != null && highlightEndX < xMax;
-  const splitX = hasHighlight ? toX(highlightEndX) : 0;
-  const resolvedDimmedColor = dimmedColor || Colors.textTertiary;
+  const xLabelCount = Math.min(5, Math.max(2, Math.floor(chartW / 60)));
+  const xLabelValues: number[] = [];
+  if (showLabels && formatX) {
+    for (let i = 0; i <= xLabelCount; i++) {
+      xLabelValues.push(xMin + (xRange * i) / xLabelCount);
+    }
+  }
 
   const indicatorColor = touchIndicatorColor || color;
   const activePixelX = activePoint ? toX(activePoint.x) : 0;
@@ -212,20 +214,6 @@ export default function LineChart({
             <Stop offset="0" stopColor={color} stopOpacity="0.2" />
             <Stop offset="1" stopColor={color} stopOpacity="0.01" />
           </LinearGradient>
-          <LinearGradient id="areaGradientDimmed" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor={resolvedDimmedColor} stopOpacity="0.08" />
-            <Stop offset="1" stopColor={resolvedDimmedColor} stopOpacity="0.01" />
-          </LinearGradient>
-          {hasHighlight && (
-            <>
-              <ClipPath id="clipHighlight">
-                <Rect x={0} y={0} width={splitX} height={height} />
-              </ClipPath>
-              <ClipPath id="clipDimmed">
-                <Rect x={splitX} y={0} width={width - splitX} height={height} />
-              </ClipPath>
-            </>
-          )}
         </Defs>
 
         {showGrid &&
@@ -254,19 +242,22 @@ export default function LineChart({
             </React.Fragment>
           ))}
 
-        {hasHighlight ? (
-          <>
-            <Path d={areaPath} fill="url(#areaGradient)" clipPath="url(#clipHighlight)" />
-            <Path d={linePath} fill="none" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" clipPath="url(#clipHighlight)" />
-            <Path d={areaPath} fill="url(#areaGradientDimmed)" clipPath="url(#clipDimmed)" />
-            <Path d={linePath} fill="none" stroke={resolvedDimmedColor} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" opacity={0.4} clipPath="url(#clipDimmed)" />
-          </>
-        ) : (
-          <>
-            <Path d={areaPath} fill="url(#areaGradient)" />
-            <Path d={linePath} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-          </>
-        )}
+        <Path d={areaPath} fill="url(#areaGradient)" />
+        <Path d={linePath} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+
+        {xLabelValues.map((xVal, i) => (
+          <SvgText
+            key={`x-${i}`}
+            x={toX(xVal)}
+            y={padding.top + chartH + 16}
+            textAnchor="middle"
+            fill={labelColor || Colors.textTertiary}
+            fontSize={10}
+            fontFamily={fontFamily.regular}
+          >
+            {formatX?.(xVal) ?? ''}
+          </SvgText>
+        ))}
 
         {activePoint && (
           <>
