@@ -1,0 +1,31 @@
+The "Show Real Returns" (inflation-adjusted) toggle is currently hidden in the Settings
+  tab. Bring it into the Forecast tab so users discover and use it.                        
+  
+  Changes needed:                                                                          
+                  
+  1. In app/(tabs)/forecast.tsx, add a pill-style toggle row directly below the time       
+  horizon tab bar (1Y / 5Y / 10Y / 20Y / 50Y) and above the milestones card. The toggle
+  should read:                                                                             
+     - Left label: "Nominal"
+     - Right label: "Real (inflation-adj.)"                                                
+     - Highlight the active selection with the primary purple color; inactive in
+  textTertiary.                                                                            
+                  
+  2. Wire it to settings.showRealReturns via setSettings({ showRealReturns:                
+  !settings.showRealReturns }). The forecast calculation already uses this flag so the
+  chart and milestone values will update automatically.                                    
+                  
+  3. Add a small info icon (Ionicons "information-circle-outline") next to the "Real       
+  (inflation-adj.)" label. Tapping it shows an Alert explaining: "Real returns adjust for
+  inflation (currently set to X%), showing what your wealth is worth in today's dollars."  
+  where X is settings.inflationPct.
+
+  4. Remove the showRealReturns toggle from app/(tabs)/settings.tsx since it now lives on  
+  the Forecast tab. The inflation rate input field should stay in Settings.
+                                                                                           
+  Use existing Colors, spacing, fontFamily, fontSize, and borderRadius constants. Match the
+   visual style of the existing time horizon tab bar as closely as possible.
+                                                                                           
+  ---                                                                                      
+  Each prompt is self-contained and references the exact files. Paste them one at a time
+  into Replit so you can review the output between each change.   

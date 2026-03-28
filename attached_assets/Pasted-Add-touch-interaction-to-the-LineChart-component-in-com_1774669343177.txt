@@ -1,0 +1,32 @@
+Add touch interaction to the LineChart component in components/LineChart.tsx so users can
+   drag their finger across the forecast chart and see the exact projected value at any    
+  point.          
+                                                                                           
+  Changes needed: 
+
+  1. Add these new optional props to the LineChartProps interface:
+     - onTouch?: (value: number, x: number) => void  — fires as the user drags
+     - onTouchEnd?: () => void  — fires when the user lifts their finger                   
+     - touchIndicatorColor?: string                                                        
+                                                                                           
+  2. Wrap the existing Svg element in a View with a PanResponder (from react-native) that  
+  captures touch events. On move, calculate which data point is closest to the touch X
+  position, then call onTouch with the interpolated y-value and the pixel x position.      
+                  
+  3. When a touch is active, render a vertical indicator line on the chart at the touch x  
+  position (a thin Line element in the SVG, using touchIndicatorColor or Colors.primary).
+  Also render a small filled circle (Circle from react-native-svg) at the intersection of  
+  the indicator and the chart line.
+
+  4. In app/(tabs)/forecast.tsx, wire up the onTouch and onTouchEnd props on the LineChart 
+  used in the forecast screen:
+     - Add state: const [touchValue, setTouchValue] = useState<number | null>(null)        
+     - Pass onTouch={(val) => setTouchValue(val)} and onTouchEnd={() =>                    
+  setTouchValue(null)}                                                                     
+     - When touchValue is not null, display it as a floating label above the chart         
+  (absolutely positioned) showing the formatted currency value using formatCurrency. When  
+  null, show nothing (don't replace the headline value).
+                                                                                           
+  Use existing Colors constants and do not change any other chart rendering behavior. The  
+  jitter/noise on the line can stay — the touch target should snap to the nearest actual
+  data point, not the jittered pixel position.               

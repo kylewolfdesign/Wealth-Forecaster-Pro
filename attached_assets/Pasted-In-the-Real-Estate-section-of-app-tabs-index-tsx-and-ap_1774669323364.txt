@@ -1,0 +1,30 @@
+In the Real Estate section of app/(tabs)/index.tsx and app/edit-item.tsx, visually
+  connect each mortgage to its corresponding real estate property and show calculated      
+  equity.
+                                                                                           
+  Changes needed: 
+
+  1. In lib/types.ts, add an optional mortgageId?: string field to the RealEstate interface
+   so a property can reference its linked mortgage.
+                                                                                           
+  2. In app/edit-item.tsx, on the Real Estate form, add a "Linked Mortgage" picker/selector
+   that lists all mortgages from the store (by name). Selecting one saves its id into
+  realEstate.mortgageId. Include a "None" option. Place it after the existing equity       
+  fields.         
+
+  3. In app/(tabs)/index.tsx, when rendering items inside the expanded Real Estate         
+  category, if a real estate item has a mortgageId, look up that mortgage from the store
+  and display a small sub-row beneath the property showing:                                
+     - "Mortgage: [mortgage name]" with the outstanding balance
+     - "Equity: [currentValue or equity field minus mortgage principalBalance]" in green
+     Style these sub-rows with smaller text (fontSize.sm), indented slightly, using        
+  textSecondary color for the mortgage line and the existing positive/green color for the  
+  equity line.                                                                             
+                                                                                           
+  4. In lib/store.ts, update the Zustand store's update action for realEstate to handle the
+   new mortgageId field (it likely already uses a spread update pattern, so this may be
+  automatic).                                                                              
+                  
+  Do not change the net worth calculation logic — the mortgage is already subtracted       
+  globally. This is purely a display/UX change to make the relationship visible. Do not
+  remove or hide the Mortgages category.                                          
