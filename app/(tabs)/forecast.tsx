@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Platform,
-  TextInput, useWindowDimensions, TouchableOpacity,
+  TextInput, useWindowDimensions, TouchableOpacity, Alert,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '@/lib/store';
 import { computeForecast } from '@/lib/calculations';
@@ -145,6 +146,56 @@ export default function ForecastScreen() {
             </TouchableOpacity>
           );
         })}
+      </View>
+
+      <View style={styles.returnToggleBar}>
+        <TouchableOpacity
+          style={[
+            styles.returnToggle,
+            !settings.showRealReturns && styles.returnToggleActive,
+          ]}
+          onPress={() => setSettings({ showRealReturns: false })}
+          activeOpacity={0.7}
+        >
+          <Text style={[
+            styles.returnToggleText,
+            !settings.showRealReturns && styles.returnToggleTextActive,
+          ]}>
+            Nominal
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.returnToggle,
+            settings.showRealReturns && styles.returnToggleActive,
+          ]}
+          onPress={() => setSettings({ showRealReturns: true })}
+          activeOpacity={0.7}
+        >
+          <View style={styles.returnToggleInner}>
+            <Text style={[
+              styles.returnToggleText,
+              settings.showRealReturns && styles.returnToggleTextActive,
+            ]}>
+              Real (inflation-adj.)
+            </Text>
+            <TouchableOpacity
+              onPress={() =>
+                Alert.alert(
+                  'Real Returns',
+                  `Real returns adjust projected values for inflation, showing your future wealth in today's purchasing power. The current assumed inflation rate is ${settings.inflationPct}% per year. You can change this rate in Settings.`,
+                )
+              }
+              hitSlop={8}
+            >
+              <Ionicons
+                name="information-circle-outline"
+                size={16}
+                color={settings.showRealReturns ? Colors.white : Colors.textTertiary}
+              />
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
       </View>
 
       <Card style={styles.milestoneCard}>
@@ -314,6 +365,38 @@ const styles = StyleSheet.create({
     color: Colors.white,
   },
   chartContainer: { marginBottom: spacing.lg },
+  returnToggleBar: {
+    flexDirection: 'row',
+    backgroundColor: Colors.surface,
+    borderRadius: borderRadius.md,
+    padding: 4,
+    marginBottom: spacing.xl,
+  },
+  returnToggle: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.sm,
+  },
+  returnToggleActive: {
+    backgroundColor: Colors.primary,
+  },
+  returnToggleText: {
+    fontFamily: fontFamily.semibold,
+    fontSize: fontSize.sm,
+    color: Colors.textTertiary,
+    textAlign: 'center',
+  },
+  returnToggleTextActive: {
+    color: Colors.white,
+  },
+  returnToggleInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
   milestoneCard: { marginBottom: spacing.xl },
   cardTitle: {
     fontFamily: fontFamily.semibold,

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Platform,
-  TextInput, Pressable, Switch, Alert,
+  TextInput, Pressable, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -103,15 +103,8 @@ export default function SettingsScreen() {
           value={settings.inflationPct}
           suffix="% / year"
           onSave={(v) => setSettings({ inflationPct: v })}
+          isLast
         />
-        <View style={styles.switchRow}>
-          <Text style={styles.switchLabel}>Show Real Returns</Text>
-          <Switch
-            value={settings.showRealReturns}
-            onValueChange={(v) => setSettings({ showRealReturns: v })}
-            trackColor={{ true: Colors.primary, false: Colors.surfaceSecondary }}
-          />
-        </View>
       </Card>
 
       <Text style={styles.sectionTitle}>Data</Text>
@@ -221,17 +214,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
   },
   settingsCard: { marginBottom: spacing.sm },
-  switchRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-  },
-  switchLabel: {
-    fontFamily: fontFamily.medium,
-    fontSize: fontSize.md,
-    color: Colors.text,
-  },
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
