@@ -548,6 +548,7 @@ function RealEstateForm({ existing, isEditing, store, saveAndSnapshot, onAction 
   const [equity, setEquity] = useState(existing?.equity?.toString() ?? '');
   const [additionalEquity, setAdditionalEquity] = useState(existing?.additionalEquity?.toString() ?? '');
   const [equityCadence, setEquityCadence] = useState<'monthly' | 'quarterly' | 'yearly'>(existing?.equityCadence ?? 'monthly');
+  const [mortgageId, setMortgageId] = useState(existing?.mortgageId ?? '');
 
   const handleSave = () => {
     if (!name.trim() || !currentValue.trim()) {
@@ -577,6 +578,7 @@ function RealEstateForm({ existing, isEditing, store, saveAndSnapshot, onAction 
       equity: parsedEquity,
       additionalEquity: parsedAdditionalEquity,
       equityCadence: parsedAdditionalEquity ? equityCadence : undefined,
+      mortgageId: mortgageId || undefined,
     };
     if (isEditing && existing) {
       store.updateRealEstate(existing.id, data);
@@ -609,6 +611,15 @@ function RealEstateForm({ existing, isEditing, store, saveAndSnapshot, onAction 
           { label: 'Monthly', value: 'monthly' },
           { label: 'Quarterly', value: 'quarterly' },
           { label: 'Yearly', value: 'yearly' },
+        ]}
+      />
+      <FieldLabel label="Linked Mortgage" />
+      <NativePicker
+        selectedValue={mortgageId}
+        onValueChange={(val) => setMortgageId(val)}
+        items={[
+          { label: 'None', value: '' },
+          ...store.mortgages.map((m) => ({ label: m.name, value: m.id })),
         ]}
       />
     </View>

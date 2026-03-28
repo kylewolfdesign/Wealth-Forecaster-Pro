@@ -205,28 +205,47 @@ export default function PortfolioScreen() {
     const { name, value, subtitle, symbol } = getItemDetails(catKey, item);
     const cat = CATEGORY_CONFIG.find(c => c.key === catKey);
 
+    const linkedMortgage = catKey === 'realEstate' && 'mortgageId' in item && (item as RealEstate).mortgageId
+      ? mortgages.find(m => m.id === (item as RealEstate).mortgageId)
+      : null;
+
     return (
-      <Pressable
-        key={item.id}
-        style={styles.itemRow}
-        onPress={() => handleEdit(cat?.type || 'holding', item.id, catKey)}
-        testID={`item-${item.id}`}
-      >
-        {symbol && (catKey === 'stocks' || catKey === 'crypto' || catKey === 'rsus') && (
-          <TickerLogo
-            symbol={symbol}
-            type={catKey === 'crypto' ? 'crypto' : 'stock'}
-            size={30}
-          />
+      <View key={item.id}>
+        <Pressable
+          style={styles.itemRow}
+          onPress={() => handleEdit(cat?.type || 'holding', item.id, catKey)}
+          testID={`item-${item.id}`}
+        >
+          {symbol && (catKey === 'stocks' || catKey === 'crypto' || catKey === 'rsus') && (
+            <TickerLogo
+              symbol={symbol}
+              type={catKey === 'crypto' ? 'crypto' : 'stock'}
+              size={30}
+            />
+          )}
+          <View style={styles.itemInfo}>
+            <Text style={styles.itemName}>{name}</Text>
+            {!!subtitle && <Text style={styles.itemSubtitle}>{subtitle}</Text>}
+          </View>
+          <Text style={styles.itemValue}>
+            {formatCurrency(value)}
+          </Text>
+        </Pressable>
+        {linkedMortgage && (
+          <View style={styles.mortgageSubRows}>
+            <View style={styles.mortgageSubRow}>
+              <Text style={styles.mortgageSubLabel}>Mortgage: {linkedMortgage.name}</Text>
+              <Text style={styles.mortgageSubValue}>{formatCurrency(linkedMortgage.principalBalance)}</Text>
+            </View>
+            <View style={styles.mortgageSubRow}>
+              <Text style={styles.equitySubLabel}>Equity</Text>
+              <Text style={styles.equitySubValue}>
+                {formatCurrency(((item as RealEstate).equity ?? (item as RealEstate).currentValue) - linkedMortgage.principalBalance)}
+              </Text>
+            </View>
+          </View>
         )}
-        <View style={styles.itemInfo}>
-          <Text style={styles.itemName}>{name}</Text>
-          {!!subtitle && <Text style={styles.itemSubtitle}>{subtitle}</Text>}
-        </View>
-        <Text style={styles.itemValue}>
-          {formatCurrency(value)}
-        </Text>
-      </Pressable>
+      </View>
     );
   };
 
@@ -457,6 +476,38 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bold,
     fontSize: fontSize.md,
     color: Colors.text,
+  },
+  mortgageSubRows: {
+    paddingLeft: spacing.lg,
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
+  },
+  mortgageSubRow: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    paddingVertical: 2,
+  },
+  mortgageSubLabel: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.xs,
+    color: Colors.textSecondary,
+  },
+  mortgageSubValue: {
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.xs,
+    color: Colors.textSecondary,
+  },
+  equitySubLabel: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.xs,
+    color: Colors.positive,
+  },
+  equitySubValue: {
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.xs,
+    color: Colors.positive,
   },
   addButtonContainer: {
     flexDirection: 'row',

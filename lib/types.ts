@@ -57,6 +57,7 @@ export interface RealEstate {
   equity?: number;
   additionalEquity?: number;
   equityCadence?: 'monthly' | 'quarterly' | 'yearly';
+  mortgageId?: string;
 }
 
 export interface Settings {
