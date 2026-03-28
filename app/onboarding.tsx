@@ -326,6 +326,27 @@ export default function OnboardingScreen() {
     router.replace('/(tabs)');
   };
 
+  const handleSkipOnboarding = () => {
+    Alert.alert(
+      'Skip Setup',
+      'You can add your assets anytime from the Portfolio screen.',
+      [
+        {
+          text: 'Got it',
+          onPress: () => {
+            store.completeOnboarding();
+            const totals = computeCurrentTotals(
+              store.holdings, store.rsuGrants, store.cashAccounts,
+              store.mortgages, store.otherAssets, store.realEstate,
+            );
+            store.addSnapshot(createSnapshot(totals));
+            router.replace('/(tabs)');
+          },
+        },
+      ],
+    );
+  };
+
   type CardItem = { id: string; name: string; value: string; editType: string };
   const getCardInfo = (catKey: CategoryKey): { label: string; icon: keyof typeof Ionicons.glyphMap; items: CardItem[]; value: string } => {
     switch (catKey) {
@@ -415,6 +436,9 @@ export default function OnboardingScreen() {
     const hasSelection = selectedCategories.size > 0;
     return (
       <View style={[catStyles.container, { paddingTop: topInset }]}>
+        <Pressable style={catStyles.skipBtn} onPress={handleSkipOnboarding} hitSlop={16}>
+          <Text style={catStyles.skipBtnText}>Skip</Text>
+        </Pressable>
         <View style={catStyles.content}>
           <View style={catStyles.dots}>
             <View style={[catStyles.dot, catStyles.dotActive]} />
@@ -467,6 +491,9 @@ export default function OnboardingScreen() {
 
   return (
     <View style={[catStyles.container, { paddingTop: topInset }]}>
+      <Pressable style={catStyles.skipBtn} onPress={handleSkipOnboarding} hitSlop={16}>
+        <Text style={catStyles.skipBtnText}>Skip</Text>
+      </Pressable>
       <View style={setupStyles.header}>
         <View style={catStyles.dots}>
           <View style={catStyles.dot} />
@@ -860,6 +887,16 @@ const catStyles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   continueBtnTextDisabled: {
+    color: Colors.textTertiary,
+  },
+  skipBtn: {
+    alignSelf: 'flex-end',
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+  },
+  skipBtnText: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.sm,
     color: Colors.textTertiary,
   },
 });
