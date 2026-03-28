@@ -75,15 +75,23 @@ export default function PortfolioScreen() {
 
   const { prices: livePrices, refetch: refetchPrices } = useStockPrices(stockSymbols, typedSymbols);
   const [refreshing, setRefreshing] = useState(false);
+  const [lastPriceUpdate, setLastPriceUpdate] = useState<Date | null>(null);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
       await refetchPrices();
+      setLastPriceUpdate(new Date());
     } finally {
       setRefreshing(false);
     }
   }, [refetchPrices]);
+
+  useEffect(() => {
+    if (lastPriceUpdate === null && Object.keys(livePrices).length > 0) {
+      setLastPriceUpdate(new Date());
+    }
+  }, [livePrices]);
 
   const totals = useMemo(
     () => computeCurrentTotals(holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate),
@@ -261,6 +269,11 @@ export default function PortfolioScreen() {
           });
           })()}
         </View>
+        <Text style={styles.priceTimestamp}>
+          {lastPriceUpdate
+            ? `Prices as of ${lastPriceUpdate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+            : 'Pull down to refresh prices'}
+        </Text>
       </View>
 
       <Text style={styles.sectionTitle}>Categories</Text>
@@ -339,6 +352,13 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginTop: spacing.lg + 20,
     paddingHorizontal: spacing.md,
+  },
+  priceTimestamp: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.xs,
+    color: Colors.textTertiary,
+    textAlign: 'center',
+    marginTop: spacing.sm,
   },
   legendItem: {
     flexDirection: 'row',
