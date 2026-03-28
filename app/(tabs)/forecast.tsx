@@ -32,6 +32,7 @@ export default function ForecastScreen() {
   } = useAppStore();
 
   const [selectedHorizon, setSelectedHorizon] = useState<string>('10Y');
+  const [touchValue, setTouchValue] = useState<number | null>(null);
 
 
   const forecast = useMemo(
@@ -107,6 +108,11 @@ export default function ForecastScreen() {
 
       {chartData.length >= 2 && (
         <View style={styles.chartContainer}>
+          {touchValue != null && (
+            <View style={styles.touchLabelContainer}>
+              <Text style={styles.touchLabel}>{formatCurrency(touchValue)}</Text>
+            </View>
+          )}
           <LineChart
             data={chartData}
             width={screenWidth - spacing.xl * 2}
@@ -116,6 +122,8 @@ export default function ForecastScreen() {
             showLabels
             formatY={(v) => formatCurrency(v)}
             highlightEndX={showHighlight ? selectedMonths : undefined}
+            onTouch={(point) => setTouchValue(point.y)}
+            onTouchEnd={() => setTouchValue(null)}
           />
         </View>
       )}
@@ -364,7 +372,25 @@ const styles = StyleSheet.create({
   tabTextActive: {
     color: Colors.white,
   },
-  chartContainer: { marginBottom: spacing.lg },
+  chartContainer: { marginBottom: spacing.lg, position: 'relative' as const },
+  touchLabelContainer: {
+    position: 'absolute' as const,
+    top: -28,
+    left: 0,
+    right: 0,
+    alignItems: 'center' as const,
+    zIndex: 10,
+  },
+  touchLabel: {
+    fontFamily: fontFamily.bold,
+    fontSize: fontSize.md,
+    color: Colors.primary,
+    backgroundColor: Colors.surface,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
+    overflow: 'hidden' as const,
+  },
   returnToggleBar: {
     flexDirection: 'row',
     backgroundColor: Colors.surface,
