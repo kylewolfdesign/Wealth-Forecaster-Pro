@@ -18,8 +18,8 @@ function NativeTabLayout() {
         <Label>Forecast</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="settings">
-        <Icon sf={{ default: 'slider.horizontal.3', selected: 'slider.horizontal.3' }} />
-        <Label>Config</Label>
+        <Icon sf={{ default: 'gearshape', selected: 'gearshape.fill' }} />
+        <Label>Settings</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );
@@ -83,9 +83,9 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'Config',
+          title: 'Settings',
           tabBarIcon: ({ size, focused }) => (
-            <Ionicons name={focused ? 'options' : 'options-outline'} size={size} color={focused ? Colors.primary : Colors.textTertiary} />
+            <Ionicons name={focused ? 'settings' : 'settings-outline'} size={size} color={focused ? Colors.primary : Colors.textTertiary} />
           ),
         }}
       />
