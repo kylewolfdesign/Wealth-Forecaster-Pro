@@ -1,5 +1,5 @@
 import * as Crypto from 'expo-crypto';
-import { Holding, RSUGrant, CashAccount, Mortgage, OtherAsset, RealEstate, Snapshot } from './types';
+import { Holding, RSUGrant, CashAccount, Mortgage, OtherAsset, RealEstate, RetirementAccount, StockOption, Bond, Business, Vehicle, Snapshot } from './types';
 
 function uid(): string {
   return Crypto.randomUUID();
@@ -51,13 +51,78 @@ export function generateDemoData() {
   ];
 
   const otherAssets: OtherAsset[] = [
-    { id: uid(), name: 'Car', value: 28000, annualGrowthRate: -10 },
     { id: uid(), name: 'Art Collection', value: 15000, annualGrowthRate: 5 },
   ];
 
   const realEstate: RealEstate[] = [
     { id: uid(), name: 'Primary Residence', currentValue: 750000, annualGrowthRate: 4, equity: 300000, additionalEquity: 1200, equityCadence: 'monthly' },
     { id: uid(), name: 'Rental Property', currentValue: 420000, annualGrowthRate: 5, equity: 180000, additionalEquity: 800, equityCadence: 'monthly' },
+  ];
+
+  const twoYearsAgo = new Date(now);
+  twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+
+  const retirementAccounts: RetirementAccount[] = [
+    {
+      id: uid(),
+      name: 'Fidelity 401k',
+      accountType: '401k',
+      balance: 185000,
+      monthlyContribution: 1875,
+      employerMatchPct: 50,
+      employerMatchLimit: 11250,
+    },
+  ];
+
+  const stockOptions: StockOption[] = [
+    {
+      id: uid(),
+      symbol: 'NVDA',
+      optionType: 'iso',
+      totalOptions: 5000,
+      vestedOptions: 1250,
+      strikePrice: 45,
+      currentPrice: 130,
+      vest: {
+        startDate: twoYearsAgo.toISOString().split('T')[0],
+        cliffMonths: 12,
+        durationMonths: 48,
+        frequency: 'monthly',
+      },
+    },
+  ];
+
+  const tenYearsFromNow = new Date(now);
+  tenYearsFromNow.setFullYear(tenYearsFromNow.getFullYear() + 10);
+
+  const bonds: Bond[] = [
+    {
+      id: uid(),
+      name: 'US Treasury 10Y',
+      faceValue: 50000,
+      couponRate: 4.25,
+      maturityDate: tenYearsFromNow.toISOString().split('T')[0],
+      purchasePrice: 48500,
+    },
+  ];
+
+  const businesses: Business[] = [
+    {
+      id: uid(),
+      name: 'Angel Investment',
+      value: 25000,
+      annualGrowthRate: 12,
+      isIlliquid: true,
+    },
+  ];
+
+  const vehicles: Vehicle[] = [
+    {
+      id: uid(),
+      name: '2022 Tesla Model 3',
+      currentValue: 32000,
+      annualDepreciationRate: 15,
+    },
   ];
 
   const snapshots: Snapshot[] = [];
@@ -77,12 +142,17 @@ export function generateDemoData() {
         rsusUnvested: Math.round(26700 + Math.random() * 500),
         savings: 37000,
         offset: 35000,
-        otherAssets: 43000,
+        otherAssets: 15000,
         realEstate: 480000,
         mortgage: 450000,
+        retirement: 185000,
+        stockOptions: 106250,
+        bonds: 48500,
+        business: 25000,
+        vehicles: 32000,
       },
     });
   }
 
-  return { holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate, snapshots };
+  return { holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate, retirementAccounts, stockOptions, bonds, businesses, vehicles, snapshots };
 }

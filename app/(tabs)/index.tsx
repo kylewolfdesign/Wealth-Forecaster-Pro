@@ -9,19 +9,19 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useAppStore } from '@/lib/store';
-import { computeCurrentTotals, computeHoldingValue, computeRSUVesting } from '@/lib/calculations';
+import { computeCurrentTotals, computeHoldingValue, computeRSUVesting, computeStockOptionVesting } from '@/lib/calculations';
 import { getInstantPrice } from '@/lib/price-service';
 import { useStockPrices } from '@/hooks/useStockPrices';
 import { createSnapshot, shouldTakeSnapshot } from '@/lib/snapshot';
 import { formatCurrency, formatShares } from '@/lib/format';
-import { Holding, RSUGrant, CashAccount, Mortgage, OtherAsset, RealEstate } from '@/lib/types';
+import { Holding, RSUGrant, CashAccount, Mortgage, OtherAsset, RealEstate, RetirementAccount, StockOption, Bond, Business, Vehicle } from '@/lib/types';
 import DonutChart from '@/components/DonutChart';
 import TickerLogo from '@/components/TickerLogo';
 import Card from '@/components/Card';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily } from '@/constants/theme';
 
-type CategoryItem = Holding | RSUGrant | CashAccount | Mortgage | OtherAsset | RealEstate;
+type CategoryItem = Holding | RSUGrant | CashAccount | Mortgage | OtherAsset | RealEstate | RetirementAccount | StockOption | Bond | Business | Vehicle;
 
 interface CategoryConfig {
   key: string;
@@ -37,6 +37,11 @@ const CATEGORY_CONFIG: CategoryConfig[] = [
   { key: 'stocks', label: 'Stocks', color: Colors.categoryStocks, icon: 'trending-up', type: 'holding', subType: 'stock' },
   { key: 'crypto', label: 'Crypto', color: Colors.categoryCrypto, icon: 'logo-bitcoin', type: 'holding', subType: 'crypto' },
   { key: 'rsus', label: 'RSUs', color: Colors.categoryRSU, icon: 'layers', type: 'rsu' },
+  { key: 'retirement', label: 'Retirement', color: Colors.categoryRetirement, icon: 'umbrella', type: 'retirement' },
+  { key: 'stockOptions', label: 'Stock Options', color: Colors.categoryStockOptions, icon: 'key', type: 'stockOption' },
+  { key: 'bonds', label: 'Bonds', color: Colors.categoryBonds, icon: 'ribbon', type: 'bond' },
+  { key: 'business', label: 'Business', color: Colors.categoryBusiness, icon: 'briefcase', type: 'business' },
+  { key: 'vehicles', label: 'Vehicles', color: Colors.categoryVehicles, icon: 'car', type: 'vehicle' },
   { key: 'otherAssets', label: 'Assets', color: Colors.categoryOther, icon: 'diamond', type: 'other' },
   { key: 'realEstate', label: 'Real Estate', color: Colors.categoryRealEstate, icon: 'business', type: 'realEstate' },
   { key: 'cashSavings', label: 'Cash / Savings', color: Colors.categorySavings, icon: 'wallet', type: 'cash' },
@@ -49,6 +54,7 @@ export default function PortfolioScreen() {
   const {
     onboardingComplete, holdings, rsuGrants, cashAccounts,
     mortgages, otherAssets, realEstate, snapshots, addSnapshot,
+    retirementAccounts, stockOptions, bonds, businesses, vehicles,
   } = store;
 
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
@@ -70,8 +76,15 @@ export default function PortfolioScreen() {
         typed.push({ symbol: upper, type: 'stock' });
       }
     });
+    stockOptions.forEach(o => {
+      const upper = o.symbol.toUpperCase();
+      if (!syms.has(upper)) {
+        syms.add(upper);
+        typed.push({ symbol: upper, type: 'stock' });
+      }
+    });
     return { stockSymbols: [...syms], typedSymbols: typed };
-  }, [holdings, rsuGrants]);
+  }, [holdings, rsuGrants, stockOptions]);
 
   const { prices: livePrices, refetch: refetchPrices } = useStockPrices(stockSymbols, typedSymbols);
   const [refreshing, setRefreshing] = useState(false);
@@ -94,8 +107,8 @@ export default function PortfolioScreen() {
   }, [livePrices]);
 
   const totals = useMemo(
-    () => computeCurrentTotals(holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate),
-    [holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate, livePrices]
+    () => computeCurrentTotals(holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate, retirementAccounts, stockOptions, bonds, businesses, vehicles),
+    [holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate, retirementAccounts, stockOptions, bonds, businesses, vehicles, livePrices]
   );
 
   useEffect(() => {
@@ -108,6 +121,11 @@ export default function PortfolioScreen() {
     stocks: totals.stocks,
     crypto: totals.crypto,
     rsus: totals.rsusVested + totals.rsusUnvested,
+    retirement: totals.retirement,
+    stockOptions: totals.stockOptions,
+    bonds: totals.bonds,
+    business: totals.business,
+    vehicles: totals.vehicles,
     otherAssets: totals.otherAssets,
     realEstate: totals.realEstate,
     cashSavings: totals.savings + totals.offset,
@@ -138,12 +156,17 @@ export default function PortfolioScreen() {
       case 'stocks': return holdings.filter(h => h.type === 'stock');
       case 'crypto': return holdings.filter(h => h.type === 'crypto');
       case 'rsus': return rsuGrants;
+      case 'retirement': return retirementAccounts;
+      case 'stockOptions': return stockOptions;
+      case 'bonds': return bonds;
+      case 'business': return businesses;
+      case 'vehicles': return vehicles;
       case 'otherAssets': return otherAssets;
       case 'realEstate': return realEstate;
       case 'cashSavings': return cashAccounts;
       default: return [];
     }
-  }, [holdings, rsuGrants, cashAccounts, otherAssets, realEstate]);
+  }, [holdings, rsuGrants, cashAccounts, otherAssets, realEstate, retirementAccounts, stockOptions, bonds, businesses, vehicles]);
 
   const handleToggle = useCallback((key: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -171,7 +194,15 @@ export default function PortfolioScreen() {
   const topInset = Platform.OS === 'web' ? 67 : insets.top;
   const donutSize = Math.min(screenWidth - spacing.xl * 4, 280);
 
-  const getItemDetails = (catKey: string, item: CategoryItem): { name: string; value: number; subtitle: string; symbol?: string } => {
+  const ACCOUNT_TYPE_LABELS: Record<string, string> = {
+    '401k': '401(k)',
+    'ira': 'IRA',
+    'roth_ira': 'Roth IRA',
+    'pension': 'Pension',
+    'other': 'Other',
+  };
+
+  const getItemDetails = (catKey: string, item: CategoryItem): { name: string; value: number; subtitle: string; symbol?: string; badge?: string; badgeColor?: string } => {
     if ((catKey === 'stocks' || catKey === 'crypto') && 'symbol' in item && 'shares' in item) {
       const h = item as Holding;
       return { name: h.symbol, value: computeHoldingValue(h), subtitle: `${formatShares(h.shares)} shares`, symbol: h.symbol };
@@ -186,7 +217,7 @@ export default function PortfolioScreen() {
       const c = item as CashAccount;
       return { name: c.name, value: c.balance, subtitle: `+${formatCurrency(c.monthlyContribution)}/mo` };
     }
-    if (catKey === 'realEstate' && 'currentValue' in item) {
+    if (catKey === 'realEstate' && 'currentValue' in item && 'equity' in item) {
       const r = item as RealEstate;
       const equityVal = r.equity ?? r.currentValue;
       const parts: string[] = [];
@@ -194,15 +225,55 @@ export default function PortfolioScreen() {
       if (r.annualGrowthRate) parts.push(`${r.annualGrowthRate}% growth/yr`);
       return { name: r.name, value: equityVal, subtitle: parts.join(' · ') };
     }
-    if (catKey === 'otherAssets' && 'value' in item) {
+    if (catKey === 'otherAssets' && 'value' in item && 'annualGrowthRate' in item) {
       const o = item as OtherAsset;
       return { name: o.name, value: o.value, subtitle: o.annualGrowthRate ? `${o.annualGrowthRate}% growth/yr` : '' };
+    }
+    if (catKey === 'retirement' && 'accountType' in item) {
+      const r = item as RetirementAccount;
+      const label = ACCOUNT_TYPE_LABELS[r.accountType] || r.accountType;
+      return { name: r.name, value: r.balance, subtitle: `+${formatCurrency(r.monthlyContribution)}/mo`, badge: label, badgeColor: Colors.categoryRetirement };
+    }
+    if (catKey === 'stockOptions' && 'strikePrice' in item) {
+      const o = item as StockOption;
+      const { vested } = computeStockOptionVesting(o, new Date());
+      const price = o.currentPrice ?? getInstantPrice(o.symbol, 'stock');
+      const intrinsic = Math.max(price - o.strikePrice, 0) * vested;
+      const isUnderwater = price < o.strikePrice;
+      return {
+        name: `${o.symbol} ${o.optionType.toUpperCase()}`,
+        value: intrinsic,
+        subtitle: `${vested}/${o.totalOptions} vested · Strike $${o.strikePrice}`,
+        symbol: o.symbol,
+        badge: isUnderwater ? 'Underwater' : undefined,
+        badgeColor: isUnderwater ? Colors.negative : undefined,
+      };
+    }
+    if (catKey === 'bonds' && 'couponRate' in item) {
+      const b = item as Bond;
+      return { name: b.name, value: b.purchasePrice ?? b.faceValue, subtitle: `${b.couponRate}% coupon · Matures ${b.maturityDate}` };
+    }
+    if (catKey === 'business' && 'isIlliquid' in item) {
+      const biz = item as Business;
+      const parts: string[] = [];
+      if (biz.annualGrowthRate) parts.push(`${biz.annualGrowthRate}% growth/yr`);
+      return {
+        name: biz.name,
+        value: biz.value,
+        subtitle: parts.join(' · '),
+        badge: biz.isIlliquid ? 'Illiquid' : undefined,
+        badgeColor: Colors.textTertiary,
+      };
+    }
+    if (catKey === 'vehicles' && 'annualDepreciationRate' in item) {
+      const v = item as Vehicle;
+      return { name: v.name, value: v.currentValue, subtitle: `${v.annualDepreciationRate ?? 15}% depreciation/yr` };
     }
     return { name: '', value: 0, subtitle: '' };
   };
 
   const renderItem = (catKey: string, item: CategoryItem) => {
-    const { name, value, subtitle, symbol } = getItemDetails(catKey, item);
+    const { name, value, subtitle, symbol, badge, badgeColor } = getItemDetails(catKey, item);
     const cat = CATEGORY_CONFIG.find(c => c.key === catKey);
 
     const linkedMortgage = catKey === 'realEstate' && 'mortgageId' in item && (item as RealEstate).mortgageId
@@ -216,7 +287,7 @@ export default function PortfolioScreen() {
           onPress={() => handleEdit(cat?.type || 'holding', item.id, catKey)}
           testID={`item-${item.id}`}
         >
-          {symbol && (catKey === 'stocks' || catKey === 'crypto' || catKey === 'rsus') && (
+          {symbol && (catKey === 'stocks' || catKey === 'crypto' || catKey === 'rsus' || catKey === 'stockOptions') && (
             <TickerLogo
               symbol={symbol}
               type={catKey === 'crypto' ? 'crypto' : 'stock'}
@@ -224,7 +295,14 @@ export default function PortfolioScreen() {
             />
           )}
           <View style={styles.itemInfo}>
-            <Text style={styles.itemName}>{name}</Text>
+            <View style={styles.itemNameRow}>
+              <Text style={styles.itemName}>{name}</Text>
+              {badge && (
+                <View style={[styles.badge, { backgroundColor: (badgeColor || Colors.textTertiary) + '22' }]}>
+                  <Text style={[styles.badgeText, { color: badgeColor || Colors.textTertiary }]}>{badge}</Text>
+                </View>
+              )}
+            </View>
             {!!subtitle && <Text style={styles.itemSubtitle}>{subtitle}</Text>}
           </View>
           <Text style={styles.itemValue}>
@@ -461,10 +539,24 @@ const styles = StyleSheet.create({
   itemInfo: {
     flex: 1,
   },
+  itemNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   itemName: {
     fontFamily: fontFamily.semibold,
     fontSize: fontSize.md,
     color: Colors.text,
+  },
+  badge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  badgeText: {
+    fontFamily: fontFamily.medium,
+    fontSize: 10,
   },
   itemSubtitle: {
     fontFamily: fontFamily.regular,

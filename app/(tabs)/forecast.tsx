@@ -40,6 +40,7 @@ export default function ForecastScreen() {
   const {
     holdings, rsuGrants, cashAccounts, mortgages,
     otherAssets, realEstate, settings, setSettings,
+    retirementAccounts, stockOptions, bonds, businesses, vehicles,
   } = useAppStore();
 
   const [selectedHorizon, setSelectedHorizon] = useState<string>('10Y');
@@ -53,9 +54,9 @@ export default function ForecastScreen() {
   const forecast = useMemo(
     () => computeForecast(
       holdings, rsuGrants, cashAccounts, mortgages, otherAssets,
-      settings, 50, realEstate,
+      settings, 50, realEstate, retirementAccounts, stockOptions, bonds, businesses, vehicles,
     ),
-    [holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate, settings]
+    [holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate, retirementAccounts, stockOptions, bonds, businesses, vehicles, settings]
   );
 
   const allChartData = useMemo(() => {
@@ -312,6 +313,13 @@ export default function ForecastScreen() {
           value={settings.cashGrowthPct}
           onChangeText={(t) => handleSettingChange('cashGrowthPct', t)}
           color={Colors.categorySavings}
+        />
+        <AssumptionRow
+          key={`retirement-${settings.retirementGrowthPct}`}
+          label="Retirement"
+          value={settings.retirementGrowthPct}
+          onChangeText={(t) => handleSettingChange('retirementGrowthPct', t)}
+          color={Colors.categoryRetirement}
         />
         <AssumptionRow
           key={`inflation-${settings.inflationPct}`}

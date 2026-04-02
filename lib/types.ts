@@ -60,11 +60,63 @@ export interface RealEstate {
   mortgageId?: string;
 }
 
+export interface RetirementAccount {
+  id: string;
+  name: string;
+  accountType: '401k' | 'ira' | 'roth_ira' | 'pension' | 'other';
+  balance: number;
+  monthlyContribution: number;
+  employerMatchPct?: number;
+  employerMatchLimit?: number;
+}
+
+export interface StockOption {
+  id: string;
+  symbol: string;
+  optionType: 'iso' | 'nso';
+  totalOptions: number;
+  vestedOptions: number;
+  strikePrice: number;
+  currentPrice?: number;
+  vest: {
+    startDate: string;
+    cliffMonths: number;
+    durationMonths: number;
+    frequency: 'monthly' | 'quarterly' | 'yearly';
+  };
+  expirationDate?: string;
+}
+
+export interface Bond {
+  id: string;
+  name: string;
+  faceValue: number;
+  couponRate: number;
+  maturityDate: string;
+  purchasePrice?: number;
+}
+
+export interface Business {
+  id: string;
+  name: string;
+  value: number;
+  annualGrowthRate?: number;
+  isIlliquid?: boolean;
+}
+
+export interface Vehicle {
+  id: string;
+  name: string;
+  currentValue: number;
+  annualDepreciationRate?: number;
+}
+
 export interface Settings {
   stockGrowthPct: number;
   cryptoGrowthPct: number;
   cashGrowthPct: number;
   rsuGrowthPct: number;
+  retirementGrowthPct: number;
   inflationPct: number;
   showRealReturns: boolean;
 }
@@ -80,6 +132,11 @@ export interface SnapshotTotals {
   otherAssets: number;
   realEstate: number;
   mortgage: number;
+  retirement: number;
+  stockOptions: number;
+  bonds: number;
+  business: number;
+  vehicles: number;
 }
 
 export interface Snapshot {
@@ -102,16 +159,22 @@ export interface ForecastPoint {
     otherAssets: number;
     realEstate: number;
     mortgage: number;
+    retirement: number;
+    stockOptions: number;
+    bonds: number;
+    business: number;
+    vehicles: number;
   };
 }
 
-export type ItemType = 'holding' | 'rsu' | 'cash' | 'mortgage' | 'other' | 'realEstate';
+export type ItemType = 'holding' | 'rsu' | 'cash' | 'mortgage' | 'other' | 'realEstate' | 'retirement' | 'stockOption' | 'bond' | 'business' | 'vehicle';
 
 export const DEFAULT_SETTINGS: Settings = {
   stockGrowthPct: 10,
   cryptoGrowthPct: 15,
   cashGrowthPct: 4.5,
   rsuGrowthPct: 10,
+  retirementGrowthPct: 8,
   inflationPct: 3,
   showRealReturns: false,
 };

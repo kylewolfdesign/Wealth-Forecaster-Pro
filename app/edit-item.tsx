@@ -10,7 +10,7 @@ import * as Haptics from 'expo-haptics';
 import * as Crypto from 'expo-crypto';
 import { Picker } from '@react-native-picker/picker';
 import { useAppStore, AppState } from '@/lib/store';
-import { Holding, RSUGrant, CashAccount, Mortgage, OtherAsset, RealEstate } from '@/lib/types';
+import { Holding, RSUGrant, CashAccount, Mortgage, OtherAsset, RealEstate, RetirementAccount, StockOption, Bond, Business, Vehicle } from '@/lib/types';
 import { computeCurrentTotals } from '@/lib/calculations';
 import { createSnapshot } from '@/lib/snapshot';
 import { priceService } from '@/lib/price-service';
@@ -28,7 +28,7 @@ const TEXT_PRIMARY = Colors.text;
 const TEXT_SECONDARY = Colors.textSecondary;
 const TEXT_MUTED = Colors.textTertiary;
 
-type EditType = 'holding' | 'rsu' | 'cash' | 'mortgage' | 'other' | 'realEstate';
+type EditType = 'holding' | 'rsu' | 'cash' | 'mortgage' | 'other' | 'realEstate' | 'retirement' | 'stockOption' | 'bond' | 'business' | 'vehicle';
 type AppStore = AppState;
 
 interface FormAction {
@@ -61,9 +61,14 @@ export default function EditItemScreen() {
       case 'mortgage': return store.mortgages.find(m => m.id === id);
       case 'other': return store.otherAssets.find(a => a.id === id);
       case 'realEstate': return store.realEstate.find(r => r.id === id);
+      case 'retirement': return store.retirementAccounts.find(r => r.id === id);
+      case 'stockOption': return store.stockOptions.find(o => o.id === id);
+      case 'bond': return store.bonds.find(b => b.id === id);
+      case 'business': return store.businesses.find(b => b.id === id);
+      case 'vehicle': return store.vehicles.find(v => v.id === id);
       default: return null;
     }
-  }, [type, id, store.holdings, store.rsuGrants, store.cashAccounts, store.mortgages, store.otherAssets, store.realEstate]);
+  }, [type, id, store.holdings, store.rsuGrants, store.cashAccounts, store.mortgages, store.otherAssets, store.realEstate, store.retirementAccounts, store.stockOptions, store.bonds, store.businesses, store.vehicles]);
 
   const isEditing = !!existing;
   const normalizedCategory = Array.isArray(category) ? category[0] : category;
@@ -72,7 +77,9 @@ export default function EditItemScreen() {
   const saveAndSnapshot = () => {
     const totals = computeCurrentTotals(
       store.holdings, store.rsuGrants, store.cashAccounts,
-      store.mortgages, store.otherAssets, store.realEstate
+      store.mortgages, store.otherAssets, store.realEstate,
+      store.retirementAccounts, store.stockOptions, store.bonds,
+      store.businesses, store.vehicles
     );
     store.addSnapshot(createSnapshot(totals, 'Manual update'));
   };
@@ -86,6 +93,11 @@ export default function EditItemScreen() {
       case 'mortgage': return 'Add mortgage';
       case 'other': return 'Add asset';
       case 'realEstate': return 'Add real estate';
+      case 'retirement': return 'Add retirement account';
+      case 'stockOption': return 'Add stock option';
+      case 'bond': return 'Add bond';
+      case 'business': return 'Add business';
+      case 'vehicle': return 'Add vehicle';
     }
   };
 
@@ -97,6 +109,11 @@ export default function EditItemScreen() {
       case 'mortgage': return 'Enter your loan details';
       case 'other': return 'Enter your asset details';
       case 'realEstate': return 'Enter your property details';
+      case 'retirement': return 'Enter your retirement account details';
+      case 'stockOption': return 'Enter your stock option details';
+      case 'bond': return 'Enter your bond details';
+      case 'business': return 'Enter your business details';
+      case 'vehicle': return 'Enter your vehicle details';
     }
   };
 
@@ -130,6 +147,11 @@ export default function EditItemScreen() {
         {type === 'mortgage' && <MortgageForm existing={existing as Mortgage | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} />}
         {type === 'other' && <OtherForm existing={existing as OtherAsset | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} />}
         {type === 'realEstate' && <RealEstateForm existing={existing as RealEstate | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} />}
+        {type === 'retirement' && <RetirementAccountForm existing={existing as RetirementAccount | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} />}
+        {type === 'stockOption' && <StockOptionForm existing={existing as StockOption | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} />}
+        {type === 'bond' && <BondForm existing={existing as Bond | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} />}
+        {type === 'business' && <BusinessForm existing={existing as Business | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} />}
+        {type === 'vehicle' && <VehicleForm existing={existing as Vehicle | null} isEditing={isEditing} store={store} saveAndSnapshot={saveAndSnapshot} onAction={setFormAction} />}
 
         {isEditing && id && (
           <Pressable
@@ -152,11 +174,18 @@ export default function EditItemScreen() {
                         case 'mortgage': store.deleteMortgage(id); break;
                         case 'other': store.deleteOtherAsset(id); break;
                         case 'realEstate': store.deleteRealEstate(id); break;
+                        case 'retirement': store.deleteRetirementAccount(id); break;
+                        case 'stockOption': store.deleteStockOption(id); break;
+                        case 'bond': store.deleteBond(id); break;
+                        case 'business': store.deleteBusiness(id); break;
+                        case 'vehicle': store.deleteVehicle(id); break;
                       }
                       const fresh = useAppStore.getState();
                       const totals = computeCurrentTotals(
                         fresh.holdings, fresh.rsuGrants, fresh.cashAccounts,
-                        fresh.mortgages, fresh.otherAssets, fresh.realEstate
+                        fresh.mortgages, fresh.otherAssets, fresh.realEstate,
+                        fresh.retirementAccounts, fresh.stockOptions, fresh.bonds,
+                        fresh.businesses, fresh.vehicles
                       );
                       fresh.addSnapshot(createSnapshot(totals, 'Deleted item'));
                       router.back();
@@ -622,6 +651,312 @@ function RealEstateForm({ existing, isEditing, store, saveAndSnapshot, onAction 
           ...store.mortgages.map((m) => ({ label: m.name, value: m.id })),
         ]}
       />
+    </View>
+  );
+}
+
+function RetirementAccountForm({ existing, isEditing, store, saveAndSnapshot, onAction }: FormProps & { existing: RetirementAccount | null }) {
+  const [name, setName] = useState(existing?.name ?? '');
+  const [accountType, setAccountType] = useState<'401k' | 'ira' | 'roth_ira' | 'pension' | 'other'>(existing?.accountType ?? '401k');
+  const [balance, setBalance] = useState(existing?.balance?.toString() ?? '');
+  const [monthly, setMonthly] = useState(existing?.monthlyContribution?.toString() ?? '');
+  const [matchPct, setMatchPct] = useState(existing?.employerMatchPct?.toString() ?? '');
+  const [matchLimit, setMatchLimit] = useState(existing?.employerMatchLimit?.toString() ?? '');
+
+  const handleSave = () => {
+    if (!name.trim() || !balance.trim()) {
+      Alert.alert('Required', 'Name and balance are required');
+      return;
+    }
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const data = {
+      name: name.trim(),
+      accountType,
+      balance: parseFloat(balance),
+      monthlyContribution: parseFloat(monthly) || 0,
+      employerMatchPct: matchPct ? parseFloat(matchPct) : undefined,
+      employerMatchLimit: matchLimit ? parseFloat(matchLimit) : undefined,
+    };
+    if (isEditing && existing) {
+      store.updateRetirementAccount(existing.id, data);
+    } else {
+      store.addRetirementAccount({ id: Crypto.randomUUID(), ...data } as RetirementAccount);
+    }
+    saveAndSnapshot();
+    router.back();
+  };
+
+  useFormAction(onAction, isEditing ? 'Save changes' : 'Add account', !name.trim() || !balance.trim(), handleSave);
+
+  return (
+    <View>
+      <FieldLabel label="Account name" />
+      <DarkInput value={name} onChangeText={setName} placeholder="e.g. Fidelity 401k" />
+      <FieldLabel label="Account type" />
+      <NativePicker
+        selectedValue={accountType}
+        onValueChange={(val) => setAccountType(val as '401k' | 'ira' | 'roth_ira' | 'pension' | 'other')}
+        items={[
+          { label: '401(k)', value: '401k' },
+          { label: 'Traditional IRA', value: 'ira' },
+          { label: 'Roth IRA', value: 'roth_ira' },
+          { label: 'Pension', value: 'pension' },
+          { label: 'Other', value: 'other' },
+        ]}
+      />
+      <FieldLabel label="Current balance ($)" />
+      <DarkInput value={balance} onChangeText={setBalance} keyboardType="numeric" placeholder="0" />
+      <FieldLabel label="Monthly contribution ($)" />
+      <DarkInput value={monthly} onChangeText={setMonthly} keyboardType="numeric" placeholder="0" />
+      <FieldLabel label="Employer match % (optional)" />
+      <DarkInput value={matchPct} onChangeText={setMatchPct} keyboardType="numeric" placeholder="e.g. 50" />
+      <FieldLabel label="Employer match annual limit $ (optional)" />
+      <DarkInput value={matchLimit} onChangeText={setMatchLimit} keyboardType="numeric" placeholder="e.g. 11250" />
+    </View>
+  );
+}
+
+function StockOptionForm({ existing, isEditing, store, saveAndSnapshot, onAction }: FormProps & { existing: StockOption | null }) {
+  const [symbol, setSymbol] = useState(existing?.symbol ?? '');
+  const [optionType, setOptionType] = useState<'iso' | 'nso'>(existing?.optionType ?? 'iso');
+  const [totalOptions, setTotalOptions] = useState(existing?.totalOptions?.toString() ?? '');
+  const [vestedOptions, setVestedOptions] = useState(existing?.vestedOptions?.toString() ?? '');
+  const [strikePrice, setStrikePrice] = useState(existing?.strikePrice?.toString() ?? '');
+  const [currentPrice, setCurrentPrice] = useState(existing?.currentPrice?.toString() ?? '');
+  const [cliffMonths, setCliffMonths] = useState(existing?.vest?.cliffMonths?.toString() ?? '12');
+  const [durationMonths, setDurationMonths] = useState(existing?.vest?.durationMonths?.toString() ?? '48');
+  const [freq, setFreq] = useState<'monthly' | 'quarterly' | 'yearly'>(existing?.vest?.frequency ?? 'monthly');
+  const [startDate, setStartDate] = useState(() => {
+    if (existing?.vest?.startDate) return existing.vest.startDate;
+    const d = new Date();
+    d.setMonth(d.getMonth() - 12);
+    return d.toISOString().split('T')[0];
+  });
+
+  const fetchPrice = useCallback(async (ticker: string) => {
+    const trimmed = ticker.trim().toUpperCase();
+    if (!trimmed) return;
+    try {
+      const quote = await priceService.getQuote(trimmed, 'stock');
+      setCurrentPrice(quote.price.toString());
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (symbol.trim().length >= 1) {
+      fetchPrice(symbol);
+    }
+  }, [symbol]);
+
+  const handleSave = () => {
+    if (!symbol.trim() || !totalOptions.trim() || !strikePrice.trim()) {
+      Alert.alert('Required', 'Symbol, total options, and strike price are required');
+      return;
+    }
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const data: Partial<StockOption> = {
+      symbol: symbol.toUpperCase().trim(),
+      optionType,
+      totalOptions: parseInt(totalOptions),
+      vestedOptions: parseInt(vestedOptions) || 0,
+      strikePrice: parseFloat(strikePrice),
+      currentPrice: currentPrice ? parseFloat(currentPrice) : undefined,
+      vest: {
+        startDate,
+        cliffMonths: parseInt(cliffMonths) || 12,
+        durationMonths: parseInt(durationMonths) || 48,
+        frequency: freq,
+      },
+    };
+    if (isEditing && existing) {
+      store.updateStockOption(existing.id, data);
+    } else {
+      store.addStockOption({ id: Crypto.randomUUID(), ...data } as StockOption);
+    }
+    saveAndSnapshot();
+    router.back();
+  };
+
+  useFormAction(onAction, isEditing ? 'Save changes' : 'Add stock option', !symbol.trim() || !totalOptions.trim() || !strikePrice.trim(), handleSave);
+
+  return (
+    <View>
+      <FieldLabel label="Ticker symbol" />
+      <TickerInput value={symbol} onChangeText={setSymbol} onSelect={setSymbol} type="stock" placeholder="e.g. NVDA" darkMode />
+      <FieldLabel label="Option type" />
+      <NativePicker
+        selectedValue={optionType}
+        onValueChange={(val) => setOptionType(val as 'iso' | 'nso')}
+        items={[
+          { label: 'ISO (Incentive)', value: 'iso' },
+          { label: 'NSO (Non-qualified)', value: 'nso' },
+        ]}
+      />
+      <FieldLabel label="Total options granted" />
+      <DarkInput value={totalOptions} onChangeText={setTotalOptions} keyboardType="numeric" placeholder="e.g. 5000" />
+      <FieldLabel label="Already vested options" />
+      <DarkInput value={vestedOptions} onChangeText={setVestedOptions} keyboardType="numeric" placeholder="0" />
+      <FieldLabel label="Strike price ($)" />
+      <DarkInput value={strikePrice} onChangeText={setStrikePrice} keyboardType="numeric" placeholder="e.g. 45" />
+      <FieldLabel label="Current price ($)" />
+      <DarkInput value={currentPrice} onChangeText={setCurrentPrice} keyboardType="numeric" placeholder="—" editable={false} />
+      <FieldLabel label="Vest start date" />
+      <DarkInput value={startDate} onChangeText={setStartDate} placeholder="YYYY-MM-DD" />
+      <FieldLabel label="Cliff (months)" />
+      <DarkInput value={cliffMonths} onChangeText={setCliffMonths} keyboardType="numeric" placeholder="12" />
+      <FieldLabel label="Total vest duration (months)" />
+      <DarkInput value={durationMonths} onChangeText={setDurationMonths} keyboardType="numeric" placeholder="48" />
+      <FieldLabel label="Vesting frequency" />
+      <NativePicker
+        selectedValue={freq}
+        onValueChange={(val) => setFreq(val as 'monthly' | 'quarterly' | 'yearly')}
+        items={[
+          { label: 'Monthly', value: 'monthly' },
+          { label: 'Quarterly', value: 'quarterly' },
+          { label: 'Yearly', value: 'yearly' },
+        ]}
+      />
+    </View>
+  );
+}
+
+function BondForm({ existing, isEditing, store, saveAndSnapshot, onAction }: FormProps & { existing: Bond | null }) {
+  const [name, setName] = useState(existing?.name ?? '');
+  const [faceValue, setFaceValue] = useState(existing?.faceValue?.toString() ?? '');
+  const [couponRate, setCouponRate] = useState(existing?.couponRate?.toString() ?? '');
+  const [maturityDate, setMaturityDate] = useState(existing?.maturityDate ?? '');
+  const [purchasePrice, setPurchasePrice] = useState(existing?.purchasePrice?.toString() ?? '');
+
+  const handleSave = () => {
+    if (!name.trim() || !faceValue.trim() || !couponRate.trim() || !maturityDate.trim()) {
+      Alert.alert('Required', 'Name, face value, coupon rate, and maturity date are required');
+      return;
+    }
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const data = {
+      name: name.trim(),
+      faceValue: parseFloat(faceValue),
+      couponRate: parseFloat(couponRate),
+      maturityDate,
+      purchasePrice: purchasePrice ? parseFloat(purchasePrice) : undefined,
+    };
+    if (isEditing && existing) {
+      store.updateBond(existing.id, data);
+    } else {
+      store.addBond({ id: Crypto.randomUUID(), ...data } as Bond);
+    }
+    saveAndSnapshot();
+    router.back();
+  };
+
+  useFormAction(onAction, isEditing ? 'Save changes' : 'Add bond', !name.trim() || !faceValue.trim() || !couponRate.trim() || !maturityDate.trim(), handleSave);
+
+  return (
+    <View>
+      <FieldLabel label="Bond name" />
+      <DarkInput value={name} onChangeText={setName} placeholder="e.g. US Treasury 10Y" />
+      <FieldLabel label="Face value ($)" />
+      <DarkInput value={faceValue} onChangeText={setFaceValue} keyboardType="numeric" placeholder="e.g. 50000" />
+      <FieldLabel label="Coupon rate (%)" />
+      <DarkInput value={couponRate} onChangeText={setCouponRate} keyboardType="numeric" placeholder="e.g. 4.25" />
+      <FieldLabel label="Maturity date" />
+      <DarkInput value={maturityDate} onChangeText={setMaturityDate} placeholder="YYYY-MM-DD" />
+      <FieldLabel label="Purchase price $ (optional)" />
+      <DarkInput value={purchasePrice} onChangeText={setPurchasePrice} keyboardType="numeric" placeholder="e.g. 48500" />
+    </View>
+  );
+}
+
+function BusinessForm({ existing, isEditing, store, saveAndSnapshot, onAction }: FormProps & { existing: Business | null }) {
+  const [name, setName] = useState(existing?.name ?? '');
+  const [value, setValue] = useState(existing?.value?.toString() ?? '');
+  const [growth, setGrowth] = useState(existing?.annualGrowthRate?.toString() ?? '');
+  const [isIlliquid, setIsIlliquid] = useState(existing?.isIlliquid ?? true);
+
+  const handleSave = () => {
+    if (!name.trim() || !value.trim()) {
+      Alert.alert('Required', 'Name and value are required');
+      return;
+    }
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const data = {
+      name: name.trim(),
+      value: parseFloat(value),
+      annualGrowthRate: growth ? parseFloat(growth) : undefined,
+      isIlliquid,
+    };
+    if (isEditing && existing) {
+      store.updateBusiness(existing.id, data);
+    } else {
+      store.addBusiness({ id: Crypto.randomUUID(), ...data } as Business);
+    }
+    saveAndSnapshot();
+    router.back();
+  };
+
+  useFormAction(onAction, isEditing ? 'Save changes' : 'Add business', !name.trim() || !value.trim(), handleSave);
+
+  return (
+    <View>
+      <FieldLabel label="Business name" />
+      <DarkInput value={name} onChangeText={setName} placeholder="e.g. Angel Investment" />
+      <FieldLabel label="Estimated value ($)" />
+      <DarkInput value={value} onChangeText={setValue} keyboardType="numeric" placeholder="0" />
+      <FieldLabel label="Annual growth rate % (optional)" />
+      <DarkInput value={growth} onChangeText={setGrowth} keyboardType="numeric" placeholder="e.g. 12" />
+      <View style={s.toggleSection}>
+        <View style={s.toggleHeader}>
+          <View>
+            <Text style={s.toggleTitle}>Illiquid?</Text>
+            <Text style={s.toggleSubtitle}>Cannot be easily sold or converted to cash</Text>
+          </View>
+          <Switch
+            value={isIlliquid}
+            onValueChange={setIsIlliquid}
+            trackColor={{ false: BORDER, true: PURPLE }}
+            thumbColor="#FFFFFF"
+          />
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function VehicleForm({ existing, isEditing, store, saveAndSnapshot, onAction }: FormProps & { existing: Vehicle | null }) {
+  const [name, setName] = useState(existing?.name ?? '');
+  const [currentValue, setCurrentValue] = useState(existing?.currentValue?.toString() ?? '');
+  const [depRate, setDepRate] = useState(existing?.annualDepreciationRate?.toString() ?? '15');
+
+  const handleSave = () => {
+    if (!name.trim() || !currentValue.trim()) {
+      Alert.alert('Required', 'Name and current value are required');
+      return;
+    }
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const data = {
+      name: name.trim(),
+      currentValue: parseFloat(currentValue),
+      annualDepreciationRate: depRate ? parseFloat(depRate) : 15,
+    };
+    if (isEditing && existing) {
+      store.updateVehicle(existing.id, data);
+    } else {
+      store.addVehicle({ id: Crypto.randomUUID(), ...data } as Vehicle);
+    }
+    saveAndSnapshot();
+    router.back();
+  };
+
+  useFormAction(onAction, isEditing ? 'Save changes' : 'Add vehicle', !name.trim() || !currentValue.trim(), handleSave);
+
+  return (
+    <View>
+      <FieldLabel label="Vehicle name" />
+      <DarkInput value={name} onChangeText={setName} placeholder="e.g. 2022 Tesla Model 3" />
+      <FieldLabel label="Current value ($)" />
+      <DarkInput value={currentValue} onChangeText={setCurrentValue} keyboardType="numeric" placeholder="0" />
+      <FieldLabel label="Annual depreciation rate (%)" />
+      <DarkInput value={depRate} onChangeText={setDepRate} keyboardType="numeric" placeholder="15" />
     </View>
   );
 }

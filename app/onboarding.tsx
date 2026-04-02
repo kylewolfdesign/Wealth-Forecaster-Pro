@@ -232,6 +232,11 @@ const CATEGORY_OPTIONS = [
   { key: 'investments', label: 'Stocks & ETFs' },
   { key: 'crypto', label: 'Crypto' },
   { key: 'rsus', label: 'RSUs' },
+  { key: 'retirement', label: 'Retirement' },
+  { key: 'stockOptions', label: 'Stock Options' },
+  { key: 'bonds', label: 'Bonds' },
+  { key: 'business', label: 'Business / PE' },
+  { key: 'vehicles', label: 'Vehicles' },
   { key: 'other', label: 'Assets' },
   { key: 'realEstate', label: 'Real Estate' },
   { key: 'cashSavings', label: 'Cash / Savings' },
@@ -306,6 +311,11 @@ export default function OnboardingScreen() {
       case 'crypto': type = 'holding'; category = 'crypto'; break;
       case 'rsus': type = 'rsu'; break;
       case 'other': type = 'other'; break;
+      case 'retirement': type = 'retirement'; break;
+      case 'stockOptions': type = 'stockOption'; break;
+      case 'bonds': type = 'bond'; break;
+      case 'business': type = 'business'; break;
+      case 'vehicles': type = 'vehicle'; break;
       case 'realEstate': type = 'realEstate'; break;
       case 'cashSavings': type = 'cash'; break;
       default: type = 'holding';
@@ -321,6 +331,8 @@ export default function OnboardingScreen() {
     const totals = computeCurrentTotals(
       store.holdings, store.rsuGrants, store.cashAccounts,
       store.mortgages, store.otherAssets, store.realEstate,
+      store.retirementAccounts, store.stockOptions, store.bonds,
+      store.businesses, store.vehicles,
     );
     store.addSnapshot(createSnapshot(totals));
     router.replace('/(tabs)');
@@ -338,6 +350,8 @@ export default function OnboardingScreen() {
             const totals = computeCurrentTotals(
               store.holdings, store.rsuGrants, store.cashAccounts,
               store.mortgages, store.otherAssets, store.realEstate,
+              store.retirementAccounts, store.stockOptions, store.bonds,
+              store.businesses, store.vehicles,
             );
             store.addSnapshot(createSnapshot(totals));
             router.replace('/(tabs)');
@@ -359,6 +373,11 @@ export default function OnboardingScreen() {
         return { label: 'Crypto', icon: 'logo-bitcoin', items: items.map(h => ({ id: h.id, name: h.symbol.toUpperCase(), value: formatCurrency((h.manualPrice || 0) * h.shares), editType: 'holding' })), value: formatCurrency(items.reduce((s, h) => s + (h.manualPrice || 0) * h.shares, 0)) };
       }
       case 'rsus': return { label: 'RSUs', icon: 'layers', items: store.rsuGrants.map(r => ({ id: r.id, name: r.symbol.toUpperCase(), value: formatCurrency(r.totalShares * 0), editType: 'rsu' })), value: formatCurrency(0) };
+      case 'retirement': return { label: 'Retirement', icon: 'umbrella', items: store.retirementAccounts.map(r => ({ id: r.id, name: r.name, value: formatCurrency(r.balance), editType: 'retirement' })), value: formatCurrency(store.retirementAccounts.reduce((s, r) => s + r.balance, 0)) };
+      case 'stockOptions': return { label: 'Stock Options', icon: 'key', items: store.stockOptions.map(o => ({ id: o.id, name: `${o.symbol} ${o.optionType?.toUpperCase() ?? ''}`, value: formatCurrency(Math.max((o.currentPrice ?? 0) - o.strikePrice, 0) * (o.vestedOptions ?? 0)), editType: 'stockOption' })), value: formatCurrency(store.stockOptions.reduce((s, o) => s + Math.max((o.currentPrice ?? 0) - o.strikePrice, 0) * (o.vestedOptions ?? 0), 0)) };
+      case 'bonds': return { label: 'Bonds', icon: 'ribbon', items: store.bonds.map(b => ({ id: b.id, name: b.name, value: formatCurrency(b.purchasePrice ?? b.faceValue), editType: 'bond' })), value: formatCurrency(store.bonds.reduce((s, b) => s + (b.purchasePrice ?? b.faceValue), 0)) };
+      case 'business': return { label: 'Business / PE', icon: 'briefcase', items: store.businesses.map(b => ({ id: b.id, name: b.name, value: formatCurrency(b.value), editType: 'business' })), value: formatCurrency(store.businesses.reduce((s, b) => s + b.value, 0)) };
+      case 'vehicles': return { label: 'Vehicles', icon: 'car', items: store.vehicles.map(v => ({ id: v.id, name: v.name, value: formatCurrency(v.currentValue), editType: 'vehicle' })), value: formatCurrency(store.vehicles.reduce((s, v) => s + v.currentValue, 0)) };
       case 'other': return { label: 'Assets', icon: 'diamond', items: store.otherAssets.map(a => ({ id: a.id, name: a.name, value: formatCurrency(a.value), editType: 'other' })), value: formatCurrency(store.otherAssets.reduce((s, a) => s + a.value, 0)) };
       case 'realEstate': return { label: 'Real Estate', icon: 'business', items: store.realEstate.map(r => ({ id: r.id, name: r.name, value: formatCurrency(r.equity ?? r.currentValue), editType: 'realEstate' })), value: formatCurrency(store.realEstate.reduce((s, r) => s + (r.equity ?? r.currentValue), 0)) };
       case 'cashSavings': {

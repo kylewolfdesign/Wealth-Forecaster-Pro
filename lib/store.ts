@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   Holding, RSUGrant, CashAccount, Mortgage, OtherAsset, RealEstate,
+  RetirementAccount, StockOption, Bond, Business, Vehicle,
   Settings, Snapshot, DEFAULT_SETTINGS,
 } from './types';
 import { generateDemoData } from './demo-data';
@@ -14,6 +15,11 @@ export interface AppState {
   mortgages: Mortgage[];
   otherAssets: OtherAsset[];
   realEstate: RealEstate[];
+  retirementAccounts: RetirementAccount[];
+  stockOptions: StockOption[];
+  bonds: Bond[];
+  businesses: Business[];
+  vehicles: Vehicle[];
   snapshots: Snapshot[];
   settings: Settings;
   onboardingComplete: boolean;
@@ -43,6 +49,26 @@ export interface AppState {
   updateRealEstate: (id: string, r: Partial<RealEstate>) => void;
   deleteRealEstate: (id: string) => void;
 
+  addRetirementAccount: (r: RetirementAccount) => void;
+  updateRetirementAccount: (id: string, r: Partial<RetirementAccount>) => void;
+  deleteRetirementAccount: (id: string) => void;
+
+  addStockOption: (o: StockOption) => void;
+  updateStockOption: (id: string, o: Partial<StockOption>) => void;
+  deleteStockOption: (id: string) => void;
+
+  addBond: (b: Bond) => void;
+  updateBond: (id: string, b: Partial<Bond>) => void;
+  deleteBond: (id: string) => void;
+
+  addBusiness: (b: Business) => void;
+  updateBusiness: (id: string, b: Partial<Business>) => void;
+  deleteBusiness: (id: string) => void;
+
+  addVehicle: (v: Vehicle) => void;
+  updateVehicle: (id: string, v: Partial<Vehicle>) => void;
+  deleteVehicle: (id: string) => void;
+
   addSnapshot: (s: Snapshot) => void;
 
   setSettings: (s: Partial<Settings>) => void;
@@ -60,6 +86,11 @@ export const useAppStore = create<AppState>()(
       mortgages: [],
       otherAssets: [],
       realEstate: [],
+      retirementAccounts: [],
+      stockOptions: [],
+      bonds: [],
+      businesses: [],
+      vehicles: [],
       snapshots: [],
       settings: { ...DEFAULT_SETTINGS },
       onboardingComplete: false,
@@ -110,6 +141,46 @@ export const useAppStore = create<AppState>()(
       deleteRealEstate: (id) =>
         set((s) => ({ realEstate: s.realEstate.filter((r) => r.id !== id) })),
 
+      addRetirementAccount: (r) => set((s) => ({ retirementAccounts: [...s.retirementAccounts, r] })),
+      updateRetirementAccount: (id, updates) =>
+        set((s) => ({
+          retirementAccounts: s.retirementAccounts.map((r) => (r.id === id ? { ...r, ...updates } : r)),
+        })),
+      deleteRetirementAccount: (id) =>
+        set((s) => ({ retirementAccounts: s.retirementAccounts.filter((r) => r.id !== id) })),
+
+      addStockOption: (o) => set((s) => ({ stockOptions: [...s.stockOptions, o] })),
+      updateStockOption: (id, updates) =>
+        set((s) => ({
+          stockOptions: s.stockOptions.map((o) => (o.id === id ? { ...o, ...updates } : o)),
+        })),
+      deleteStockOption: (id) =>
+        set((s) => ({ stockOptions: s.stockOptions.filter((o) => o.id !== id) })),
+
+      addBond: (b) => set((s) => ({ bonds: [...s.bonds, b] })),
+      updateBond: (id, updates) =>
+        set((s) => ({
+          bonds: s.bonds.map((b) => (b.id === id ? { ...b, ...updates } : b)),
+        })),
+      deleteBond: (id) =>
+        set((s) => ({ bonds: s.bonds.filter((b) => b.id !== id) })),
+
+      addBusiness: (b) => set((s) => ({ businesses: [...s.businesses, b] })),
+      updateBusiness: (id, updates) =>
+        set((s) => ({
+          businesses: s.businesses.map((b) => (b.id === id ? { ...b, ...updates } : b)),
+        })),
+      deleteBusiness: (id) =>
+        set((s) => ({ businesses: s.businesses.filter((b) => b.id !== id) })),
+
+      addVehicle: (v) => set((s) => ({ vehicles: [...s.vehicles, v] })),
+      updateVehicle: (id, updates) =>
+        set((s) => ({
+          vehicles: s.vehicles.map((v) => (v.id === id ? { ...v, ...updates } : v)),
+        })),
+      deleteVehicle: (id) =>
+        set((s) => ({ vehicles: s.vehicles.filter((v) => v.id !== id) })),
+
       addSnapshot: (snapshot) =>
         set((s) => {
           const existing = s.snapshots.filter(
@@ -132,6 +203,11 @@ export const useAppStore = create<AppState>()(
           mortgages: demo.mortgages,
           otherAssets: demo.otherAssets,
           realEstate: demo.realEstate,
+          retirementAccounts: demo.retirementAccounts,
+          stockOptions: demo.stockOptions,
+          bonds: demo.bonds,
+          businesses: demo.businesses,
+          vehicles: demo.vehicles,
           snapshots: demo.snapshots,
           onboardingComplete: true,
         });
@@ -145,6 +221,11 @@ export const useAppStore = create<AppState>()(
           mortgages: [],
           otherAssets: [],
           realEstate: [],
+          retirementAccounts: [],
+          stockOptions: [],
+          bonds: [],
+          businesses: [],
+          vehicles: [],
           snapshots: [],
           settings: { ...DEFAULT_SETTINGS },
           onboardingComplete: false,
@@ -154,7 +235,7 @@ export const useAppStore = create<AppState>()(
     {
       name: 'networth-app-storage',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 1,
+      version: 2,
       migrate: (persistedState, version) => {
         const state = persistedState as AppState;
         if (version === 0 && Array.isArray(state.realEstate)) {
@@ -162,6 +243,14 @@ export const useAppStore = create<AppState>()(
             ...r,
             equity: r.equity ?? r.currentValue,
           }));
+        }
+        if (version < 2) {
+          if (!state.retirementAccounts) state.retirementAccounts = [];
+          if (!state.stockOptions) state.stockOptions = [];
+          if (!state.bonds) state.bonds = [];
+          if (!state.businesses) state.businesses = [];
+          if (!state.vehicles) state.vehicles = [];
+          if (state.settings.retirementGrowthPct == null) state.settings.retirementGrowthPct = 8;
         }
         return state;
       },

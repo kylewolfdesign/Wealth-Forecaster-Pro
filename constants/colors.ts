@@ -35,8 +35,13 @@ const Colors = {
   categoryOther: '#6366f1',
   categoryRealEstate: '#d946ef',
   categoryMortgage: '#f43f5e',
+  categoryRetirement: '#f97316',
+  categoryStockOptions: '#84cc16',
+  categoryBonds: '#14b8a6',
+  categoryBusiness: '#a78bfa',
+  categoryVehicles: '#64748b',
 
-  chartPalette: ['#8b5cf6', '#0ea5e9', '#10b981', '#6366f1', '#d946ef', '#f59e0b', '#f43f5e', '#06b6d4'] as readonly string[],
+  chartPalette: ['#8b5cf6', '#0ea5e9', '#10b981', '#6366f1', '#d946ef', '#f59e0b', '#f43f5e', '#06b6d4', '#f97316', '#84cc16', '#14b8a6', '#a78bfa', '#64748b'] as readonly string[],
 
   tabIconDefault: '#64748B',
   tint: '#8b5cf6',

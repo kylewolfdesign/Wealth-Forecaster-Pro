@@ -21,6 +21,11 @@ const CATEGORIES = [
   { key: 'stocks', label: 'Stocks & ETFs', color: Colors.categoryStocks, icon: 'trending-up' as const, type: 'holding' },
   { key: 'crypto', label: 'Crypto', color: Colors.categoryCrypto, icon: 'logo-bitcoin' as const, type: 'holding' },
   { key: 'rsus', label: 'RSUs', color: Colors.categoryRSU, icon: 'layers' as const, type: 'rsu' },
+  { key: 'retirement', label: 'Retirement', color: Colors.categoryRetirement, icon: 'umbrella' as const, type: 'retirement' },
+  { key: 'stockOptions', label: 'Stock Options', color: Colors.categoryStockOptions, icon: 'key' as const, type: 'stockOption' },
+  { key: 'bonds', label: 'Bonds', color: Colors.categoryBonds, icon: 'ribbon' as const, type: 'bond' },
+  { key: 'business', label: 'Business', color: Colors.categoryBusiness, icon: 'briefcase' as const, type: 'business' },
+  { key: 'vehicles', label: 'Vehicles', color: Colors.categoryVehicles, icon: 'car' as const, type: 'vehicle' },
   { key: 'other', label: 'Assets', color: Colors.categoryOther, icon: 'diamond' as const, type: 'other' },
   { key: 'realEstate', label: 'Real Estate', color: Colors.categoryRealEstate, icon: 'business' as const, type: 'realEstate' },
   { key: 'cashSavings', label: 'Cash / Savings', color: Colors.categorySavings, icon: 'wallet' as const, type: 'cash' },
@@ -32,7 +37,9 @@ export default function BreakdownScreen() {
   const [expanded, setExpanded] = useState<string | null>(params.focus ?? null);
   const {
     holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate,
+    retirementAccounts, stockOptions, bonds, businesses, vehicles,
     deleteHolding, deleteRSUGrant, deleteCashAccount, deleteMortgage, deleteOtherAsset, deleteRealEstate,
+    deleteRetirementAccount, deleteStockOption, deleteBond, deleteBusiness, deleteVehicle,
   } = useAppStore();
 
   const { stockSymbols, typedSymbols } = useMemo(() => {
@@ -68,8 +75,8 @@ export default function BreakdownScreen() {
   }, [refetchPrices]);
 
   const totals = useMemo(
-    () => computeCurrentTotals(holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate),
-    [holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate, livePrices]
+    () => computeCurrentTotals(holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate, retirementAccounts, stockOptions, bonds, businesses, vehicles),
+    [holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate, retirementAccounts, stockOptions, bonds, businesses, vehicles, livePrices]
   );
 
   const getCategoryTotal = (key: string): number => {
@@ -77,6 +84,11 @@ export default function BreakdownScreen() {
       case 'stocks': return totals.stocks;
       case 'crypto': return totals.crypto;
       case 'rsus': return totals.rsusVested + totals.rsusUnvested;
+      case 'retirement': return totals.retirement;
+      case 'stockOptions': return totals.stockOptions;
+      case 'bonds': return totals.bonds;
+      case 'business': return totals.business;
+      case 'vehicles': return totals.vehicles;
       case 'other': return totals.otherAssets;
       case 'realEstate': return totals.realEstate;
       case 'cashSavings': return totals.savings + totals.offset;
@@ -101,6 +113,11 @@ export default function BreakdownScreen() {
       case 'stocks': return holdings.filter(h => h.type === 'stock');
       case 'crypto': return holdings.filter(h => h.type === 'crypto');
       case 'rsus': return rsuGrants;
+      case 'retirement': return retirementAccounts;
+      case 'stockOptions': return stockOptions;
+      case 'bonds': return bonds;
+      case 'business': return businesses;
+      case 'vehicles': return vehicles;
       case 'other': return otherAssets;
       case 'realEstate': return realEstate;
       case 'cashSavings': return cashAccounts;
@@ -119,6 +136,11 @@ export default function BreakdownScreen() {
           else if (catKey === 'cashSavings') deleteCashAccount(itemId);
           else if (catKey === 'realEstate') deleteRealEstate(itemId);
           else if (catKey === 'other') deleteOtherAsset(itemId);
+          else if (catKey === 'retirement') deleteRetirementAccount(itemId);
+          else if (catKey === 'stockOptions') deleteStockOption(itemId);
+          else if (catKey === 'bonds') deleteBond(itemId);
+          else if (catKey === 'business') deleteBusiness(itemId);
+          else if (catKey === 'vehicles') deleteVehicle(itemId);
         },
       },
     ]);
@@ -175,6 +197,27 @@ export default function BreakdownScreen() {
       name = item.name;
       value = item.value;
       subtitle = item.annualGrowthRate ? `${item.annualGrowthRate}% growth/yr` : '';
+    } else if (catKey === 'retirement') {
+      name = item.name;
+      value = item.balance;
+      subtitle = `+${formatCurrency(item.monthlyContribution)}/mo`;
+    } else if (catKey === 'stockOptions') {
+      name = `${item.symbol} ${item.optionType?.toUpperCase() ?? ''}`;
+      const price = item.currentPrice ?? getInstantPrice(item.symbol, 'stock');
+      value = Math.max(price - item.strikePrice, 0) * (item.vestedOptions ?? 0);
+      subtitle = `Strike $${item.strikePrice}`;
+    } else if (catKey === 'bonds') {
+      name = item.name;
+      value = item.purchasePrice ?? item.faceValue;
+      subtitle = `${item.couponRate}% coupon`;
+    } else if (catKey === 'business') {
+      name = item.name;
+      value = item.value;
+      subtitle = item.annualGrowthRate ? `${item.annualGrowthRate}% growth/yr` : '';
+    } else if (catKey === 'vehicles') {
+      name = item.name;
+      value = item.currentValue;
+      subtitle = `${item.annualDepreciationRate ?? 15}% depreciation/yr`;
     }
 
     return (
@@ -183,7 +226,7 @@ export default function BreakdownScreen() {
         style={styles.itemRow}
         onPress={() => handleEdit(CATEGORIES.find(c => c.key === catKey)?.type || 'holding', item.id, catKey)}
       >
-        {(catKey === 'stocks' || catKey === 'crypto' || catKey === 'rsus') && (
+        {(catKey === 'stocks' || catKey === 'crypto' || catKey === 'rsus' || catKey === 'stockOptions') && (
           <TickerLogo
             symbol={item.symbol}
             type={catKey === 'crypto' ? 'crypto' : 'stock'}
