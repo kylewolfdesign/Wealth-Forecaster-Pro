@@ -175,11 +175,10 @@ export function computeForecast(
     },
   });
 
+  const totalMonths = maxYears * 12;
+  const step = totalMonths <= 24 ? 1 : totalMonths <= 120 ? 3 : 6;
   const intervals: number[] = [];
-  for (let m = 1; m <= Math.min(maxYears * 12, 60); m++) {
-    intervals.push(m);
-  }
-  for (let m = 72; m <= maxYears * 12; m += 12) {
+  for (let m = step; m <= totalMonths; m += step) {
     intervals.push(m);
   }
 

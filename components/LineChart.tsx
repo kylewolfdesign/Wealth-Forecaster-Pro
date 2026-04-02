@@ -132,54 +132,14 @@ export default function LineChart({
     );
   }
 
-  const baseJitter = chartH * 0.05;
-
-  const seededRandom = (s: number) => {
-    let h = (s * 2654435761) >>> 0;
-    h = ((h >>> 16) ^ h) * 0x45d9f3b >>> 0;
-    h = ((h >>> 16) ^ h) >>> 0;
-    return h / 0xffffffff;
-  };
-
-  const SUB_POINTS = 3;
-
-  const jitteredSegments: string[] = [];
+  const segments: string[] = [];
   for (let i = 0; i < data.length; i++) {
     const d = data[i];
     const px = toX(d.x);
     const py = toY(d.y);
-
-    if (i === 0 || i === data.length - 1) {
-      jitteredSegments.push(`${i === 0 ? 'M' : 'L'}${px.toFixed(2)},${py.toFixed(2)}`);
-    } else {
-      const yNorm = yRange > 0 ? (d.y - yMin) / yRange : 0.5;
-      const pointJitter = baseJitter * (0.15 + yNorm * 0.85);
-      const r = seededRandom(i * 137 + 53);
-      const jPy = py + (r - 0.5) * 2 * pointJitter;
-      jitteredSegments.push(`L${px.toFixed(2)},${jPy.toFixed(2)}`);
-    }
-
-    if (i < data.length - 1) {
-      const next = data[i + 1];
-      for (let s = 1; s <= SUB_POINTS; s++) {
-        const t = s / (SUB_POINTS + 1);
-        const subX = d.x + (next.x - d.x) * t;
-        const subY = d.y + (next.y - d.y) * t;
-        const subPx = toX(subX);
-        const subPy = toY(subY);
-        const subYNorm = yRange > 0 ? (subY - yMin) / yRange : 0.5;
-        const subJitter = baseJitter * (0.15 + subYNorm * 0.85);
-        const r1 = seededRandom(i * 1031 + s * 7723 + 89);
-        const r2 = seededRandom(i * 4519 + s * 3137 + 211);
-        const combined = (r1 + r2) / 2;
-        const sign = seededRandom(i * 997 + s * 61) > 0.5 ? 1 : -1;
-        const magnitude = combined * subJitter * (0.5 + seededRandom(i * 2371 + s * 499) * 1.0);
-        const jSubPy = subPy + sign * magnitude;
-        jitteredSegments.push(`L${subPx.toFixed(2)},${jSubPy.toFixed(2)}`);
-      }
-    }
+    segments.push(`${i === 0 ? 'M' : 'L'}${px.toFixed(2)},${py.toFixed(2)}`);
   }
-  const linePath = jitteredSegments.join(' ');
+  const linePath = segments.join(' ');
 
   const firstPoint = data[0];
   const lastPoint = data[data.length - 1];
