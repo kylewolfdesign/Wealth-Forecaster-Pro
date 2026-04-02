@@ -252,7 +252,7 @@ export default function PortfolioScreen() {
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={[styles.content, { paddingTop: topInset + spacing.sm, paddingBottom: Platform.OS === 'web' ? 84 : 100 }]}
+      contentContainerStyle={[styles.content, { paddingTop: topInset + spacing.xs, paddingBottom: Platform.OS === 'web' ? 84 : 100 }]}
       showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl
@@ -265,6 +265,11 @@ export default function PortfolioScreen() {
       }
     >
       <View style={styles.donutSection}>
+        <Text style={styles.priceTimestamp}>
+          {lastPriceUpdate
+            ? `Prices as of ${lastPriceUpdate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+            : 'Pull down to refresh prices'}
+        </Text>
         <DonutChart
           slices={donutSlices}
           size={donutSize}
@@ -288,11 +293,6 @@ export default function PortfolioScreen() {
           });
           })()}
         </View>
-        <Text style={styles.priceTimestamp}>
-          {lastPriceUpdate
-            ? `Prices as of ${lastPriceUpdate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-            : 'Pull down to refresh prices'}
-        </Text>
       </View>
 
       <Text style={styles.sectionTitle}>Categories</Text>
@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: Colors.textTertiary,
     textAlign: 'center',
-    marginTop: spacing.sm,
+    marginBottom: 36,
   },
   legendItem: {
     flexDirection: 'row',
