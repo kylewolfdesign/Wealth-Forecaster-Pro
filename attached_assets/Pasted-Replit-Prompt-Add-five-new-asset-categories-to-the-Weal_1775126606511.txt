@@ -1,0 +1,346 @@
+Replit Prompt
+
+  Add five new asset categories to the Wealth Forecaster Pro app: Retirement Accounts, Stock
+  Options, Bonds/Fixed Income, Business/Private Equity, and Vehicles. Follow the exact patterns
+  already established for existing types (Holding, RSUGrant, CashAccount, OtherAsset, RealEstate).
+  Here is the complete spec:
+
+  ---
+
+  ## STEP 1 — lib/types.ts
+
+  Add these five interfaces and update the existing shared types.
+
+  ### New interfaces:
+
+  ```ts
+  export interface RetirementAccount {
+    id: string;
+    name: string;
+    accountType: '401k' | 'ira' | 'roth_ira' | 'pension' | 'super';
+    balance: number;
+    monthlyContribution: number;
+    employerMatchPct?: number;   // e.g. 50 means employer matches 50% of contributions
+    employerMatchCapPct?: number; // max employer match as % of annual salary e.g. 3
+    annualSalary?: number;        // required if employerMatchCapPct set
+    annualGrowthRate?: number;    // defaults to settings.stockGrowthPct in forecast
+  }
+
+  export interface StockOption {
+    id: string;
+    symbol: string;
+    optionType: 'iso' | 'nso';
+    totalOptions: number;
+    alreadyVestedOptions: number;
+    strikePrice: number;
+    expirationDate: string; // ISO date string YYYY-MM-DD
+    vest: {
+      startDate: string;
+      cliffMonths: number;
+      durationMonths: number;
+      frequency: 'monthly' | 'quarterly' | 'yearly';
+    };
+    growthOverride?: number;
+  }
+
+  export interface Bond {
+    id: string;
+    name: string;
+    faceValue: number;
+    couponRate: number;       // annual % e.g. 5
+    maturityDate: string;     // ISO date string YYYY-MM-DD
+    currentValue?: number;    // manual override; falls back to faceValue
+    monthlyContribution?: number; // optional reinvestment
+  }
+
+  export interface Business {
+    id: string;
+    name: string;
+    currentValue: number;
+    ownershipPct?: number;    // display only
+    annualGrowthRate?: number; // defaults to 0
+    isIlliquid?: boolean;
+  }
+
+  export interface Vehicle {
+    id: string;
+    name: string;
+    currentValue: number;
+    annualDepreciationRate?: number; // positive number e.g. 15, applied as negative growth.
+  Default 15.
+  }
+
+  Update SnapshotTotals — add these fields:
+
+  retirement: number;
+  stockOptions: number;
+  bonds: number;
+  business: number;
+  vehicles: number;
+
+  Update ForecastPoint.breakdown — add these fields:
+
+  retirement: number;
+  stockOptions: number;
+  bonds: number;
+  business: number;
+  vehicles: number;
+
+  Update ItemType union:
+
+  export type ItemType = 'holding' | 'rsu' | 'cash' | 'mortgage' | 'other' | 'realEstate' |
+  'retirement' | 'stockOption' | 'bond' | 'business' | 'vehicle';
+
+  ---
+  STEP 2 — lib/calculations.ts
+
+  Add helper computeStockOptionVesting (same logic as computeRSUVesting but for StockOption):
+
+  export function computeStockOptionVesting(option: StockOption, atDate: Date): { vested: number;
+  unvested: number }
+  Use the identical vesting algorithm as computeRSUVesting, substituting option.totalOptions,
+  option.alreadyVestedOptions, option.vest.
+
+  Update computeCurrentTotals signature:
+
+  export function computeCurrentTotals(
+    holdings: Holding[],
+    rsuGrants: RSUGrant[],
+    cashAccounts: CashAccount[],
+    mortgages: Mortgage[],
+    otherAssets: OtherAsset[],
+    realEstate: RealEstate[],
+    retirementAccounts: RetirementAccount[],
+    stockOptions: StockOption[],
+    bonds: Bond[],
+    businesses: Business[],
+    vehicles: Vehicle[],
+  ): SnapshotTotals
+
+  Add to computeCurrentTotals body:
+  - retirement: sum of account.balance for all retirementAccounts
+  - stockOptions: sum of max(0, (getInstantPrice(opt.symbol, 'stock') - opt.strikePrice) *
+  computeStockOptionVesting(opt, now).vested) for all stockOptions. Return 0 if expirationDate has
+  passed.
+  - bonds: sum of (bond.currentValue ?? bond.faceValue) for all bonds
+  - business: sum of b.currentValue for all businesses
+  - vehicles: sum of v.currentValue for all vehicles
+
+  Include all five in totalAssets calculation. Add all five fields to the returned SnapshotTotals
+  object.
+
+  Update computeForecast signature to accept the five new arrays (same pattern as existing args).
+  Add forecast logic for each:
+
+  - retirement: use growWithContributions. Monthly contribution = monthlyContribution +
+  monthlyEmployerMatch. Monthly employer match = min(monthlyContribution * (employerMatchPct/100 ??
+   0), (annualSalary ?? 0) * (employerMatchCapPct/100 ?? 0) / 12). Growth rate = annualGrowthRate
+  ?? settings.stockGrowthPct.
+  - stockOptions: at each forecast point, compute vested options using
+  computeStockOptionVesting(opt, futureDate). Project price with growMonthly. Value = max(0,
+  projectedPrice - strikePrice) * vested. Zero out options past expirationDate.
+  - bonds: use growWithContributions(bond.currentValue ?? bond.faceValue, bond.monthlyContribution
+  ?? 0, bond.couponRate, months). At or after maturityDate, lock value to bond.faceValue.
+  - business: growMonthly(b.currentValue, b.annualGrowthRate ?? 0, months)
+  - vehicles: Math.max(0, growMonthly(v.currentValue, -(v.annualDepreciationRate ?? 15), months))
+
+  Add all five to the ForecastPoint breakdown and to totalAssets. Update the existing initial point
+   (monthsFromNow: 0) to include the five new breakdown fields.
+
+  ---
+  STEP 3 — lib/store.ts
+
+  Import the five new types. Add five new state arrays and CRUD actions following the exact pattern
+   of existing ones:
+
+  retirementAccounts: RetirementAccount[];
+  stockOptions: StockOption[];
+  bonds: Bond[];
+  businesses: Business[];
+  vehicles: Vehicle[];
+
+  addRetirementAccount / updateRetirementAccount / deleteRetirementAccount
+  addStockOption / updateStockOption / deleteStockOption
+  addBond / updateBond / deleteBond
+  addBusiness / updateBusiness / deleteBusiness
+  addVehicle / updateVehicle / deleteVehicle
+
+  Initialize all five arrays as [] in the initial state.
+
+  Update clearAllData to reset all five to [].
+
+  Update loadDemoData to include sample entries for each (1-2 realistic examples each — see below
+  for demo values).
+
+  Bump persist version to 2. Add migration from version 1: initialize all five new fields as [] if
+  undefined on the persisted state.
+
+  Update saveAndSnapshot calls: anywhere computeCurrentTotals is called (in edit-item.tsx and
+  index.tsx), pass the five new arrays from the store.
+
+  Demo data examples:
+  - retirementAccounts: { name: "Fidelity 401k", accountType: "401k", balance: 85000,
+  monthlyContribution: 1500, employerMatchPct: 50, employerMatchCapPct: 3, annualSalary: 120000 }
+  - stockOptions: { symbol: "NVDA", optionType: "iso", totalOptions: 2000, alreadyVestedOptions:
+  500, strikePrice: 420, expirationDate: "2030-01-15", vest: { startDate: "2022-01-15",
+  cliffMonths: 12, durationMonths: 48, frequency: "quarterly" } }
+  - bonds: { name: "US Treasury 10Y", faceValue: 10000, couponRate: 4.5, maturityDate: "2033-06-01"
+   }
+  - businesses: { name: "Angel Investment — Series A", currentValue: 25000, ownershipPct: 0.5,
+  annualGrowthRate: 20, isIlliquid: true }
+  - vehicles: { name: "2022 Tesla Model 3", currentValue: 32000 }
+
+  ---
+  STEP 4 — constants/colors.ts
+
+  Add six new color entries:
+  categoryRetirement: '#f97316',   // orange
+  categoryStockOptions: '#84cc16', // lime
+  categoryBonds: '#14b8a6',        // teal
+  categoryBusiness: '#c084fc',     // soft purple (distinct from categoryStocks #8b5cf6)
+  categoryVehicles: '#64748b',     // slate
+
+  ---
+  STEP 5 — app/(tabs)/index.tsx
+
+  Import the five new types and the five new store arrays.
+
+  Add five new entries to CATEGORY_CONFIG:
+  { key: 'retirement', label: 'Retirement', color: Colors.categoryRetirement, icon: 'umbrella',
+  type: 'retirement' },
+  { key: 'stockOptions', label: 'Stock Options', color: Colors.categoryStockOptions, icon: 'key',
+  type: 'stockOption' },
+  { key: 'bonds', label: 'Fixed Income', color: Colors.categoryBonds, icon: 'ribbon', type: 'bond'
+  },
+  { key: 'business', label: 'Business', color: Colors.categoryBusiness, icon: 'briefcase', type:
+  'business' },
+  { key: 'vehicles', label: 'Vehicles', color: Colors.categoryVehicles, icon: 'car', type:
+  'vehicle' },
+
+  Update categoryValues useMemo to include:
+  retirement: totals.retirement,
+  stockOptions: totals.stockOptions,
+  bonds: totals.bonds,
+  business: totals.business,
+  vehicles: totals.vehicles,
+
+  Update getItems switch to handle all five new keys, returning the matching array from the store.
+
+  Update the computeCurrentTotals call to pass the five new arrays.
+
+  Update the useStockPrices symbols collection to include stockOptions symbols (same as how RSU
+  grant symbols are collected for holdings).
+
+  For stock options: in the expanded category list item rendering, if the option's intrinsic value
+  is 0, show a small "Underwater" badge in Colors.negative. Show the strike price as a subtitle
+  ("Strike: $420.00").
+
+  For retirement accounts: show the account type as a badge (e.g. "401k", "Roth IRA") and show
+  employer match info as a subtitle if present ("50% match up to 3%").
+
+  For vehicles: show the depreciation rate as a subtitle ("~15%/yr depreciation").
+
+  For bonds: show maturity date as subtitle ("Matures Jun 2033") and coupon rate ("4.5%").
+
+  For businesses: show isIlliquid lock icon (Ionicons "lock-closed-outline") if flagged.
+
+  ---
+  STEP 6 — app/edit-item.tsx
+
+  Add the five new type strings to the EditType union: 'retirement' | 'stockOption' | 'bond' |
+  'business' | 'vehicle'
+
+  Add cases to the existing switch in the existing lookup, getTitle, getSubtitle functions for all
+  five new types.
+
+  Update the computeCurrentTotals call in saveAndSnapshot to pass the five new arrays from the
+  store.
+
+  Add five new form components following the exact pattern of existing form components (e.g.
+  CashAccountForm, MortgageForm). Each form should:
+  - Be a functional component that receives { isEditing, store, saveAndSnapshot, onAction }
+  matching FormProps
+  - Use the existing DARK_BG, CARD_BG, BORDER, PURPLE, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_MUTED
+  color constants
+  - Use the existing styled TextInput pattern for all number/text fields
+  - Use the existing Picker component for enum fields (accountType, optionType, frequency,
+  equityCadence)
+  - Call the appropriate store add/update/delete action on save/delete
+  - Call saveAndSnapshot() after saving
+
+  Form fields per type:
+
+  RetirementAccountForm:
+  - name (TextInput)
+  - accountType (Picker: 401k / IRA / Roth IRA / Pension / Super)
+  - balance (TextInput, numeric)
+  - monthlyContribution (TextInput, numeric)
+  - employerMatchPct (TextInput, numeric, optional — label "Employer match %")
+  - employerMatchCapPct (TextInput, numeric, optional — label "Match cap (% of salary)")
+  - annualSalary (TextInput, numeric, optional — label "Annual salary")
+  - annualGrowthRate (TextInput, numeric, optional — label "Annual growth % (default: stock rate)")
+
+  StockOptionForm:
+  - symbol (TickerInput — reuse existing component, stock only)
+  - optionType (Picker: ISO / NSO)
+  - totalOptions (TextInput, numeric)
+  - alreadyVestedOptions (TextInput, numeric)
+  - strikePrice (TextInput, numeric — label "Strike price per share $")
+  - expirationDate (TextInput, text — label "Expiration date (YYYY-MM-DD)")
+  - vest.startDate (TextInput, text)
+  - vest.cliffMonths (TextInput, numeric)
+  - vest.durationMonths (TextInput, numeric)
+  - vest.frequency (Picker: monthly / quarterly / yearly)
+  - growthOverride (TextInput, numeric, optional)
+
+  BondForm:
+  - name (TextInput)
+  - faceValue (TextInput, numeric — label "Face value $")
+  - couponRate (TextInput, numeric — label "Annual coupon rate %")
+  - maturityDate (TextInput, text — label "Maturity date (YYYY-MM-DD)")
+  - currentValue (TextInput, numeric, optional — label "Current market value $ (optional)")
+  - monthlyContribution (TextInput, numeric, optional — label "Monthly reinvestment $")
+
+  BusinessForm:
+  - name (TextInput)
+  - currentValue (TextInput, numeric — label "Current valuation $")
+  - ownershipPct (TextInput, numeric, optional — label "Your ownership %")
+  - annualGrowthRate (TextInput, numeric, optional — label "Expected annual growth %")
+  - isIlliquid (Switch — label "Mark as illiquid")
+
+  VehicleForm:
+  - name (TextInput — label "Vehicle name (e.g. 2022 Tesla Model 3)")
+  - currentValue (TextInput, numeric — label "Current estimated value $")
+  - annualDepreciationRate (TextInput, numeric, optional — label "Annual depreciation % (default:
+  15)")
+
+  ---
+  STEP 7 — app/(tabs)/forecast.tsx
+
+  Update the computeForecast call to pass the five new arrays from the store (pull them from
+  useAppStore). Also add the five new types to the settings growth rate section if relevant:
+  - Add a "Retirement" assumption row wired to a new settings field retirementGrowthPct (default 8)
+  - Do NOT add rows for vehicles (depreciation is per-item) or bonds (coupon rate is per-item) or
+  business (per-item)
+
+  Add retirementGrowthPct: number to the Settings interface in lib/types.ts with default value 8.
+  Update DEFAULT_SETTINGS. The forecast for retirement should use account.annualGrowthRate ??
+  settings.retirementGrowthPct.
+
+  ---
+  STEP 8 — lib/demo-data.ts
+
+  Add demo entries for all five new types matching the values specified in Step 3. Export them from
+   generateDemoData() as new fields: retirementAccounts, stockOptions, bonds, businesses, vehicles.
+
+  ---
+  Constraints:
+
+  - Follow all existing code patterns exactly — naming, file structure, StyleSheet usage, Zustand
+  store actions.
+  - Do not change any existing type interfaces (Holding, RSUGrant, etc.) — only add new ones.
+  - All new fields on SnapshotTotals and ForecastPoint.breakdown must be included in every existing
+   place those objects are constructed (computeCurrentTotals return, computeForecast point push,
+  createSnapshot calls).
+  - Keep all existing functionality working — this is purely additive.
+  - Use expo-crypto Crypto.randomUUID() for generating IDs in form save actions.
