@@ -96,10 +96,11 @@ export default function LineChart({
   }, []);
 
   const panResponder = useMemo(() => PanResponder.create({
-    onStartShouldSetPanResponder: () => false,
+    onStartShouldSetPanResponder: () => !!onTouchRef.current,
     onMoveShouldSetPanResponder: (_evt, gestureState) => {
       if (!onTouchRef.current) return false;
-      return Math.abs(gestureState.dx) > Math.abs(gestureState.dy) && Math.abs(gestureState.dx) > 5;
+      const distance = Math.sqrt(gestureState.dx * gestureState.dx + gestureState.dy * gestureState.dy);
+      return distance > 3;
     },
     onPanResponderGrant: (evt) => {
       const point = findNearestPoint(evt.nativeEvent.locationX);
@@ -114,6 +115,9 @@ export default function LineChart({
         setActivePoint(point);
         onTouchRef.current?.(point);
       }
+    },
+    onPanResponderTerminationRequest: (_evt, gestureState) => {
+      return Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
     },
     onPanResponderRelease: () => {
       setActivePoint(null);
