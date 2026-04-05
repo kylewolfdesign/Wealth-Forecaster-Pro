@@ -1,6 +1,9 @@
 import express from "express";
 import type { Request, Response, NextFunction } from "express";
+import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
 import { registerRoutes } from "./routes";
+import { pool } from "./db";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -225,9 +228,39 @@ function setupErrorHandler(app: express.Application) {
   });
 }
 
+function setupSession(app: express.Application) {
+  const PgStore = connectPgSimple(session);
+
+  app.use(
+    session({
+      store: new PgStore({
+        pool,
+        tableName: "session",
+        createTableIfMissing: true,
+      }),
+      secret: (() => {
+        const secret = process.env.SESSION_SECRET;
+        if (!secret && process.env.NODE_ENV === "production") {
+          throw new Error("SESSION_SECRET environment variable is required in production");
+        }
+        return secret || "wealth-forecaster-dev-secret";
+      })(),
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        secure: process.env.NODE_ENV === "production",
+        httpOnly: true,
+        sameSite: "lax",
+        maxAge: 24 * 60 * 60 * 1000,
+      },
+    })
+  );
+}
+
 (async () => {
   setupCors(app);
   setupBodyParsing(app);
+  setupSession(app);
   setupRequestLogging(app);
 
   configureExpoAndLanding(app);

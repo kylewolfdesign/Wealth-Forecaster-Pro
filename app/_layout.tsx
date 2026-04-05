@@ -7,6 +7,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AnimatedSplash } from '@/components/AnimatedSplash';
+import { AuthProvider } from '@/lib/auth-context';
 import { queryClient } from '@/lib/query-client';
 import {
   useFonts,
@@ -61,12 +62,14 @@ export default function RootLayout() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <GestureHandlerRootView style={styles.root}>
-          <KeyboardProvider>
-            <RootLayoutNav />
-          </KeyboardProvider>
-          {showSplash && <AnimatedSplash onFinish={handleSplashFinish} />}
-        </GestureHandlerRootView>
+        <AuthProvider>
+          <GestureHandlerRootView style={styles.root}>
+            <KeyboardProvider>
+              <RootLayoutNav />
+            </KeyboardProvider>
+            {showSplash && <AnimatedSplash onFinish={handleSplashFinish} />}
+          </GestureHandlerRootView>
+        </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );

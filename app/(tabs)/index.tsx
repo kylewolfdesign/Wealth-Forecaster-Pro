@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useCallback, useState } from 'react';
+import React, { useEffect, useMemo, useCallback, useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Platform,
   Pressable, useWindowDimensions,
@@ -14,6 +14,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useAppStore } from '@/lib/store';
+import { useAuth } from '@/lib/auth-context';
+import { savePortfolioToServer } from '@/lib/portfolio-sync';
 import { computeCurrentTotals, computeHoldingValue, computeRSUVesting, computeStockOptionVesting } from '@/lib/calculations';
 import { getInstantPrice } from '@/lib/price-service';
 import { useStockPrices } from '@/hooks/useStockPrices';
@@ -23,6 +25,7 @@ import { Holding, RSUGrant, CashAccount, Mortgage, OtherAsset, RealEstate, Retir
 import DonutChart from '@/components/DonutChart';
 import TickerLogo from '@/components/TickerLogo';
 import Card from '@/components/Card';
+import SaveDataModal from '@/components/SaveDataModal';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily } from '@/constants/theme';
 
@@ -93,6 +96,27 @@ export default function PortfolioScreen() {
     mortgages, otherAssets, realEstate, snapshots, addSnapshot,
     retirementAccounts, stockOptions, bonds, businesses, vehicles,
   } = store;
+
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const hasShownModalRef = useRef(false);
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated && onboardingComplete && !hasShownModalRef.current) {
+      hasShownModalRef.current = true;
+      const timer = setTimeout(() => setShowSaveModal(true), 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [authLoading, isAuthenticated, onboardingComplete]);
+
+  const handleRegisterSuccess = useCallback(async () => {
+    setShowSaveModal(false);
+    try {
+      await savePortfolioToServer();
+    } catch (err) {
+      console.warn('Failed to sync portfolio after registration:', err);
+    }
+  }, []);
 
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -479,6 +503,12 @@ export default function PortfolioScreen() {
           </Card>
         );
       })}
+
+      <SaveDataModal
+        visible={showSaveModal}
+        onDismiss={() => setShowSaveModal(false)}
+        onSuccess={handleRegisterSuccess}
+      />
     </ScrollView>
   );
 }

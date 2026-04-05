@@ -1,21 +1,109 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Platform,
-  Pressable, Alert,
+  Pressable, Alert, TextInput, ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Constants from 'expo-constants';
 import { useAppStore } from '@/lib/store';
+import { useAuth } from '@/lib/auth-context';
 import Card from '@/components/Card';
 import WealthChart from '@/components/WealthChart';
 import Colors from '@/constants/colors';
-import { spacing, fontSize, fontFamily } from '@/constants/theme';
+import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
+
+function ChangePasswordForm() {
+  const { changePassword } = useAuth();
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const handleSubmit = async () => {
+    setError('');
+    setSuccess('');
+    if (!currentPassword || !newPassword) {
+      setError('Both fields are required');
+      return;
+    }
+    if (newPassword.length < 8) {
+      setError('New password must be at least 8 characters');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await changePassword(currentPassword, newPassword);
+      if (result.success) {
+        setSuccess('Password updated successfully');
+        setCurrentPassword('');
+        setNewPassword('');
+      } else {
+        setError(result.error || 'Failed to change password');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <View style={styles.changePasswordForm}>
+      {!!error && (
+        <View style={styles.errorBox}>
+          <Ionicons name="alert-circle" size={14} color={Colors.negative} />
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
+      {!!success && (
+        <View style={styles.successBox}>
+          <Ionicons name="checkmark-circle" size={14} color={Colors.positive} />
+          <Text style={styles.successText}>{success}</Text>
+        </View>
+      )}
+      <TextInput
+        style={styles.formInput}
+        value={currentPassword}
+        onChangeText={setCurrentPassword}
+        placeholder="Current password"
+        placeholderTextColor={Colors.textTertiary}
+        secureTextEntry
+        autoCapitalize="none"
+        testID="current-password"
+      />
+      <TextInput
+        style={styles.formInput}
+        value={newPassword}
+        onChangeText={setNewPassword}
+        placeholder="New password"
+        placeholderTextColor={Colors.textTertiary}
+        secureTextEntry
+        autoCapitalize="none"
+        testID="new-password"
+      />
+      <Pressable
+        style={[styles.changeButton, loading && styles.buttonDisabled]}
+        onPress={handleSubmit}
+        disabled={loading}
+        testID="change-password-submit"
+      >
+        {loading ? (
+          <ActivityIndicator color={Colors.white} size="small" />
+        ) : (
+          <Text style={styles.changeButtonText}>Update Password</Text>
+        )}
+      </Pressable>
+    </View>
+  );
+}
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { loadDemoData, clearAllData } = useAppStore();
+  const { user, isAuthenticated, logout } = useAuth();
+  const [showChangePassword, setShowChangePassword] = useState(false);
 
   const handleLoadDemo = () => {
     Alert.alert(
@@ -52,8 +140,37 @@ export default function SettingsScreen() {
     );
   };
 
+  const handleLogout = () => {
+    Alert.alert(
+      'Log Out',
+      'You will continue to have access to your local data.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Log Out',
+          onPress: () => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            logout();
+          },
+        },
+      ]
+    );
+  };
+
   const topInset = Platform.OS === 'web' ? 67 : insets.top;
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
+
+  const formatDate = (dateStr: string) => {
+    try {
+      return new Date(dateStr).toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+    } catch {
+      return dateStr;
+    }
+  };
 
   return (
     <ScrollView
@@ -66,6 +183,44 @@ export default function SettingsScreen() {
         <Text style={styles.brandName}>Wealth Forecaster</Text>
         <Text style={styles.versionBadge}>v{appVersion}</Text>
       </View>
+
+      {isAuthenticated && user && (
+        <>
+          <Text style={styles.sectionTitle}>Account</Text>
+          <Card style={styles.settingsCard}>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Email</Text>
+              <Text style={styles.infoValue}>{user.email}</Text>
+            </View>
+            <View style={styles.rowDivider} />
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Member since</Text>
+              <Text style={styles.infoValue}>{formatDate(user.createdAt)}</Text>
+            </View>
+            <View style={styles.rowDivider} />
+            <Pressable
+              style={styles.actionRow}
+              onPress={() => setShowChangePassword(!showChangePassword)}
+              testID="toggle-change-password"
+            >
+              <Ionicons name="key" size={20} color={Colors.primary} />
+              <Text style={styles.actionText}>Change Password</Text>
+              <View style={{ flex: 1 }} />
+              <Ionicons
+                name={showChangePassword ? 'chevron-up' : 'chevron-down'}
+                size={16}
+                color={Colors.textTertiary}
+              />
+            </Pressable>
+            {showChangePassword && <ChangePasswordForm />}
+            <View style={styles.rowDivider} />
+            <Pressable style={styles.actionRow} onPress={handleLogout} testID="logout-button">
+              <Ionicons name="log-out" size={20} color={Colors.negative} />
+              <Text style={[styles.actionText, { color: Colors.negative }]}>Log Out</Text>
+            </Pressable>
+          </Card>
+        </>
+      )}
 
       <Text style={styles.sectionTitle}>Data</Text>
       <Card style={styles.settingsCard}>
@@ -114,6 +269,22 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
   },
   settingsCard: { marginBottom: spacing.sm },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+  },
+  infoLabel: {
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.md,
+    color: Colors.textSecondary,
+  },
+  infoValue: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.md,
+    color: Colors.text,
+  },
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -128,5 +299,64 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.medium,
     fontSize: fontSize.md,
     color: Colors.primary,
+  },
+  changePasswordForm: {
+    paddingVertical: spacing.sm,
+    gap: spacing.sm,
+  },
+  formInput: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.md,
+    color: Colors.text,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: borderRadius.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  changeButton: {
+    backgroundColor: Colors.primary,
+    borderRadius: borderRadius.sm,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.xs,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  changeButtonText: {
+    fontFamily: fontFamily.semibold,
+    fontSize: fontSize.sm,
+    color: Colors.white,
+  },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: Colors.negativeLight,
+    padding: spacing.sm,
+    borderRadius: borderRadius.sm,
+  },
+  errorText: {
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.xs,
+    color: Colors.negative,
+    flex: 1,
+  },
+  successBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: Colors.positiveLight,
+    padding: spacing.sm,
+    borderRadius: borderRadius.sm,
+  },
+  successText: {
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.xs,
+    color: Colors.positive,
+    flex: 1,
   },
 });

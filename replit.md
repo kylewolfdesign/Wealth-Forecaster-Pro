@@ -50,8 +50,14 @@ constants/
 ```
 
 ### Backend (Express - Port 5000)
-- Minimal Express server serving landing page and static assets
-- No API routes needed for v1 (all data is local)
+- Express server serving landing page, static assets, and API
+- PostgreSQL database via Drizzle ORM for user accounts and portfolio data
+- Session-based auth with express-session + connect-pg-simple
+- Auth API: POST /api/auth/register, POST /api/auth/login, POST /api/auth/logout, GET /api/auth/me, POST /api/auth/change-password
+- Portfolio sync API: GET /api/portfolio, PUT /api/portfolio (authenticated only)
+- Passwords hashed with bcryptjs (cost 12)
+- Sessions use secure HTTP-only cookies, 24h default TTL, 30 days with "remember me"
+- SESSION_SECRET env var required in production
 
 ## Key Data Models
 - Holding: stocks/crypto with symbol, shares, optional manual price
@@ -73,11 +79,12 @@ constants/
 
 ## Extension Points
 - **Real stock prices**: Replace mock provider in `lib/price-service.ts` with a real API (Alpha Vantage, Finnhub, etc.)
-- **Cloud sync**: Add backend API routes and sync logic
+- **Cloud sync**: Implemented - authenticated users get automatic debounced sync
 - **IAP/Pro features**: Add RevenueCat, gate features behind `isPro` flag
 - **CSV export**: Pro feature, export snapshots/holdings
 
 ## Recent Changes
+- 2026-04-05: Email/password authentication with optional account creation, portfolio sync, login/register modals, settings account section, session management with remember-me
 - 2026-03-15: Restructured asset categories from 7 to 6: added Real Estate, merged Offset into Cash / Savings, removed Mortgage from grid, renamed "Stocks/ETFs" to "Stocks & ETFs", renamed "Other" to "Assets"
 - 2026-02-25: Animated splash screen from Figma design — dark navy bg (#0F172A), SVG chart with purple gradient animates upward, "Wealth Forecaster" text fades in, displays for 3000ms then fades out
 - 2026-02-20: Merged Forecast tab into Home screen with time-range chart tabs (Today, 1Y, 5Y, 10Y, 20Y, 50Y). Removed Forecast from bottom tab bar.

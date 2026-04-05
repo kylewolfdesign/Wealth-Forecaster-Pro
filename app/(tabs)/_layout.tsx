@@ -2,9 +2,13 @@ import { isLiquidGlassAvailable } from 'expo-glass-effect';
 import { Tabs } from 'expo-router';
 import { NativeTabs, Icon, Label } from 'expo-router/unstable-native-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { Platform, StyleSheet, View } from 'react-native';
-import React from 'react';
+import { Platform, StyleSheet, View, Pressable, Text } from 'react-native';
+import React, { useState } from 'react';
+import { useAuth } from '@/lib/auth-context';
+import { loadPortfolioFromServer, hydrateStoreFromServer } from '@/lib/portfolio-sync';
+import LoginModal from '@/components/LoginModal';
 import Colors from '@/constants/colors';
+import { fontFamily, fontSize } from '@/constants/theme';
 
 function NativeTabLayout() {
   return (
@@ -24,6 +28,61 @@ function NativeTabLayout() {
     </NativeTabs>
   );
 }
+
+function LoginButton() {
+  const { isAuthenticated, isLoading } = useAuth();
+  const [showLogin, setShowLogin] = useState(false);
+
+  const handleLoginSuccess = async () => {
+    setShowLogin(false);
+    try {
+      const data = await loadPortfolioFromServer();
+      if (data) {
+        hydrateStoreFromServer(data);
+      }
+    } catch (err) {
+      console.warn('Failed to load portfolio after login:', err);
+    }
+  };
+
+  if (isLoading || isAuthenticated) return null;
+
+  return (
+    <>
+      <Pressable
+        style={loginStyles.button}
+        onPress={() => setShowLogin(true)}
+        testID="login-button"
+      >
+        <Ionicons name="log-in-outline" size={16} color={Colors.primary} />
+        <Text style={loginStyles.text}>Log In</Text>
+      </Pressable>
+      <LoginModal
+        visible={showLogin}
+        onDismiss={() => setShowLogin(false)}
+        onSuccess={handleLoginSuccess}
+      />
+    </>
+  );
+}
+
+const loginStyles = StyleSheet.create({
+  button: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  text: {
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.xs,
+    color: Colors.primary,
+  },
+});
 
 function ClassicTabLayout() {
   const isWeb = Platform.OS === 'web';
@@ -94,8 +153,22 @@ function ClassicTabLayout() {
 }
 
 export default function TabLayout() {
-  if (isLiquidGlassAvailable()) {
-    return <NativeTabLayout />;
-  }
-  return <ClassicTabLayout />;
+  const isWeb = Platform.OS === 'web';
+
+  return (
+    <View style={{ flex: 1 }}>
+      <View style={[floatStyles.loginContainer, { top: isWeb ? 20 : 54 }]}>
+        <LoginButton />
+      </View>
+      {isLiquidGlassAvailable() ? <NativeTabLayout /> : <ClassicTabLayout />}
+    </View>
+  );
 }
+
+const floatStyles = StyleSheet.create({
+  loginContainer: {
+    position: 'absolute',
+    right: 16,
+    zIndex: 100,
+  },
+});
