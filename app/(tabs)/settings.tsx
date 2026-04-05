@@ -9,6 +9,7 @@ import * as Haptics from 'expo-haptics';
 import Constants from 'expo-constants';
 import { useAppStore } from '@/lib/store';
 import Card from '@/components/Card';
+import WealthChart from '@/components/WealthChart';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily } from '@/constants/theme';
 
@@ -52,7 +53,6 @@ export default function SettingsScreen() {
   };
 
   const topInset = Platform.OS === 'web' ? 67 : insets.top;
-  const appName = Constants.expoConfig?.name ?? 'Wealth forecaster';
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
 
   return (
@@ -61,7 +61,11 @@ export default function SettingsScreen() {
       contentContainerStyle={[styles.content, { paddingTop: topInset + spacing.lg, paddingBottom: Platform.OS === 'web' ? 84 : 100 }]}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={styles.pageTitle}>Settings</Text>
+      <View style={styles.brandingSection}>
+        <WealthChart width={80} height={70} />
+        <Text style={styles.brandName}>Wealth Forecaster</Text>
+        <Text style={styles.versionBadge}>v{appVersion}</Text>
+      </View>
 
       <Text style={styles.sectionTitle}>Data</Text>
       <Card style={styles.settingsCard}>
@@ -75,8 +79,6 @@ export default function SettingsScreen() {
           <Text style={[styles.actionText, { color: Colors.negative }]}>Clear All Data</Text>
         </Pressable>
       </Card>
-
-      <Text style={styles.versionText}>{appName} v{appVersion}</Text>
     </ScrollView>
   );
 }
@@ -84,11 +86,23 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   content: { paddingHorizontal: spacing.xl },
-  pageTitle: {
+  brandingSection: {
+    alignItems: 'center',
+    paddingVertical: spacing.xxl,
+    marginBottom: spacing.lg,
+  },
+  brandName: {
     fontFamily: fontFamily.bold,
-    fontSize: fontSize.xxxl,
+    fontSize: fontSize.xl,
     color: Colors.text,
-    marginBottom: spacing.xl,
+    marginTop: spacing.md,
+    letterSpacing: 0.3,
+  },
+  versionBadge: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.xs,
+    color: Colors.textTertiary,
+    marginTop: spacing.xs,
   },
   sectionTitle: {
     fontFamily: fontFamily.semibold,
@@ -114,13 +128,5 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.medium,
     fontSize: fontSize.md,
     color: Colors.primary,
-  },
-  versionText: {
-    fontFamily: fontFamily.regular,
-    fontSize: fontSize.xs,
-    color: Colors.textTertiary,
-    textAlign: 'center',
-    marginTop: spacing.xxl,
-    marginBottom: spacing.xl,
   },
 });
