@@ -120,6 +120,7 @@ export default function PortfolioScreen() {
 
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const { stockSymbols, typedSymbols } = useMemo(() => {
     const syms = new Set<string>();
@@ -400,6 +401,21 @@ export default function PortfolioScreen() {
       style={styles.container}
       contentContainerStyle={[styles.content, { paddingTop: topInset + spacing.xs, paddingBottom: Platform.OS === 'web' ? 84 : 100 }]}
       showsVerticalScrollIndicator={false}
+      onStartShouldSetResponder={() => true}
+      onResponderGrant={(e) => {
+        touchStartRef.current = { x: e.nativeEvent.pageX, y: e.nativeEvent.pageY };
+      }}
+      onResponderRelease={(e) => {
+        const start = touchStartRef.current;
+        if (start) {
+          const dx = Math.abs(e.nativeEvent.pageX - start.x);
+          const dy = Math.abs(e.nativeEvent.pageY - start.y);
+          if (dx < 10 && dy < 10) {
+            setSelectedCategory(null);
+          }
+        }
+        touchStartRef.current = null;
+      }}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -416,16 +432,14 @@ export default function PortfolioScreen() {
             ? `Prices as of ${lastPriceUpdate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
             : 'Pull down to refresh prices'}
         </Text>
-        <Pressable onPress={() => setSelectedCategory(null)}>
-          <DonutChart
-            slices={donutSlices}
-            size={donutSize}
-            strokeWidth={17}
-            centerLabel={formatCurrency(totals.netWorth)}
-            centerSubLabel="NET WORTH"
-            selectedLabel={selectedCategory ? (sortedCategories.find(c => c.key === selectedCategory)?.label ?? null) : null}
-          />
-        </Pressable>
+        <DonutChart
+          slices={donutSlices}
+          size={donutSize}
+          strokeWidth={17}
+          centerLabel={formatCurrency(totals.netWorth)}
+          centerSubLabel="NET WORTH"
+          selectedLabel={selectedCategory ? (sortedCategories.find(c => c.key === selectedCategory)?.label ?? null) : null}
+        />
         <View style={styles.legend}>
           {(() => {
             const totalPositive = Object.values(categoryValues).reduce((s, v) => s + Math.abs(v), 0);
