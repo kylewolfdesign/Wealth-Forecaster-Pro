@@ -8,6 +8,7 @@ interface DataPoint {
   x: number;
   y: number;
   label?: string;
+  isJump?: boolean;
 }
 
 interface LineChartProps {
@@ -132,14 +133,49 @@ export default function LineChart({
     );
   }
 
-  const segments: string[] = [];
-  for (let i = 0; i < data.length; i++) {
-    const d = data[i];
-    const px = toX(d.x);
-    const py = toY(d.y);
-    segments.push(`${i === 0 ? 'M' : 'L'}${px.toFixed(2)},${py.toFixed(2)}`);
-  }
-  const linePath = segments.join(' ');
+  const pixelData = data.map((d) => ({
+    px: toX(d.x),
+    py: toY(d.y),
+    isJump: d.isJump ?? false,
+  }));
+
+  const buildPath = (): string => {
+    if (pixelData.length === 0) return '';
+    const parts: string[] = [`M${pixelData[0].px.toFixed(2)},${pixelData[0].py.toFixed(2)}`];
+
+    for (let i = 1; i < pixelData.length; i++) {
+      const curr = pixelData[i];
+      const prev = pixelData[i - 1];
+
+      const isJumpEdge = curr.isJump || prev.isJump ||
+        (Math.abs(curr.px - prev.px) < 2 && Math.abs(curr.py - prev.py) > 2);
+
+      if (isJumpEdge) {
+        parts.push(`L${curr.px.toFixed(2)},${curr.py.toFixed(2)}`);
+      } else {
+        const tension = 0.3;
+        let dx0 = 0, dy0 = 0;
+        if (i >= 2 && !pixelData[i - 2].isJump) {
+          dx0 = (curr.px - pixelData[i - 2].px) * tension;
+          dy0 = (curr.py - pixelData[i - 2].py) * tension;
+        }
+        let dx1 = 0, dy1 = 0;
+        if (i < pixelData.length - 1 && !pixelData[i + 1].isJump) {
+          dx1 = (pixelData[i + 1].px - prev.px) * tension;
+          dy1 = (pixelData[i + 1].py - prev.py) * tension;
+        }
+
+        const cp1x = prev.px + dx0;
+        const cp1y = prev.py + dy0;
+        const cp2x = curr.px - dx1;
+        const cp2y = curr.py - dy1;
+        parts.push(`C${cp1x.toFixed(2)},${cp1y.toFixed(2)} ${cp2x.toFixed(2)},${cp2y.toFixed(2)} ${curr.px.toFixed(2)},${curr.py.toFixed(2)}`);
+      }
+    }
+    return parts.join(' ');
+  };
+
+  const linePath = buildPath();
 
   const firstPoint = data[0];
   const lastPoint = data[data.length - 1];

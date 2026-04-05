@@ -206,6 +206,244 @@ function growWithContributions(
   return result;
 }
 
+interface DiscreteEvent {
+  monthsFromNow: number;
+  type: 'rsu_cliff' | 'rsu_tranche' | 'option_cliff' | 'option_tranche' | 'real_estate_equity';
+}
+
+export function enumerateDiscreteEvents(
+  rsuGrants: RSUGrant[],
+  stockOptions: StockOption[],
+  realEstate: RealEstate[],
+  maxMonths: number,
+): DiscreteEvent[] {
+  const events: DiscreteEvent[] = [];
+  const now = new Date();
+
+  for (const grant of rsuGrants) {
+    const startDate = new Date(grant.vest.startDate);
+    const startMonthsAgo = (now.getFullYear() - startDate.getFullYear()) * 12 +
+      (now.getMonth() - startDate.getMonth());
+
+    const cliffMonth = grant.vest.cliffMonths - startMonthsAgo;
+    if (cliffMonth > 0 && cliffMonth <= maxMonths) {
+      events.push({ monthsFromNow: cliffMonth, type: 'rsu_cliff' });
+    }
+
+    const vestIntervalMonths = grant.vest.frequency === 'monthly' ? 1 : grant.vest.frequency === 'quarterly' ? 3 : 12;
+    const totalVestPeriods = Math.floor(
+      (grant.vest.durationMonths - grant.vest.cliffMonths) / vestIntervalMonths
+    );
+    for (let p = 1; p < totalVestPeriods; p++) {
+      const trancheMonth = grant.vest.cliffMonths + p * vestIntervalMonths - startMonthsAgo;
+      if (trancheMonth > 0 && trancheMonth <= maxMonths) {
+        events.push({ monthsFromNow: trancheMonth, type: 'rsu_tranche' });
+      }
+    }
+  }
+
+  for (const option of stockOptions) {
+    const startDate = new Date(option.vest.startDate);
+    const startMonthsAgo = (now.getFullYear() - startDate.getFullYear()) * 12 +
+      (now.getMonth() - startDate.getMonth());
+
+    const cliffMonth = option.vest.cliffMonths - startMonthsAgo;
+    if (cliffMonth > 0 && cliffMonth <= maxMonths) {
+      events.push({ monthsFromNow: cliffMonth, type: 'option_cliff' });
+    }
+
+    const vestIntervalMonths = option.vest.frequency === 'monthly' ? 1 : option.vest.frequency === 'quarterly' ? 3 : 12;
+    const totalVestPeriods = Math.floor(
+      (option.vest.durationMonths - option.vest.cliffMonths) / vestIntervalMonths
+    );
+    for (let p = 1; p < totalVestPeriods; p++) {
+      const trancheMonth = option.vest.cliffMonths + p * vestIntervalMonths - startMonthsAgo;
+      if (trancheMonth > 0 && trancheMonth <= maxMonths) {
+        events.push({ monthsFromNow: trancheMonth, type: 'option_tranche' });
+      }
+    }
+  }
+
+  for (const r of realEstate) {
+    const addEquity = r.additionalEquity ?? 0;
+    if (addEquity <= 0) continue;
+    const cadence = r.equityCadence ?? 'monthly';
+    const intervalMonths = cadence === 'monthly' ? 1 : cadence === 'quarterly' ? 3 : 12;
+    if (intervalMonths <= 1) continue;
+    for (let m = intervalMonths; m <= maxMonths; m += intervalMonths) {
+      events.push({ monthsFromNow: m, type: 'real_estate_equity' });
+    }
+  }
+
+  events.sort((a, b) => a.monthsFromNow - b.monthsFromNow);
+  return events;
+}
+
+function evaluateNetWorthAtMonth(
+  months: number,
+  now: Date,
+  holdings: Holding[],
+  rsuGrants: RSUGrant[],
+  cashAccounts: CashAccount[],
+  mortgages: Mortgage[],
+  otherAssets: OtherAsset[],
+  settings: Settings,
+  realEstate: RealEstate[],
+  retirementAccounts: RetirementAccount[],
+  stockOptions: StockOption[],
+  bonds: Bond[],
+  businesses: Business[],
+  vehicles: Vehicle[],
+  inflationMultiplier: (m: number) => number,
+): Omit<ForecastPoint, 'isJump'> {
+  const futureDate = new Date(now);
+  futureDate.setMonth(futureDate.getMonth() + months);
+  const realAdj = inflationMultiplier(months);
+
+  let stocksVal = 0;
+  for (const h of holdings) {
+    if (h.type === 'stock') {
+      const rate = h.growthOverride ?? settings.stockGrowthPct;
+      stocksVal += growMonthly(computeHoldingValue(h), rate, months);
+    }
+  }
+
+  let cryptoVal = 0;
+  for (const h of holdings) {
+    if (h.type === 'crypto') {
+      const rate = h.growthOverride ?? settings.cryptoGrowthPct;
+      cryptoVal += growMonthly(computeHoldingValue(h), rate, months);
+    }
+  }
+
+  let rsusVal = 0;
+  for (const grant of rsuGrants) {
+    const { vested } = computeRSUVesting(grant, futureDate);
+    const price = getInstantPrice(grant.symbol, 'stock');
+    const rate = grant.growthOverride ?? settings.rsuGrowthPct;
+    rsusVal += growMonthly(vested * price, rate, months);
+  }
+
+  let savingsVal = 0;
+  let offsetVal = 0;
+  for (const ca of cashAccounts) {
+    const rate = ca.annualInterestRate ?? settings.cashGrowthPct;
+    const val = growWithContributions(ca.balance, ca.monthlyContribution, rate, months);
+    if (ca.type === 'savings') savingsVal += val;
+    else offsetVal += val;
+  }
+
+  let otherVal = 0;
+  for (const a of otherAssets) {
+    const rate = a.annualGrowthRate ?? 0;
+    otherVal += growMonthly(a.value, rate, months);
+  }
+
+  let realEstateVal = 0;
+  for (const r of realEstate) {
+    const rate = r.annualGrowthRate ?? 0;
+    const equityBase = r.equity ?? r.currentValue;
+    const addEquity = r.additionalEquity ?? 0;
+    if (addEquity > 0) {
+      const cadence = r.equityCadence ?? 'monthly';
+      if (cadence === 'monthly') {
+        realEstateVal += growWithContributions(equityBase, addEquity, rate, months);
+      } else {
+        const intervalMonths = cadence === 'quarterly' ? 3 : 12;
+        const monthlyRate = Math.pow(1 + rate / 100, 1 / 12) - 1;
+        const wholeMonths = Math.floor(months);
+        let value = equityBase;
+        for (let m = 1; m <= wholeMonths; m++) {
+          value = value * (1 + monthlyRate);
+          if (m % intervalMonths === 0) {
+            value += addEquity;
+          }
+        }
+        const frac = months - wholeMonths;
+        if (frac > 0) {
+          value = value * Math.pow(1 + monthlyRate, frac);
+        }
+        realEstateVal += value;
+      }
+    } else {
+      realEstateVal += growMonthly(equityBase, rate, months);
+    }
+  }
+
+  let mortgageVal = 0;
+  for (const m of mortgages) {
+    mortgageVal += computeMortgageBalance(m, months);
+  }
+
+  let retirementVal = 0;
+  for (const acct of retirementAccounts) {
+    const totalMonthlyContrib = acct.monthlyContribution +
+      (acct.employerMatchPct ? Math.min(
+        acct.monthlyContribution * (acct.employerMatchPct / 100),
+        (acct.employerMatchLimit ?? Infinity) / 12
+      ) : 0);
+    retirementVal += growWithContributions(acct.balance, totalMonthlyContrib, settings.retirementGrowthPct, months);
+  }
+
+  let stockOptionsVal = 0;
+  for (const opt of stockOptions) {
+    const { vested } = computeStockOptionVesting(opt, futureDate);
+    const price = opt.currentPrice ?? getInstantPrice(opt.symbol, 'stock');
+    const projectedPrice = growMonthly(price, settings.stockGrowthPct, months);
+    const intrinsicValue = Math.max(projectedPrice - opt.strikePrice, 0) * vested;
+    stockOptionsVal += intrinsicValue;
+  }
+
+  let bondsVal = 0;
+  for (const b of bonds) {
+    const maturity = new Date(b.maturityDate);
+    const monthsToMaturity = (maturity.getFullYear() - now.getFullYear()) * 12 + (maturity.getMonth() - now.getMonth());
+    if (months >= monthsToMaturity) {
+      bondsVal += b.faceValue;
+    } else {
+      const currentVal = b.purchasePrice ?? b.faceValue;
+      bondsVal += growMonthly(currentVal, b.couponRate, months);
+    }
+  }
+
+  let businessVal = 0;
+  for (const biz of businesses) {
+    const rate = biz.annualGrowthRate ?? 0;
+    businessVal += growMonthly(biz.value, rate, months);
+  }
+
+  let vehiclesVal = 0;
+  for (const v of vehicles) {
+    const rate = -(v.annualDepreciationRate ?? 15);
+    vehiclesVal += Math.max(growMonthly(v.currentValue, rate, months), 0);
+  }
+
+  const totalAssets = stocksVal + cryptoVal + rsusVal + savingsVal + offsetVal + otherVal +
+    realEstateVal + retirementVal + stockOptionsVal + bondsVal + businessVal + vehiclesVal;
+  const netWorth = (totalAssets - mortgageVal) * realAdj;
+
+  return {
+    monthsFromNow: months,
+    date: futureDate.toISOString(),
+    netWorth,
+    breakdown: {
+      stocks: stocksVal * realAdj,
+      crypto: cryptoVal * realAdj,
+      rsus: rsusVal * realAdj,
+      savings: savingsVal * realAdj,
+      offset: offsetVal * realAdj,
+      otherAssets: otherVal * realAdj,
+      realEstate: realEstateVal * realAdj,
+      mortgage: mortgageVal * realAdj,
+      retirement: retirementVal * realAdj,
+      stockOptions: stockOptionsVal * realAdj,
+      bonds: bondsVal * realAdj,
+      business: businessVal * realAdj,
+      vehicles: vehiclesVal * realAdj,
+    },
+  };
+}
+
 export function computeForecast(
   holdings: Holding[],
   rsuGrants: RSUGrant[],
@@ -233,6 +471,7 @@ export function computeForecast(
     monthsFromNow: 0,
     date: now.toISOString(),
     netWorth: totals.netWorth,
+    isJump: false,
     breakdown: {
       stocks: totals.stocks,
       crypto: totals.crypto,
@@ -252,141 +491,39 @@ export function computeForecast(
 
   const totalMonths = maxYears * 12;
   const step = totalMonths <= 24 ? 1 : totalMonths <= 120 ? 3 : 6;
-  const intervals: number[] = [];
+
+  const EPSILON = 0.01;
+  const discreteEvents = enumerateDiscreteEvents(rsuGrants, stockOptions, realEstate, totalMonths);
+
+  const sampleSet = new Set<number>();
   for (let m = step; m <= totalMonths; m += step) {
-    intervals.push(m);
+    sampleSet.add(m);
   }
 
-  for (const months of intervals) {
-    const futureDate = new Date(now);
-    futureDate.setMonth(futureDate.getMonth() + months);
-    const realAdj = inflationMultiplier(months);
+  const jumpMonths = new Set<number>();
+  for (const evt of discreteEvents) {
+    const preMonth = Math.max(EPSILON, evt.monthsFromNow - EPSILON);
+    sampleSet.add(preMonth);
+    sampleSet.add(evt.monthsFromNow);
+    jumpMonths.add(evt.monthsFromNow);
+  }
 
-    let stocksVal = 0;
-    for (const h of holdings) {
-      if (h.type === 'stock') {
-        const rate = h.growthOverride ?? settings.stockGrowthPct;
-        stocksVal += growMonthly(computeHoldingValue(h), rate, months);
-      }
+  const rawSorted = Array.from(sampleSet).sort((a, b) => a - b);
+  const sortedSamples: number[] = [];
+  for (const s of rawSorted) {
+    if (sortedSamples.length > 0 && Math.abs(s - sortedSamples[sortedSamples.length - 1]) < 1e-6) {
+      continue;
     }
+    sortedSamples.push(s);
+  }
 
-    let cryptoVal = 0;
-    for (const h of holdings) {
-      if (h.type === 'crypto') {
-        const rate = h.growthOverride ?? settings.cryptoGrowthPct;
-        cryptoVal += growMonthly(computeHoldingValue(h), rate, months);
-      }
-    }
+  const evalArgs = [now, holdings, rsuGrants, cashAccounts, mortgages, otherAssets, settings, realEstate, retirementAccounts, stockOptions, bonds, businesses, vehicles, inflationMultiplier] as const;
 
-    let rsusVal = 0;
-    for (const grant of rsuGrants) {
-      const { vested } = computeRSUVesting(grant, futureDate);
-      const price = getInstantPrice(grant.symbol, 'stock');
-      const rate = grant.growthOverride ?? settings.rsuGrowthPct;
-      rsusVal += growMonthly(vested * price, rate, months);
-    }
-
-    let savingsVal = 0;
-    let offsetVal = 0;
-    for (const ca of cashAccounts) {
-      const rate = ca.annualInterestRate ?? settings.cashGrowthPct;
-      const val = growWithContributions(ca.balance, ca.monthlyContribution, rate, months);
-      if (ca.type === 'savings') savingsVal += val;
-      else offsetVal += val;
-    }
-
-    let otherVal = 0;
-    for (const a of otherAssets) {
-      const rate = a.annualGrowthRate ?? 0;
-      otherVal += growMonthly(a.value, rate, months);
-    }
-
-    let realEstateVal = 0;
-    for (const r of realEstate) {
-      const rate = r.annualGrowthRate ?? 0;
-      const equityBase = r.equity ?? r.currentValue;
-      const addEquity = r.additionalEquity ?? 0;
-      let monthlyContribution = 0;
-      if (addEquity > 0) {
-        const cadence = r.equityCadence ?? 'monthly';
-        if (cadence === 'monthly') monthlyContribution = addEquity;
-        else if (cadence === 'quarterly') monthlyContribution = addEquity / 3;
-        else monthlyContribution = addEquity / 12;
-      }
-      realEstateVal += growWithContributions(equityBase, monthlyContribution, rate, months);
-    }
-
-    let mortgageVal = 0;
-    for (const m of mortgages) {
-      mortgageVal += computeMortgageBalance(m, months);
-    }
-
-    let retirementVal = 0;
-    for (const acct of retirementAccounts) {
-      const totalMonthlyContrib = acct.monthlyContribution +
-        (acct.employerMatchPct ? Math.min(
-          acct.monthlyContribution * (acct.employerMatchPct / 100),
-          (acct.employerMatchLimit ?? Infinity) / 12
-        ) : 0);
-      retirementVal += growWithContributions(acct.balance, totalMonthlyContrib, settings.retirementGrowthPct, months);
-    }
-
-    let stockOptionsVal = 0;
-    for (const opt of stockOptions) {
-      const { vested } = computeStockOptionVesting(opt, futureDate);
-      const price = opt.currentPrice ?? getInstantPrice(opt.symbol, 'stock');
-      const projectedPrice = growMonthly(price, settings.stockGrowthPct, months);
-      const intrinsicValue = Math.max(projectedPrice - opt.strikePrice, 0) * vested;
-      stockOptionsVal += intrinsicValue;
-    }
-
-    let bondsVal = 0;
-    for (const b of bonds) {
-      const maturity = new Date(b.maturityDate);
-      const monthsToMaturity = (maturity.getFullYear() - now.getFullYear()) * 12 + (maturity.getMonth() - now.getMonth());
-      if (months >= monthsToMaturity) {
-        bondsVal += b.faceValue;
-      } else {
-        const currentVal = b.purchasePrice ?? b.faceValue;
-        bondsVal += growMonthly(currentVal, b.couponRate, months);
-      }
-    }
-
-    let businessVal = 0;
-    for (const biz of businesses) {
-      const rate = biz.annualGrowthRate ?? 0;
-      businessVal += growMonthly(biz.value, rate, months);
-    }
-
-    let vehiclesVal = 0;
-    for (const v of vehicles) {
-      const rate = -(v.annualDepreciationRate ?? 15);
-      vehiclesVal += Math.max(growMonthly(v.currentValue, rate, months), 0);
-    }
-
-    const totalAssets = stocksVal + cryptoVal + rsusVal + savingsVal + offsetVal + otherVal +
-      realEstateVal + retirementVal + stockOptionsVal + bondsVal + businessVal + vehiclesVal;
-    const netWorth = (totalAssets - mortgageVal) * realAdj;
-
+  for (const months of sortedSamples) {
+    const result = evaluateNetWorthAtMonth(months, ...evalArgs);
     points.push({
-      monthsFromNow: months,
-      date: futureDate.toISOString(),
-      netWorth,
-      breakdown: {
-        stocks: stocksVal * realAdj,
-        crypto: cryptoVal * realAdj,
-        rsus: rsusVal * realAdj,
-        savings: savingsVal * realAdj,
-        offset: offsetVal * realAdj,
-        otherAssets: otherVal * realAdj,
-        realEstate: realEstateVal * realAdj,
-        mortgage: mortgageVal * realAdj,
-        retirement: retirementVal * realAdj,
-        stockOptions: stockOptionsVal * realAdj,
-        bonds: bondsVal * realAdj,
-        business: businessVal * realAdj,
-        vehicles: vehiclesVal * realAdj,
-      },
+      ...result,
+      isJump: jumpMonths.has(months),
     });
   }
 

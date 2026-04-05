@@ -150,6 +150,7 @@ export interface ForecastPoint {
   monthsFromNow: number;
   date: string;
   netWorth: number;
+  isJump?: boolean;
   breakdown: {
     stocks: number;
     crypto: number;

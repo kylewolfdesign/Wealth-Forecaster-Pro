@@ -63,6 +63,7 @@ export default function ForecastScreen() {
     return forecast.map((p) => ({
       x: p.monthsFromNow,
       y: p.netWorth,
+      isJump: p.isJump ?? false,
     }));
   }, [forecast]);
 
