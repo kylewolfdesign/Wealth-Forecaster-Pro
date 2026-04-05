@@ -4,6 +4,11 @@ import {
   Pressable, useWindowDimensions,
   RefreshControl,
 } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 import { Redirect, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -47,6 +52,38 @@ const CATEGORY_CONFIG: CategoryConfig[] = [
   { key: 'cashSavings', label: 'Cash / Savings', color: Colors.categorySavings, icon: 'wallet', type: 'cash' },
 ];
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+function LegendChip({ color, label, isSelected, hasSelection, onPress }: {
+  color: string;
+  label: string;
+  isSelected: boolean;
+  hasSelection: boolean;
+  onPress: () => void;
+}) {
+  const timingConfig = { duration: 300, easing: Easing.out(Easing.cubic) };
+
+  const animatedStyle = useAnimatedStyle(() => {
+    const scale = withTiming(isSelected ? 1.08 : 1, timingConfig);
+    const opacity = withTiming(hasSelection && !isSelected ? 0.4 : 1, timingConfig);
+    return { transform: [{ scale }], opacity };
+  }, [isSelected, hasSelection]);
+
+  return (
+    <AnimatedPressable
+      onPress={onPress}
+      style={[
+        styles.legendItem,
+        isSelected && { borderColor: color, borderWidth: 1.5 },
+        animatedStyle,
+      ]}
+    >
+      <View style={[styles.legendDot, { backgroundColor: color }]} />
+      <Text style={styles.legendLabel}>{label}</Text>
+    </AnimatedPressable>
+  );
+}
+
 export default function PortfolioScreen() {
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
@@ -58,6 +95,7 @@ export default function PortfolioScreen() {
   } = store;
 
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const { stockSymbols, typedSymbols } = useMemo(() => {
     const syms = new Set<string>();
@@ -130,6 +168,12 @@ export default function PortfolioScreen() {
     realEstate: totals.realEstate,
     cashSavings: totals.savings + totals.offset,
   }), [totals]);
+
+  useEffect(() => {
+    if (selectedCategory && (categoryValues[selectedCategory] ?? 0) === 0) {
+      setSelectedCategory(null);
+    }
+  }, [categoryValues, selectedCategory]);
 
   const sortedCategories = useMemo(() => {
     const sorted = [...CATEGORY_CONFIG].sort((a, b) => {
@@ -348,13 +392,16 @@ export default function PortfolioScreen() {
             ? `Prices as of ${lastPriceUpdate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
             : 'Pull down to refresh prices'}
         </Text>
-        <DonutChart
-          slices={donutSlices}
-          size={donutSize}
-          strokeWidth={17}
-          centerLabel={formatCurrency(totals.netWorth)}
-          centerSubLabel="NET WORTH"
-        />
+        <Pressable onPress={() => setSelectedCategory(null)}>
+          <DonutChart
+            slices={donutSlices}
+            size={donutSize}
+            strokeWidth={17}
+            centerLabel={formatCurrency(totals.netWorth)}
+            centerSubLabel="NET WORTH"
+            selectedLabel={selectedCategory ? (sortedCategories.find(c => c.key === selectedCategory)?.label ?? null) : null}
+          />
+        </Pressable>
         <View style={styles.legend}>
           {(() => {
             const totalPositive = Object.values(categoryValues).reduce((s, v) => s + Math.abs(v), 0);
@@ -362,11 +409,17 @@ export default function PortfolioScreen() {
             const val = categoryValues[cat.key] ?? 0;
             if (val === 0) return null;
             const pct = totalPositive > 0 ? Math.round((Math.abs(val) / totalPositive) * 100) : 0;
+            const isSelected = selectedCategory === cat.key;
+            const hasSelection = selectedCategory != null;
             return (
-              <View key={cat.key} style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: cat.color }]} />
-                <Text style={styles.legendLabel}>{cat.label} {pct}%</Text>
-              </View>
+              <LegendChip
+                key={cat.key}
+                color={cat.color}
+                label={`${cat.label} ${pct}%`}
+                isSelected={isSelected}
+                hasSelection={hasSelection}
+                onPress={() => setSelectedCategory(prev => prev === cat.key ? null : cat.key)}
+              />
             );
           });
           })()}
@@ -458,13 +511,15 @@ const styles = StyleSheet.create({
     marginBottom: 36,
   },
   legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: spacing.xs,
     backgroundColor: Colors.surface,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
   },
   legendDot: {
     width: 6,
