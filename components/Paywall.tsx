@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, Modal, Pressable,
   ActivityIndicator, Alert, Platform, TextInput,
-  KeyboardAvoidingView, ScrollView,
+  KeyboardAvoidingView, ScrollView, Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, {
@@ -327,6 +327,23 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
                     />
                   </View>
 
+                  <Text style={styles.legalText}>
+                    {'By continuing you are agreeing to our '}
+                    <Text
+                      style={styles.legalLink}
+                      onPress={() => Linking.openURL('https://placeholder.example.com/privacy-policy')}
+                    >
+                      Privacy Policy
+                    </Text>
+                    {' and '}
+                    <Text
+                      style={styles.legalLink}
+                      onPress={() => Linking.openURL('https://placeholder.example.com/terms-and-conditions')}
+                    >
+                      Terms and Conditions
+                    </Text>
+                  </Text>
+
                   <Pressable
                     style={[styles.ctaButton, registering && styles.ctaDisabled]}
                     onPress={handleRegisterAndPurchase}
@@ -474,6 +491,18 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     color: Colors.white,
   },
+  legalText: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.xs,
+    color: Colors.textTertiary,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+    lineHeight: 18,
+  },
+  legalLink: {
+    color: Colors.primary,
+    textDecorationLine: 'underline',
+  },
   restoreButton: {
     paddingVertical: spacing.sm,
     alignItems: 'center',
@@ -483,13 +512,6 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.medium,
     fontSize: fontSize.sm,
     color: Colors.textTertiary,
-  },
-  legalText: {
-    fontFamily: fontFamily.regular,
-    fontSize: 10,
-    color: Colors.textTertiary,
-    textAlign: 'center',
-    lineHeight: 14,
   },
   errorBox: {
     flexDirection: 'row',
