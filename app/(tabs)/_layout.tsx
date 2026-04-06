@@ -18,7 +18,7 @@ function NativeTabLayout() {
         <Label>Portfolio</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="forecast">
-        <Icon sf={{ default: 'chart.bar', selected: 'chart.bar.fill' }} />
+        <Icon sf={{ default: 'chart.xyaxis.line', selected: 'chart.xyaxis.line' }} />
         <Label>Forecast</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="settings">
@@ -129,7 +129,7 @@ function ClassicTabLayout() {
         options={{
           title: 'Forecast',
           tabBarIcon: ({ size, focused }) => (
-            <Ionicons name={focused ? 'bar-chart' : 'bar-chart-outline'} size={size} color={focused ? Colors.primary : Colors.textTertiary} />
+            <Ionicons name={focused ? 'trending-up' : 'trending-up-outline'} size={size} color={focused ? Colors.primary : Colors.textTertiary} />
           ),
         }}
       />
