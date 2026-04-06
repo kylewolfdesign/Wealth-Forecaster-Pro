@@ -94,7 +94,15 @@ constants/
 - **Cloud sync**: Implemented - authenticated users get automatic debounced sync
 - **CSV export**: Pro feature, export snapshots/holdings
 
+## Database
+- Development: Uses Replit's built-in PostgreSQL (helium), accessible via internal hostname
+- Production: Uses Neon PostgreSQL (publicly accessible), provisioned via Replit's database blueprint
+- Schema migrations run automatically during deployment build step (`npm run db:push`)
+- SSL is auto-configured for Neon connections in `server/db.ts`
+- Database connection is verified on server startup with `verifyDatabaseConnection()`
+
 ## Recent Changes
+- 2026-04-06: Fixed production database connection - provisioned Neon PostgreSQL for production, added SSL support and startup connection verification, added db:push to deployment build step
 - 2026-04-06: RevenueCat subscription paywall integration with 3-day free trial, count-up animation, feature gating
 - 2026-04-05: Email/password authentication with optional account creation, portfolio sync, login/register modals, settings account section, session management with remember-me
 - 2026-03-15: Restructured asset categories from 7 to 6: added Real Estate, merged Offset into Cash / Savings, removed Mortgage from grid, renamed "Stocks/ETFs" to "Stocks & ETFs", renamed "Other" to "Assets"

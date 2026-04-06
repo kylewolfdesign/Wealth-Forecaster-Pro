@@ -3,7 +3,7 @@ import type { Request, Response, NextFunction } from "express";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { registerRoutes } from "./routes";
-import { pool } from "./db";
+import { pool, verifyDatabaseConnection } from "./db";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -258,6 +258,8 @@ function setupSession(app: express.Application) {
 }
 
 (async () => {
+  await verifyDatabaseConnection();
+
   setupCors(app);
   setupBodyParsing(app);
   setupSession(app);
