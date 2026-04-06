@@ -464,7 +464,7 @@ const styles = StyleSheet.create({
   chartContainer: { marginBottom: spacing.lg, position: 'relative' as const },
   touchLabelContainer: {
     position: 'absolute' as const,
-    top: -28,
+    top: -18,
     left: 0,
     right: 0,
     alignItems: 'center' as const,
