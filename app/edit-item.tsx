@@ -50,8 +50,8 @@ export default function EditItemScreen() {
   const type = (rawType || 'holding') as EditType;
   const insets = useSafeAreaInsets();
   const store = useAppStore();
-  const { isPro } = store;
-  const [showPaywall, setShowPaywall] = useState(!isPro);
+  const { isPro, onboardingComplete } = store;
+  const [showPaywall, setShowPaywall] = useState(!isPro && onboardingComplete);
   const topInset = Platform.OS === 'web' ? 67 : insets.top;
   const bottomInset = Platform.OS === 'web' ? 34 : insets.bottom;
 
