@@ -77,13 +77,25 @@ constants/
 5. Real Estate - property entries
 6. Cash / Savings - all cash accounts (savings + offset types merged)
 
+## Subscription / Paywall (RevenueCat)
+- `react-native-purchases` SDK integrated, initialized in `app/_layout.tsx`
+- API key stored as `REVENUECAT_API_KEY` secret (also checks `EXPO_PUBLIC_REVENUECAT_API_KEY`)
+- `isPro` flag in Zustand store driven by RevenueCat entitlement (`pro`)
+- Paywall component: `components/Paywall.tsx` - slide-up modal with free trial CTA, restore purchases
+- After onboarding, portfolio screen shows net worth count-up animation, then paywall 1s after
+- All editing/adding gated behind `isPro` check in portfolio screen
+- Forecast tab shows paywall for non-Pro users
+- Edit-item screen shows paywall and navigates back if dismissed
+- Settings has "Subscription" section showing Pro status or upgrade option
+- DonutChart supports `animateValue`, `targetValue`, `onCountUpComplete` props for count-up
+
 ## Extension Points
 - **Real stock prices**: Replace mock provider in `lib/price-service.ts` with a real API (Alpha Vantage, Finnhub, etc.)
 - **Cloud sync**: Implemented - authenticated users get automatic debounced sync
-- **IAP/Pro features**: Add RevenueCat, gate features behind `isPro` flag
 - **CSV export**: Pro feature, export snapshots/holdings
 
 ## Recent Changes
+- 2026-04-06: RevenueCat subscription paywall integration with 3-day free trial, count-up animation, feature gating
 - 2026-04-05: Email/password authentication with optional account creation, portfolio sync, login/register modals, settings account section, session management with remember-me
 - 2026-03-15: Restructured asset categories from 7 to 6: added Real Estate, merged Offset into Cash / Savings, removed Mortgage from grid, renamed "Stocks/ETFs" to "Stocks & ETFs", renamed "Other" to "Assets"
 - 2026-02-25: Animated splash screen from Figma design — dark navy bg (#0F172A), SVG chart with purple gradient animates upward, "Wealth Forecaster" text fades in, displays for 3000ms then fades out

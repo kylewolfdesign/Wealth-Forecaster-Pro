@@ -72,6 +72,7 @@ export interface AppState {
   addSnapshot: (s: Snapshot) => void;
 
   setSettings: (s: Partial<Settings>) => void;
+  setIsPro: (val: boolean) => void;
   completeOnboarding: () => void;
   loadDemoData: () => void;
   clearAllData: () => void;
@@ -191,6 +192,8 @@ export const useAppStore = create<AppState>()(
 
       setSettings: (updates) =>
         set((s) => ({ settings: { ...s.settings, ...updates } })),
+
+      setIsPro: (val) => set({ isPro: val }),
 
       completeOnboarding: () => set({ onboardingComplete: true }),
 

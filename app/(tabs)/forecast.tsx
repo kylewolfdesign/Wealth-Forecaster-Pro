@@ -21,6 +21,7 @@ import { formatCurrency } from '@/lib/format';
 import Card from '@/components/Card';
 import LineChart from '@/components/LineChart';
 import AnimatedEntry from '@/components/AnimatedEntry';
+import Paywall from '@/components/Paywall';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
 
@@ -43,7 +44,16 @@ export default function ForecastScreen() {
     holdings, rsuGrants, cashAccounts, mortgages,
     otherAssets, realEstate, settings, setSettings,
     retirementAccounts, stockOptions, bonds, businesses, vehicles,
+    isPro,
   } = useAppStore();
+
+  const [showPaywall, setShowPaywall] = useState(!isPro);
+
+  useFocusEffect(useCallback(() => {
+    if (!isPro) {
+      setShowPaywall(true);
+    }
+  }, [isPro]));
 
   const [selectedHorizon, setSelectedHorizon] = useState<string>('10Y');
   const [touchValue, setTouchValue] = useState<number | null>(null);
@@ -125,6 +135,10 @@ export default function ForecastScreen() {
   }, [forecast]);
 
   const handleSettingChange = (key: string, text: string) => {
+    if (!isPro) {
+      setShowPaywall(true);
+      return;
+    }
     const val = parseFloat(text);
     if (!isNaN(val)) {
       setSettings({ [key]: val });
@@ -132,6 +146,10 @@ export default function ForecastScreen() {
   };
 
   const handleHorizonSelect = (key: string) => {
+    if (!isPro) {
+      setShowPaywall(true);
+      return;
+    }
     const horizon = TIME_HORIZONS.find((h) => h.key === key);
     if (!horizon) return;
     setSelectedHorizon(key);
@@ -348,6 +366,12 @@ export default function ForecastScreen() {
         />
         </Card>
       </AnimatedEntry>
+
+      <Paywall
+        visible={showPaywall && !isPro}
+        onDismiss={() => setShowPaywall(false)}
+        allowDismiss={false}
+      />
     </ScrollView>
   );
 }

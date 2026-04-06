@@ -10,6 +10,7 @@ import * as Haptics from 'expo-haptics';
 import * as Crypto from 'expo-crypto';
 import { Picker } from '@react-native-picker/picker';
 import { useAppStore, AppState } from '@/lib/store';
+import Paywall from '@/components/Paywall';
 import { Holding, RSUGrant, CashAccount, Mortgage, OtherAsset, RealEstate, RetirementAccount, StockOption, Bond, Business, Vehicle } from '@/lib/types';
 import { computeCurrentTotals } from '@/lib/calculations';
 import { createSnapshot } from '@/lib/snapshot';
@@ -49,6 +50,8 @@ export default function EditItemScreen() {
   const type = (rawType || 'holding') as EditType;
   const insets = useSafeAreaInsets();
   const store = useAppStore();
+  const { isPro } = store;
+  const [showPaywall, setShowPaywall] = useState(!isPro);
   const topInset = Platform.OS === 'web' ? 67 : insets.top;
   const bottomInset = Platform.OS === 'web' ? 34 : insets.bottom;
 
@@ -209,6 +212,15 @@ export default function EditItemScreen() {
           disabled={formAction.disabled}
         />
       </View>
+
+      <Paywall
+        visible={showPaywall}
+        onDismiss={() => {
+          setShowPaywall(false);
+          router.back();
+        }}
+        allowDismiss
+      />
     </View>
   );
 }

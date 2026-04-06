@@ -5,10 +5,13 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
+import Purchases, { CustomerInfo } from 'react-native-purchases';
+import Constants from 'expo-constants';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AnimatedSplash } from '@/components/AnimatedSplash';
 import { AuthProvider } from '@/lib/auth-context';
 import { queryClient } from '@/lib/query-client';
+import { useAppStore } from '@/lib/store';
 import {
   useFonts,
   Inter_400Regular,
@@ -18,6 +21,49 @@ import {
 } from '@expo-google-fonts/inter';
 
 SplashScreen.preventAutoHideAsync();
+
+function getRevenueCatKey(): string {
+  if (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_REVENUECAT_API_KEY) {
+    return process.env.EXPO_PUBLIC_REVENUECAT_API_KEY;
+  }
+  if (typeof process !== 'undefined' && process.env?.REVENUECAT_API_KEY) {
+    return process.env.REVENUECAT_API_KEY;
+  }
+  const extra = Constants.expoConfig?.extra;
+  if (extra?.revenueCatApiKey) return extra.revenueCatApiKey;
+  return '';
+}
+
+function useRevenueCat() {
+  const setIsPro = useAppStore((s) => s.setIsPro);
+
+  useEffect(() => {
+    const apiKey = getRevenueCatKey();
+    if (!apiKey) return;
+
+    try {
+      Purchases.configure({ apiKey });
+
+      const listener = (info: CustomerInfo) => {
+        const hasPro = !!info.entitlements.active['pro'];
+        setIsPro(hasPro);
+      };
+
+      Purchases.addCustomerInfoUpdateListener(listener);
+
+      Purchases.getCustomerInfo().then((info) => {
+        const hasPro = !!info.entitlements.active['pro'];
+        setIsPro(hasPro);
+      }).catch(() => {});
+
+      return () => {
+        Purchases.removeCustomerInfoUpdateListener(listener);
+      };
+    } catch (e) {
+      console.log('RevenueCat init error (expected in Expo Go):', e);
+    }
+  }, []);
+}
 
 function RootLayoutNav() {
   return (
@@ -46,6 +92,8 @@ export default function RootLayout() {
     Inter_700Bold,
   });
   const [showSplash, setShowSplash] = useState(true);
+
+  useRevenueCat();
 
   useEffect(() => {
     if (fontsLoaded) {

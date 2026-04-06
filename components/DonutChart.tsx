@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import Animated, {
@@ -28,6 +28,9 @@ interface DonutChartProps {
   centerSubLabel?: string;
   selectedLabel?: string | null;
   animationKey?: number;
+  animateValue?: boolean;
+  targetValue?: number;
+  onCountUpComplete?: () => void;
 }
 
 function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
@@ -132,10 +135,74 @@ function SliceLayer({
   );
 }
 
-export default function DonutChart({ slices, size, strokeWidth, centerLabel, centerSubLabel, selectedLabel, animationKey }: DonutChartProps) {
+function formatCountUpValue(val: number): string {
+  const absVal = Math.abs(val);
+  const sign = val < 0 ? '-' : '';
+  if (absVal >= 1000000) {
+    return sign + '$' + (absVal / 1000000).toFixed(absVal >= 10000000 ? 1 : 2) + 'M';
+  }
+  if (absVal >= 1000) {
+    return sign + '$' + Math.round(absVal).toLocaleString();
+  }
+  return sign + '$' + Math.round(absVal).toString();
+}
+
+function useCountUp(target: number, duration: number, enabled: boolean, onComplete?: () => void) {
+  const [displayValue, setDisplayValue] = useState(0);
+  const frameRef = useRef<number | null>(null);
+  const completedRef = useRef(false);
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+
+  useEffect(() => {
+    if (!enabled || target === 0) {
+      setDisplayValue(target);
+      if (enabled && !completedRef.current) {
+        completedRef.current = true;
+        onCompleteRef.current?.();
+      }
+      return;
+    }
+
+    completedRef.current = false;
+    const startTime = Date.now();
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplayValue(target * eased);
+
+      if (progress < 1) {
+        frameRef.current = requestAnimationFrame(animate);
+      } else {
+        setDisplayValue(target);
+        if (!completedRef.current) {
+          completedRef.current = true;
+          onCompleteRef.current?.();
+        }
+      }
+    };
+
+    frameRef.current = requestAnimationFrame(animate);
+    return () => {
+      if (frameRef.current) cancelAnimationFrame(frameRef.current);
+    };
+  }, [target, duration, enabled]);
+
+  return displayValue;
+}
+
+export default function DonutChart({ slices, size, strokeWidth, centerLabel, centerSubLabel, selectedLabel, animationKey, animateValue, targetValue, onCountUpComplete }: DonutChartProps) {
   const radius = (size - strokeWidth) / 2;
   const cx = size / 2;
   const cy = size / 2;
+
+  const countUpValue = useCountUp(
+    targetValue ?? 0,
+    1500,
+    !!animateValue,
+    onCountUpComplete
+  );
 
   const centerOpacity = useSharedValue(animationKey !== undefined ? 0 : 1);
 
@@ -152,6 +219,8 @@ export default function DonutChart({ slices, size, strokeWidth, centerLabel, cen
   const centerAnimStyle = useAnimatedStyle(() => ({
     opacity: centerOpacity.value,
   }));
+
+  const displayLabel = animateValue ? formatCountUpValue(countUpValue) : centerLabel;
 
   const total = slices.reduce((sum, s) => sum + Math.abs(s.value), 0);
   const activeSlices = slices
@@ -207,7 +276,7 @@ export default function DonutChart({ slices, size, strokeWidth, centerLabel, cen
           <Text style={styles.centerSubLabel}>{centerSubLabel}</Text>
         )}
         <Text style={styles.centerLabel} numberOfLines={1} adjustsFontSizeToFit>
-          {centerLabel}
+          {displayLabel}
         </Text>
       </Animated.View>
     </View>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Platform,
-  Pressable, Alert, TextInput, ActivityIndicator,
+  Pressable, Alert, TextInput, ActivityIndicator, Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,6 +12,7 @@ import { useAuth } from '@/lib/auth-context';
 import Card from '@/components/Card';
 import WealthChart from '@/components/WealthChart';
 import AnimatedEntry from '@/components/AnimatedEntry';
+import Paywall from '@/components/Paywall';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
 
@@ -102,11 +103,16 @@ function ChangePasswordForm() {
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
-  const { loadDemoData, clearAllData } = useAppStore();
+  const { loadDemoData, clearAllData, isPro } = useAppStore();
   const { user, isAuthenticated, logout } = useAuth();
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
 
   const handleLoadDemo = () => {
+    if (!isPro) {
+      setShowPaywall(true);
+      return;
+    }
     Alert.alert(
       'Load Demo Data',
       'This will replace your current data with sample data. Continue?',
@@ -124,6 +130,10 @@ export default function SettingsScreen() {
   };
 
   const handleClearAll = () => {
+    if (!isPro) {
+      setShowPaywall(true);
+      return;
+    }
     Alert.alert(
       'Clear All Data',
       'This will permanently delete all your data. This cannot be undone.',
@@ -229,7 +239,45 @@ export default function SettingsScreen() {
         </>
       )}
 
+      <AnimatedEntry delay={175} duration={300}>
+        <Text style={styles.sectionTitle}>Subscription</Text>
+      </AnimatedEntry>
       <AnimatedEntry delay={200} duration={300}>
+        <Card style={styles.settingsCard}>
+          <Pressable
+            style={styles.actionRow}
+            onPress={() => {
+              if (isPro) {
+                if (Platform.OS === 'ios') {
+                  Linking.openURL('https://apps.apple.com/account/subscriptions');
+                } else if (Platform.OS === 'android') {
+                  Linking.openURL('https://play.google.com/store/account/subscriptions');
+                } else {
+                  Alert.alert('Manage Subscription', 'To manage your subscription, visit the App Store or Google Play subscription settings on your device.');
+                }
+              } else {
+                setShowPaywall(true);
+              }
+            }}
+            testID="subscription-row"
+          >
+            <Ionicons name="diamond" size={20} color={Colors.primary} />
+            <Text style={styles.actionText}>
+              {isPro ? 'Manage Subscription' : 'Upgrade to Pro'}
+            </Text>
+            <View style={{ flex: 1 }} />
+            {isPro ? (
+              <View style={styles.proBadge}>
+                <Text style={styles.proBadgeText}>PRO</Text>
+              </View>
+            ) : (
+              <Ionicons name="chevron-forward" size={16} color={Colors.textTertiary} />
+            )}
+          </Pressable>
+        </Card>
+      </AnimatedEntry>
+
+      <AnimatedEntry delay={250} duration={300}>
         <Text style={styles.sectionTitle}>Data</Text>
       </AnimatedEntry>
       <AnimatedEntry delay={250} duration={300}>
@@ -245,6 +293,12 @@ export default function SettingsScreen() {
         </Pressable>
         </Card>
       </AnimatedEntry>
+
+      <Paywall
+        visible={showPaywall}
+        onDismiss={() => setShowPaywall(false)}
+        allowDismiss
+      />
     </ScrollView>
   );
 }
@@ -369,5 +423,17 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: Colors.positive,
     flex: 1,
+  },
+  proBadge: {
+    backgroundColor: Colors.primaryLight,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+  },
+  proBadgeText: {
+    fontFamily: fontFamily.bold,
+    fontSize: 10,
+    color: Colors.primary,
+    letterSpacing: 0.5,
   },
 });

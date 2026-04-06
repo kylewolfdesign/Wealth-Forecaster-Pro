@@ -27,6 +27,7 @@ import TickerLogo from '@/components/TickerLogo';
 import Card from '@/components/Card';
 import AnimatedEntry from '@/components/AnimatedEntry';
 import SaveDataModal from '@/components/SaveDataModal';
+import Paywall from '@/components/Paywall';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily } from '@/constants/theme';
 
@@ -96,10 +97,14 @@ export default function PortfolioScreen() {
     onboardingComplete, holdings, rsuGrants, cashAccounts,
     mortgages, otherAssets, realEstate, snapshots, addSnapshot,
     retirementAccounts, stockOptions, bonds, businesses, vehicles,
+    isPro,
   } = store;
 
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [countUpDone, setCountUpDone] = useState(false);
+  const paywallShownRef = useRef(false);
   const hasShownModalRef = useRef(false);
 
   useEffect(() => {
@@ -109,6 +114,22 @@ export default function PortfolioScreen() {
       return () => clearTimeout(timer);
     }
   }, [authLoading, isAuthenticated, onboardingComplete]);
+
+  const paywallTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (paywallTimerRef.current) clearTimeout(paywallTimerRef.current);
+    };
+  }, []);
+
+  const handleCountUpComplete = useCallback(() => {
+    setCountUpDone(true);
+    if (!isPro && !paywallShownRef.current) {
+      paywallShownRef.current = true;
+      paywallTimerRef.current = setTimeout(() => setShowPaywall(true), 1000);
+    }
+  }, [isPro]);
 
   const handleRegisterSuccess = useCallback(async () => {
     setShowSaveModal(false);
@@ -242,23 +263,35 @@ export default function PortfolioScreen() {
   }, [holdings, rsuGrants, cashAccounts, otherAssets, realEstate, retirementAccounts, stockOptions, bonds, businesses, vehicles]);
 
   const handleToggle = useCallback((key: string) => {
+    if (!isPro) {
+      setShowPaywall(true);
+      return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setExpandedCategory(prev => prev === key ? null : key);
-  }, []);
+  }, [isPro]);
 
   const handleEdit = useCallback((type: string, id: string, catKey?: string) => {
+    if (!isPro) {
+      setShowPaywall(true);
+      return;
+    }
     let editType = type;
     if (catKey === 'stocks' || catKey === 'crypto') editType = 'holding';
     else if (catKey === 'cashSavings') editType = 'cash';
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push(`/edit-item?type=${editType}&id=${id}`);
-  }, []);
+  }, [isPro]);
 
   const handleAdd = useCallback((type: string, category?: string) => {
+    if (!isPro) {
+      setShowPaywall(true);
+      return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const params = category ? `type=${type}&category=${category}` : `type=${type}`;
     router.push(`/edit-item?${params}`);
-  }, []);
+  }, [isPro]);
 
   if (!onboardingComplete) {
     return <Redirect href="/onboarding" />;
@@ -445,6 +478,9 @@ export default function PortfolioScreen() {
             centerSubLabel="NET WORTH"
             selectedLabel={selectedCategory ? (sortedCategories.find(c => c.key === selectedCategory)?.label ?? null) : null}
             animationKey={focusKey}
+            animateValue={!countUpDone}
+            targetValue={totals.netWorth}
+            onCountUpComplete={handleCountUpComplete}
           />
         </View>
       </AnimatedEntry>
@@ -535,6 +571,12 @@ export default function PortfolioScreen() {
         visible={showSaveModal}
         onDismiss={() => setShowSaveModal(false)}
         onSuccess={handleRegisterSuccess}
+      />
+
+      <Paywall
+        visible={showPaywall && !isPro}
+        onDismiss={() => setShowPaywall(false)}
+        allowDismiss={false}
       />
     </ScrollView>
   );
