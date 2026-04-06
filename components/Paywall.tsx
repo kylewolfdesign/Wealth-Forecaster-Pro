@@ -262,7 +262,7 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
 
                   <Text style={styles.title}>Create Your Account</Text>
                   <Text style={styles.subtitle}>
-                    Sign up to start your free trial and save your portfolio data
+                    Get full access with a free 3-day trial
                   </Text>
 
                   {!!authError && (
