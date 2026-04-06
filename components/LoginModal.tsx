@@ -180,6 +180,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.xxl,
+    paddingTop: spacing.xxl + 24,
   },
   modal: {
     backgroundColor: Colors.backgroundFlat,
