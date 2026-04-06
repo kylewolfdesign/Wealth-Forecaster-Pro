@@ -1,8 +1,17 @@
-import React, { useRef, useCallback, useMemo } from 'react';
+import React, { useRef, useCallback, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, PanResponder } from 'react-native';
 import Svg, { Path, Defs, LinearGradient, Stop, Line, Text as SvgText, Circle } from 'react-native-svg';
+import Animated, {
+  useSharedValue,
+  useAnimatedProps,
+  withTiming,
+  withDelay,
+  Easing,
+} from 'react-native-reanimated';
 import Colors from '@/constants/colors';
 import { fontFamily, fontSize } from '@/constants/theme';
+
+const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 interface DataPoint {
   x: number;
@@ -26,6 +35,7 @@ interface LineChartProps {
   onTouch?: (point: DataPoint) => void;
   onTouchEnd?: () => void;
   touchIndicatorColor?: string;
+  animationKey?: number;
 }
 
 export default function LineChart({
@@ -43,6 +53,7 @@ export default function LineChart({
   onTouch,
   onTouchEnd,
   touchIndicatorColor,
+  animationKey,
 }: LineChartProps) {
   const [activePoint, setActivePoint] = React.useState<DataPoint | null>(null);
 
@@ -129,6 +140,24 @@ export default function LineChart({
     },
   }), [findNearestPoint]);
 
+  const lineReveal = useSharedValue(animationKey !== undefined ? 1 : 0);
+  const areaOpacity = useSharedValue(animationKey !== undefined ? 0 : 1);
+
+  useEffect(() => {
+    if (animationKey !== undefined) {
+      lineReveal.value = 1;
+      areaOpacity.value = 0;
+      lineReveal.value = withTiming(0, {
+        duration: 400,
+        easing: Easing.out(Easing.cubic),
+      });
+      areaOpacity.value = withDelay(
+        300,
+        withTiming(1, { duration: 250, easing: Easing.out(Easing.cubic) })
+      );
+    }
+  }, [animationKey]);
+
   if (data.length < 2) {
     return (
       <View style={[styles.empty, { width, height }]}>
@@ -185,6 +214,24 @@ export default function LineChart({
   const lastPoint = data[data.length - 1];
   const areaPath = `${linePath} L${toX(lastPoint.x).toFixed(2)},${(padding.top + chartH).toFixed(2)} L${toX(firstPoint.x).toFixed(2)},${(padding.top + chartH).toFixed(2)} Z`;
 
+  const estimatedPathLength = useMemo(() => {
+    let len = 0;
+    for (let i = 1; i < pixelData.length; i++) {
+      const dx = pixelData[i].px - pixelData[i - 1].px;
+      const dy = pixelData[i].py - pixelData[i - 1].py;
+      len += Math.sqrt(dx * dx + dy * dy);
+    }
+    return len * 1.5;
+  }, [pixelData]);
+
+  const lineAnimProps = useAnimatedProps(() => ({
+    strokeDashoffset: estimatedPathLength * lineReveal.value,
+  }));
+
+  const areaAnimProps = useAnimatedProps(() => ({
+    opacity: areaOpacity.value,
+  }));
+
   const gridLines = showGrid ? 4 : 0;
   const gridYValues: number[] = [];
   for (let i = 0; i <= gridLines; i++) {
@@ -202,6 +249,8 @@ export default function LineChart({
   const indicatorColor = touchIndicatorColor || color;
   const activePixelX = activePoint ? toX(activePoint.x) : 0;
   const activePixelY = activePoint ? toY(activePoint.y) : 0;
+
+  const hasAnimation = animationKey !== undefined;
 
   return (
     <View
@@ -242,8 +291,26 @@ export default function LineChart({
             </React.Fragment>
           ))}
 
-        <Path d={areaPath} fill="url(#areaGradient)" />
-        <Path d={linePath} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+        {hasAnimation ? (
+          <AnimatedPath d={areaPath} fill="url(#areaGradient)" animatedProps={areaAnimProps} />
+        ) : (
+          <Path d={areaPath} fill="url(#areaGradient)" />
+        )}
+
+        {hasAnimation ? (
+          <AnimatedPath
+            d={linePath}
+            fill="none"
+            stroke={color}
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeDasharray={`${estimatedPathLength} ${estimatedPathLength}`}
+            animatedProps={lineAnimProps}
+          />
+        ) : (
+          <Path d={linePath} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+        )}
 
         {xLabelValues.map((xVal, i) => (
           <SvgText

@@ -9,7 +9,7 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated';
-import { Redirect, router } from 'expo-router';
+import { Redirect, router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -25,6 +25,7 @@ import { Holding, RSUGrant, CashAccount, Mortgage, OtherAsset, RealEstate, Retir
 import DonutChart from '@/components/DonutChart';
 import TickerLogo from '@/components/TickerLogo';
 import Card from '@/components/Card';
+import AnimatedEntry from '@/components/AnimatedEntry';
 import SaveDataModal from '@/components/SaveDataModal';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily } from '@/constants/theme';
@@ -121,6 +122,9 @@ export default function PortfolioScreen() {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  const [focusKey, setFocusKey] = useState(0);
+  useFocusEffect(useCallback(() => { setFocusKey(k => k + 1); }, []));
 
   const { stockSymbols, typedSymbols } = useMemo(() => {
     const syms = new Set<string>();
@@ -426,20 +430,25 @@ export default function PortfolioScreen() {
         />
       }
     >
-      <View style={styles.donutSection}>
-        <Text style={styles.priceTimestamp}>
-          {lastPriceUpdate
-            ? `Prices as of ${lastPriceUpdate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-            : 'Pull down to refresh prices'}
-        </Text>
-        <DonutChart
-          slices={donutSlices}
-          size={donutSize}
-          strokeWidth={17}
-          centerLabel={formatCurrency(totals.netWorth)}
-          centerSubLabel="NET WORTH"
-          selectedLabel={selectedCategory ? (sortedCategories.find(c => c.key === selectedCategory)?.label ?? null) : null}
-        />
+      <AnimatedEntry delay={0} duration={350}>
+        <View style={styles.donutSection}>
+          <Text style={styles.priceTimestamp}>
+            {lastPriceUpdate
+              ? `Prices as of ${lastPriceUpdate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+              : 'Pull down to refresh prices'}
+          </Text>
+          <DonutChart
+            slices={donutSlices}
+            size={donutSize}
+            strokeWidth={17}
+            centerLabel={formatCurrency(totals.netWorth)}
+            centerSubLabel="NET WORTH"
+            selectedLabel={selectedCategory ? (sortedCategories.find(c => c.key === selectedCategory)?.label ?? null) : null}
+            animationKey={focusKey}
+          />
+        </View>
+      </AnimatedEntry>
+      <AnimatedEntry delay={150} duration={300}>
         <View style={styles.legend}>
           {(() => {
             const totalPositive = Object.values(categoryValues).reduce((s, v) => s + Math.abs(v), 0);
@@ -462,18 +471,21 @@ export default function PortfolioScreen() {
           });
           })()}
         </View>
-      </View>
+      </AnimatedEntry>
 
-      <Text style={styles.sectionTitle}>Categories</Text>
+      <AnimatedEntry delay={250} duration={300}>
+        <Text style={styles.sectionTitle}>Categories</Text>
+      </AnimatedEntry>
 
-      {sortedCategories.map((cat) => {
+      {sortedCategories.map((cat, catIndex) => {
         const items = getItems(cat.key);
         const total = categoryValues[cat.key] ?? 0;
         const isOpen = expandedCategory === cat.key;
 
         return (
-          <Card key={cat.key} style={styles.categoryCard} noPadding>
-            <Pressable
+          <AnimatedEntry key={cat.key} delay={300 + catIndex * 40} duration={300}>
+            <Card style={styles.categoryCard} noPadding>
+              <Pressable
               style={styles.categoryHeader}
               onPress={() => handleToggle(cat.key)}
               testID={`category-${cat.key}`}
@@ -513,8 +525,9 @@ export default function PortfolioScreen() {
                   </Pressable>
                 </View>
               </View>
-            )}
-          </Card>
+              )}
+            </Card>
+          </AnimatedEntry>
         );
       })}
 

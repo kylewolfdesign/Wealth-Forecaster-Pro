@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, FlatList, ScrollView, Platform,
   Pressable, useWindowDimensions, RefreshControl,
 } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '@/lib/store';
@@ -10,6 +11,7 @@ import { useStockPrices } from '@/hooks/useStockPrices';
 import { formatCurrency, formatDate, formatPercent } from '@/lib/format';
 import Card from '@/components/Card';
 import LineChart from '@/components/LineChart';
+import AnimatedEntry from '@/components/AnimatedEntry';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
 import type { Snapshot } from '@/lib/types';
@@ -21,6 +23,9 @@ export default function HistoryScreen() {
   const { width: screenWidth } = useWindowDimensions();
   const { snapshots, holdings, rsuGrants } = useAppStore();
   const [range, setRange] = useState<TimeRange>('30d');
+
+  const [focusKey, setFocusKey] = useState(0);
+  useFocusEffect(useCallback(() => { setFocusKey(k => k + 1); }, []));
 
   const { stockSymbols, typedSymbols } = useMemo(() => {
     const syms = new Set<string>();
@@ -106,33 +111,40 @@ export default function HistoryScreen() {
   return (
     <View style={[styles.container, { paddingTop: topInset + spacing.lg }]}>
       <View style={styles.headerWrap}>
-        <Text style={styles.pageTitle}>History</Text>
+        <AnimatedEntry delay={0} duration={350}>
+          <Text style={styles.pageTitle}>History</Text>
+        </AnimatedEntry>
 
-        <View style={styles.rangePicker}>
-          {ranges.map((r) => (
-            <Pressable
-              key={r}
-              style={[styles.rangeBtn, range === r && styles.rangeBtnActive]}
-              onPress={() => setRange(r)}
-            >
-              <Text style={[styles.rangeBtnText, range === r && styles.rangeBtnTextActive]}>
-                {r === 'all' ? 'All' : r.replace('d', 'D')}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
+        <AnimatedEntry delay={50} duration={300}>
+          <View style={styles.rangePicker}>
+            {ranges.map((r) => (
+              <Pressable
+                key={r}
+                style={[styles.rangeBtn, range === r && styles.rangeBtnActive]}
+                onPress={() => setRange(r)}
+              >
+                <Text style={[styles.rangeBtnText, range === r && styles.rangeBtnTextActive]}>
+                  {r === 'all' ? 'All' : r.replace('d', 'D')}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </AnimatedEntry>
 
         {chartData.length >= 2 && (
-          <Card style={styles.chartCard}>
-            <LineChart
-              data={chartData}
-              width={screenWidth - spacing.xl * 2 - spacing.lg * 2}
-              height={180}
-              color={Colors.primary}
-              showGrid
-              formatY={(v) => formatCurrency(v)}
-            />
-          </Card>
+          <AnimatedEntry delay={100} duration={300}>
+            <Card style={styles.chartCard}>
+              <LineChart
+                data={chartData}
+                width={screenWidth - spacing.xl * 2 - spacing.lg * 2}
+                height={180}
+                color={Colors.primary}
+                showGrid
+                formatY={(v) => formatCurrency(v)}
+                animationKey={focusKey}
+              />
+            </Card>
+          </AnimatedEntry>
         )}
       </View>
 

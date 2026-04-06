@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Platform,
   TextInput, useWindowDimensions, TouchableOpacity, Alert,
@@ -12,6 +12,7 @@ import Animated, {
   useAnimatedReaction,
   runOnJS,
 } from 'react-native-reanimated';
+import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '@/lib/store';
@@ -19,6 +20,7 @@ import { computeForecast } from '@/lib/calculations';
 import { formatCurrency } from '@/lib/format';
 import Card from '@/components/Card';
 import LineChart from '@/components/LineChart';
+import AnimatedEntry from '@/components/AnimatedEntry';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
 
@@ -46,6 +48,9 @@ export default function ForecastScreen() {
   const [selectedHorizon, setSelectedHorizon] = useState<string>('10Y');
   const [touchValue, setTouchValue] = useState<number | null>(null);
   const [displayMonths, setDisplayMonths] = useState(10 * 12);
+
+  const [focusKey, setFocusKey] = useState(0);
+  useFocusEffect(useCallback(() => { setFocusKey(k => k + 1); }, []));
 
   const animatedMonths = useSharedValue(10 * 12);
   const chartOpacity = useSharedValue(1);
@@ -159,40 +164,46 @@ export default function ForecastScreen() {
       contentContainerStyle={[styles.content, { paddingTop: topInset + spacing.lg, paddingBottom: Platform.OS === 'web' ? 84 : 100 }]}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.headlineContainer}>
-        <Text style={styles.headlineLabel}>
-          Projected Net Worth · {selectedYears}{selectedYears === 1 ? ' Year' : ' Years'}
-        </Text>
-        <Text style={styles.headlineValue}>
-          {headlineValue != null ? formatCurrency(headlineValue) : '--'}
-        </Text>
-      </View>
+      <AnimatedEntry delay={0} duration={350}>
+        <View style={styles.headlineContainer}>
+          <Text style={styles.headlineLabel}>
+            Projected Net Worth · {selectedYears}{selectedYears === 1 ? ' Year' : ' Years'}
+          </Text>
+          <Text style={styles.headlineValue}>
+            {headlineValue != null ? formatCurrency(headlineValue) : '--'}
+          </Text>
+        </View>
+      </AnimatedEntry>
 
       {chartData.length >= 2 && (
-        <View style={styles.chartContainer}>
-          {touchValue != null && (
-            <View style={styles.touchLabelContainer}>
-              <Text style={styles.touchLabel}>{formatCurrency(touchValue)}</Text>
-            </View>
-          )}
-          <Animated.View style={chartAnimStyle}>
-            <LineChart
-              data={chartData}
-              width={screenWidth - spacing.xl * 2}
-              height={300}
-              color={Colors.primary}
-              showGrid
-              showLabels
-              formatY={(v) => formatCurrency(v)}
-              formatX={formatXLabel}
-              onTouch={(point) => setTouchValue(point.y)}
-              onTouchEnd={() => setTouchValue(null)}
-            />
-          </Animated.View>
-        </View>
+        <AnimatedEntry delay={100} duration={300}>
+          <View style={styles.chartContainer}>
+            {touchValue != null && (
+              <View style={styles.touchLabelContainer}>
+                <Text style={styles.touchLabel}>{formatCurrency(touchValue)}</Text>
+              </View>
+            )}
+            <Animated.View style={chartAnimStyle}>
+              <LineChart
+                data={chartData}
+                width={screenWidth - spacing.xl * 2}
+                height={300}
+                color={Colors.primary}
+                showGrid
+                showLabels
+                formatY={(v) => formatCurrency(v)}
+                formatX={formatXLabel}
+                onTouch={(point) => setTouchValue(point.y)}
+                onTouchEnd={() => setTouchValue(null)}
+                animationKey={focusKey}
+              />
+            </Animated.View>
+          </View>
+        </AnimatedEntry>
       )}
 
-      <View style={styles.tabBar}>
+      <AnimatedEntry delay={200} duration={300}>
+        <View style={styles.tabBar}>
         {TIME_HORIZONS.map((h) => {
           const isSelected = selectedHorizon === h.key;
           return (
@@ -218,9 +229,11 @@ export default function ForecastScreen() {
             </TouchableOpacity>
           );
         })}
-      </View>
+        </View>
+      </AnimatedEntry>
 
-      <View style={styles.returnToggleBar}>
+      <AnimatedEntry delay={250} duration={300}>
+        <View style={styles.returnToggleBar}>
         <TouchableOpacity
           style={[
             styles.returnToggle,
@@ -268,9 +281,11 @@ export default function ForecastScreen() {
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
-      </View>
+        </View>
+      </AnimatedEntry>
 
-      <Card style={styles.milestoneCard}>
+      <AnimatedEntry delay={300} duration={300}>
+        <Card style={styles.milestoneCard}>
         <Text style={styles.cardTitle}>Projected Net Worth</Text>
         {milestoneValues.map((m) => (
           <View key={m.year} style={styles.milestoneRow}>
@@ -282,9 +297,11 @@ export default function ForecastScreen() {
             </Text>
           </View>
         ))}
-      </Card>
+        </Card>
+      </AnimatedEntry>
 
-      <Card style={styles.assumptionsCard}>
+      <AnimatedEntry delay={350} duration={300}>
+        <Card style={styles.assumptionsCard}>
         <Text style={styles.cardTitle}>Growth Assumptions</Text>
 
         <AssumptionRow
@@ -329,7 +346,8 @@ export default function ForecastScreen() {
           onChangeText={(t) => handleSettingChange('inflationPct', t)}
           color={Colors.textSecondary}
         />
-      </Card>
+        </Card>
+      </AnimatedEntry>
     </ScrollView>
   );
 }

@@ -4,11 +4,15 @@ import Svg, { Path } from 'react-native-svg';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
+  useAnimatedProps,
   withTiming,
+  withDelay,
   Easing,
 } from 'react-native-reanimated';
 import { fontFamily, fontSize } from '@/constants/theme';
 import Colors from '@/constants/colors';
+
+const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 interface DonutSlice {
   value: number;
@@ -23,6 +27,7 @@ interface DonutChartProps {
   centerLabel: string;
   centerSubLabel?: string;
   selectedLabel?: string | null;
+  animationKey?: number;
 }
 
 function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
@@ -64,11 +69,20 @@ interface SliceLayerProps {
   isSelected: boolean;
   hasSelection: boolean;
   svgSize: number;
+  entranceDelay: number;
+  animationKey?: number;
 }
 
-function SliceLayer({ cx, cy, radius, startAngle, endAngle, color, baseStrokeWidth, isSelected, hasSelection, svgSize }: SliceLayerProps) {
+function SliceLayer({
+  cx, cy, radius, startAngle, endAngle, color, baseStrokeWidth,
+  isSelected, hasSelection, svgSize, entranceDelay, animationKey,
+}: SliceLayerProps) {
   const opacity = useSharedValue(1);
   const scale = useSharedValue(1);
+  const dashProgress = useSharedValue(animationKey !== undefined ? 1 : 0);
+
+  const spread = endAngle - startAngle;
+  const arcLength = (spread / 360) * 2 * Math.PI * radius;
 
   const timingConfig = { duration: 300, easing: Easing.out(Easing.cubic) };
 
@@ -82,30 +96,62 @@ function SliceLayer({ cx, cy, radius, startAngle, endAngle, color, baseStrokeWid
     }
   }, [isSelected, hasSelection]);
 
+  useEffect(() => {
+    if (animationKey !== undefined) {
+      dashProgress.value = 1;
+      dashProgress.value = withDelay(
+        entranceDelay,
+        withTiming(0, { duration: 400, easing: Easing.out(Easing.cubic) })
+      );
+    }
+  }, [animationKey]);
+
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
     transform: [{ scale: scale.value }],
   }));
 
+  const animatedPathProps = useAnimatedProps(() => ({
+    strokeDashoffset: arcLength * dashProgress.value,
+  }));
+
   return (
     <Animated.View style={[{ width: svgSize, height: svgSize, position: 'absolute' }, animatedStyle]}>
       <Svg width={svgSize} height={svgSize}>
-        <Path
+        <AnimatedPath
           d={describeArc(cx, cy, radius, startAngle, endAngle)}
           stroke={color}
           strokeWidth={baseStrokeWidth}
           fill="none"
           strokeLinecap="butt"
+          strokeDasharray={`${arcLength} ${arcLength}`}
+          animatedProps={animatedPathProps}
         />
       </Svg>
     </Animated.View>
   );
 }
 
-export default function DonutChart({ slices, size, strokeWidth, centerLabel, centerSubLabel, selectedLabel }: DonutChartProps) {
+export default function DonutChart({ slices, size, strokeWidth, centerLabel, centerSubLabel, selectedLabel, animationKey }: DonutChartProps) {
   const radius = (size - strokeWidth) / 2;
   const cx = size / 2;
   const cy = size / 2;
+
+  const centerOpacity = useSharedValue(animationKey !== undefined ? 0 : 1);
+
+  useEffect(() => {
+    if (animationKey !== undefined) {
+      centerOpacity.value = 0;
+      centerOpacity.value = withDelay(
+        200,
+        withTiming(1, { duration: 300, easing: Easing.out(Easing.cubic) })
+      );
+    }
+  }, [animationKey]);
+
+  const centerAnimStyle = useAnimatedStyle(() => ({
+    opacity: centerOpacity.value,
+  }));
 
   const total = slices.reduce((sum, s) => sum + Math.abs(s.value), 0);
   const activeSlices = slices
@@ -152,16 +198,18 @@ export default function DonutChart({ slices, size, strokeWidth, centerLabel, cen
             isSelected={selectedLabel === slice.label}
             hasSelection={hasSelection}
             svgSize={size}
+            entranceDelay={index * 40}
+            animationKey={animationKey}
           />
         ))}
-      <View style={styles.centerContent}>
+      <Animated.View style={[styles.centerContent, centerAnimStyle]}>
         {centerSubLabel && (
           <Text style={styles.centerSubLabel}>{centerSubLabel}</Text>
         )}
         <Text style={styles.centerLabel} numberOfLines={1} adjustsFontSizeToFit>
           {centerLabel}
         </Text>
-      </View>
+      </Animated.View>
     </View>
   );
 }

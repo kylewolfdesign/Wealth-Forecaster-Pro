@@ -11,6 +11,7 @@ import { useAppStore } from '@/lib/store';
 import { useAuth } from '@/lib/auth-context';
 import Card from '@/components/Card';
 import WealthChart from '@/components/WealthChart';
+import AnimatedEntry from '@/components/AnimatedEntry';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
 
@@ -178,16 +179,21 @@ export default function SettingsScreen() {
       contentContainerStyle={[styles.content, { paddingTop: topInset + spacing.lg, paddingBottom: Platform.OS === 'web' ? 84 : 100 }]}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.brandingSection}>
-        <WealthChart width={80} height={70} />
-        <Text style={styles.brandName}>Wealth Forecaster</Text>
-        <Text style={styles.versionBadge}>v{appVersion}</Text>
-      </View>
+      <AnimatedEntry delay={0} duration={350}>
+        <View style={styles.brandingSection}>
+          <WealthChart width={80} height={70} />
+          <Text style={styles.brandName}>Wealth Forecaster</Text>
+          <Text style={styles.versionBadge}>v{appVersion}</Text>
+        </View>
+      </AnimatedEntry>
 
       {isAuthenticated && user && (
         <>
-          <Text style={styles.sectionTitle}>Account</Text>
-          <Card style={styles.settingsCard}>
+          <AnimatedEntry delay={100} duration={300}>
+            <Text style={styles.sectionTitle}>Account</Text>
+          </AnimatedEntry>
+          <AnimatedEntry delay={150} duration={300}>
+            <Card style={styles.settingsCard}>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Email</Text>
               <Text style={styles.infoValue}>{user.email}</Text>
@@ -218,12 +224,16 @@ export default function SettingsScreen() {
               <Ionicons name="log-out" size={20} color={Colors.negative} />
               <Text style={[styles.actionText, { color: Colors.negative }]}>Log Out</Text>
             </Pressable>
-          </Card>
+            </Card>
+          </AnimatedEntry>
         </>
       )}
 
-      <Text style={styles.sectionTitle}>Data</Text>
-      <Card style={styles.settingsCard}>
+      <AnimatedEntry delay={200} duration={300}>
+        <Text style={styles.sectionTitle}>Data</Text>
+      </AnimatedEntry>
+      <AnimatedEntry delay={250} duration={300}>
+        <Card style={styles.settingsCard}>
         <Pressable style={styles.actionRow} onPress={handleLoadDemo}>
           <Ionicons name="flask" size={20} color={Colors.primary} />
           <Text style={styles.actionText}>Load Demo Data</Text>
@@ -233,7 +243,8 @@ export default function SettingsScreen() {
           <Ionicons name="trash" size={20} color={Colors.negative} />
           <Text style={[styles.actionText, { color: Colors.negative }]}>Clear All Data</Text>
         </Pressable>
-      </Card>
+        </Card>
+      </AnimatedEntry>
     </ScrollView>
   );
 }

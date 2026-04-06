@@ -14,6 +14,7 @@ import { useStockPrices } from '@/hooks/useStockPrices';
 import { formatCurrency, formatShares } from '@/lib/format';
 import Card from '@/components/Card';
 import TickerLogo from '@/components/TickerLogo';
+import AnimatedEntry from '@/components/AnimatedEntry';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
 
@@ -265,17 +266,20 @@ export default function BreakdownScreen() {
         />
       }
     >
-      <Text style={styles.pageTitle}>Breakdown</Text>
-      <Text style={styles.netWorthSub}>Net Worth: {formatCurrency(totals.netWorth)}</Text>
+      <AnimatedEntry delay={0} duration={350}>
+        <Text style={styles.pageTitle}>Breakdown</Text>
+        <Text style={styles.netWorthSub}>Net Worth: {formatCurrency(totals.netWorth)}</Text>
+      </AnimatedEntry>
 
-      {sortedCategories.map((cat) => {
+      {sortedCategories.map((cat, catIndex) => {
         const items = getItems(cat.key);
         const total = getCategoryTotal(cat.key);
         const isOpen = expanded === cat.key;
 
         return (
-          <Card key={cat.key} style={styles.categoryCard} noPadding>
-            <Pressable
+          <AnimatedEntry key={cat.key} delay={100 + catIndex * 40} duration={300}>
+            <Card style={styles.categoryCard} noPadding>
+              <Pressable
               style={styles.categoryHeader}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -303,23 +307,24 @@ export default function BreakdownScreen() {
               </View>
             </Pressable>
 
-            {isOpen && (
-              <View style={styles.categoryBody}>
-                {items.length === 0 ? (
-                  <Text style={styles.emptyText}>No items yet</Text>
-                ) : (
-                  items.map((item: any) => renderItem(cat.key, item))
-                )}
-                <Pressable
-                  style={styles.addButton}
-                  onPress={() => handleAdd(cat.type, cat.key)}
-                >
-                  <Ionicons name="add" size={18} color={Colors.primary} />
-                  <Text style={styles.addButtonText}>Add {cat.label}</Text>
-                </Pressable>
-              </View>
-            )}
-          </Card>
+              {isOpen && (
+                <View style={styles.categoryBody}>
+                  {items.length === 0 ? (
+                    <Text style={styles.emptyText}>No items yet</Text>
+                  ) : (
+                    items.map((item: any) => renderItem(cat.key, item))
+                  )}
+                  <Pressable
+                    style={styles.addButton}
+                    onPress={() => handleAdd(cat.type, cat.key)}
+                  >
+                    <Ionicons name="add" size={18} color={Colors.primary} />
+                    <Text style={styles.addButtonText}>Add {cat.label}</Text>
+                  </Pressable>
+                </View>
+              )}
+            </Card>
+          </AnimatedEntry>
         );
       })}
     </ScrollView>
