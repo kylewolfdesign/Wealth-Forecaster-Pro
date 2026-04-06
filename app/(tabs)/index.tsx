@@ -14,8 +14,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useAppStore } from '@/lib/store';
-import { useAuth } from '@/lib/auth-context';
-import { savePortfolioToServer } from '@/lib/portfolio-sync';
 import { computeCurrentTotals, computeHoldingValue, computeRSUVesting, computeStockOptionVesting } from '@/lib/calculations';
 import { getInstantPrice } from '@/lib/price-service';
 import { useStockPrices } from '@/hooks/useStockPrices';
@@ -26,7 +24,6 @@ import DonutChart from '@/components/DonutChart';
 import TickerLogo from '@/components/TickerLogo';
 import Card from '@/components/Card';
 import AnimatedEntry from '@/components/AnimatedEntry';
-import SaveDataModal from '@/components/SaveDataModal';
 import Paywall from '@/components/Paywall';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily } from '@/constants/theme';
@@ -100,20 +97,9 @@ export default function PortfolioScreen() {
     isPro,
   } = store;
 
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
-  const [showSaveModal, setShowSaveModal] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [countUpDone, setCountUpDone] = useState(false);
   const paywallShownRef = useRef(false);
-  const hasShownModalRef = useRef(false);
-
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated && onboardingComplete && !hasShownModalRef.current) {
-      hasShownModalRef.current = true;
-      const timer = setTimeout(() => setShowSaveModal(true), 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [authLoading, isAuthenticated, onboardingComplete]);
 
   const paywallTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -131,14 +117,6 @@ export default function PortfolioScreen() {
     }
   }, [isPro]);
 
-  const handleRegisterSuccess = useCallback(async () => {
-    setShowSaveModal(false);
-    try {
-      await savePortfolioToServer();
-    } catch (err) {
-      console.warn('Failed to sync portfolio after registration:', err);
-    }
-  }, []);
 
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -566,12 +544,6 @@ export default function PortfolioScreen() {
           </AnimatedEntry>
         );
       })}
-
-      <SaveDataModal
-        visible={showSaveModal}
-        onDismiss={() => setShowSaveModal(false)}
-        onSuccess={handleRegisterSuccess}
-      />
 
       <Paywall
         visible={showPaywall && !isPro}

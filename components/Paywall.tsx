@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, Modal, Pressable,
-  ActivityIndicator, Alert, Platform,
+  ActivityIndicator, Alert, Platform, TextInput,
+  KeyboardAvoidingView, ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   useSharedValue, useAnimatedStyle, withTiming, withDelay,
-  Easing, runOnJS,
+  Easing,
 } from 'react-native-reanimated';
 import Purchases, { PurchasesPackage } from 'react-native-purchases';
 import { useAppStore } from '@/lib/store';
+import { useAuth } from '@/lib/auth-context';
+import { savePortfolioToServer } from '@/lib/portfolio-sync';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
 
@@ -21,11 +24,19 @@ interface PaywallProps {
 
 export default function Paywall({ visible, onDismiss, allowDismiss = false }: PaywallProps) {
   const { setIsPro } = useAppStore();
+  const { isAuthenticated, register } = useAuth();
   const [loading, setLoading] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [pkg, setPkg] = useState<PurchasesPackage | null>(null);
   const [sdkAvailable, setSdkAvailable] = useState(true);
   const [priceString, setPriceString] = useState('$4.99/month');
+  const [showAccountForm, setShowAccountForm] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [registering, setRegistering] = useState(false);
   const translateY = useSharedValue(600);
   const opacity = useSharedValue(0);
 
@@ -37,6 +48,12 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
         withTiming(0, { duration: 400, easing: Easing.out(Easing.cubic) })
       );
       loadOfferings();
+      setShowAccountForm(false);
+      setEmail('');
+      setPassword('');
+      setConfirmPassword('');
+      setShowPassword(false);
+      setAuthError('');
     } else {
       translateY.value = 600;
       opacity.value = 0;
@@ -58,7 +75,7 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
     }
   };
 
-  const handlePurchase = async () => {
+  const proceedWithPurchase = async () => {
     if (!pkg) {
       if (!sdkAvailable) {
         Alert.alert('Not Available', 'In-app purchases are not available in this environment. Please use a device with the App Store or Google Play.');
@@ -81,6 +98,52 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleStartTrial = () => {
+    if (isAuthenticated) {
+      proceedWithPurchase();
+    } else {
+      setShowAccountForm(true);
+    }
+  };
+
+  const handleRegisterAndPurchase = async () => {
+    setAuthError('');
+    if (!email || !password || !confirmPassword) {
+      setAuthError('All fields are required');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setAuthError('Passwords do not match');
+      return;
+    }
+    if (password.length < 8) {
+      setAuthError('Password must be at least 8 characters');
+      return;
+    }
+
+    setRegistering(true);
+    try {
+      const result = await register(email, password, confirmPassword, false);
+      if (result.success) {
+        try {
+          await savePortfolioToServer();
+        } catch (err) {
+          console.warn('Failed to sync portfolio after registration:', err);
+        }
+        setShowAccountForm(false);
+        setEmail('');
+        setPassword('');
+        setConfirmPassword('');
+        setAuthError('');
+        await proceedWithPurchase();
+      } else {
+        setAuthError(result.error || 'Registration failed');
+      }
+    } finally {
+      setRegistering(false);
     }
   };
 
@@ -112,73 +175,187 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
 
   if (!visible) return null;
 
+  const isActionDisabled = loading || restoring || registering;
+
   return (
     <Modal transparent visible={visible} animationType="none" statusBarTranslucent>
-      <Animated.View style={[styles.overlay, overlayStyle]}>
-        {allowDismiss && (
-          <Pressable style={StyleSheet.absoluteFill} onPress={onDismiss} />
-        )}
-        <Animated.View style={[styles.sheet, sheetStyle]}>
-          <View style={styles.handle} />
-
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <Animated.View style={[styles.overlay, overlayStyle]}>
           {allowDismiss && (
-            <Pressable style={styles.closeButton} onPress={onDismiss} hitSlop={12} testID="paywall-close">
-              <Ionicons name="close" size={24} color={Colors.textTertiary} />
-            </Pressable>
+            <Pressable style={StyleSheet.absoluteFill} onPress={onDismiss} />
           )}
+          <Animated.View style={[styles.sheet, sheetStyle]}>
+            <ScrollView
+              bounces={false}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={styles.handle} />
 
-          <View style={styles.iconContainer}>
-            <Ionicons name="diamond" size={48} color={Colors.primary} />
-          </View>
+              {allowDismiss && (
+                <Pressable style={styles.closeButton} onPress={onDismiss} hitSlop={12} testID="paywall-close">
+                  <Ionicons name="close" size={24} color={Colors.textTertiary} />
+                </Pressable>
+              )}
 
-          <Text style={styles.title}>Unlock Wealth Forecaster</Text>
-          <Text style={styles.subtitle}>
-            Get full access to all features with a free 3-day trial
-          </Text>
+              {!showAccountForm ? (
+                <>
+                  <View style={styles.iconContainer}>
+                    <Ionicons name="diamond" size={48} color={Colors.primary} />
+                  </View>
 
-          <View style={styles.features}>
-            <FeatureRow icon="pie-chart" text="Full portfolio tracking & analytics" />
-            <FeatureRow icon="trending-up" text="Advanced wealth forecasting" />
-            <FeatureRow icon="create" text="Unlimited editing & additions" />
-            <FeatureRow icon="shield-checkmark" text="Cancel anytime during trial" />
-          </View>
+                  <Text style={styles.title}>Unlock Wealth Forecaster</Text>
+                  <Text style={styles.subtitle}>
+                    Get full access to all features with a free 3-day trial
+                  </Text>
 
-          <View style={styles.priceBox}>
-            <Text style={styles.trialText}>3-DAY FREE TRIAL</Text>
-            <Text style={styles.priceText}>then {priceString}</Text>
-          </View>
+                  <View style={styles.features}>
+                    <FeatureRow icon="pie-chart" text="Full portfolio tracking & analytics" />
+                    <FeatureRow icon="trending-up" text="Advanced wealth forecasting" />
+                    <FeatureRow icon="create" text="Unlimited editing & additions" />
+                    <FeatureRow icon="shield-checkmark" text="Cancel anytime during trial" />
+                  </View>
 
-          <Pressable
-            style={[styles.ctaButton, loading && styles.ctaDisabled]}
-            onPress={handlePurchase}
-            disabled={loading || restoring}
-            testID="paywall-subscribe"
-          >
-            {loading ? (
-              <ActivityIndicator color={Colors.white} />
-            ) : (
-              <Text style={styles.ctaText}>Start Free Trial</Text>
-            )}
-          </Pressable>
+                  <View style={styles.priceBox}>
+                    <Text style={styles.trialText}>3-DAY FREE TRIAL</Text>
+                    <Text style={styles.priceText}>then {priceString}</Text>
+                  </View>
 
-          <Pressable
-            style={styles.restoreButton}
-            onPress={handleRestore}
-            disabled={loading || restoring}
-            testID="paywall-restore"
-          >
-            {restoring ? (
-              <ActivityIndicator color={Colors.textTertiary} size="small" />
-            ) : (
-              <Text style={styles.restoreText}>Restore Purchases</Text>
-            )}
-          </Pressable>
+                  <Pressable
+                    style={[styles.ctaButton, loading && styles.ctaDisabled]}
+                    onPress={handleStartTrial}
+                    disabled={isActionDisabled}
+                    testID="paywall-subscribe"
+                  >
+                    {loading ? (
+                      <ActivityIndicator color={Colors.white} />
+                    ) : (
+                      <Text style={styles.ctaText}>Start Free Trial</Text>
+                    )}
+                  </Pressable>
 
-          <Text style={styles.legalText}>
-            Payment will be charged to your account after the free trial ends. Subscription automatically renews unless cancelled at least 24 hours before the end of the current period.
-          </Text>
+                  <Pressable
+                    style={styles.restoreButton}
+                    onPress={handleRestore}
+                    disabled={isActionDisabled}
+                    testID="paywall-restore"
+                  >
+                    {restoring ? (
+                      <ActivityIndicator color={Colors.textTertiary} size="small" />
+                    ) : (
+                      <Text style={styles.restoreText}>Restore Purchases</Text>
+                    )}
+                  </Pressable>
+
+                  <Text style={styles.legalText}>
+                    Payment will be charged to your account after the free trial ends. Subscription automatically renews unless cancelled at least 24 hours before the end of the current period.
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <View style={styles.iconContainer}>
+                    <Ionicons name="person-add" size={40} color={Colors.primary} />
+                  </View>
+
+                  <Text style={styles.title}>Create Your Account</Text>
+                  <Text style={styles.subtitle}>
+                    Sign up to start your free trial and save your portfolio data
+                  </Text>
+
+                  {!!authError && (
+                    <View style={styles.errorBox}>
+                      <Ionicons name="alert-circle" size={16} color={Colors.negative} />
+                      <Text style={styles.errorText}>{authError}</Text>
+                    </View>
+                  )}
+
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Email</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={email}
+                      onChangeText={setEmail}
+                      placeholder="you@example.com"
+                      placeholderTextColor={Colors.textTertiary}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      testID="paywall-register-email"
+                    />
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Password</Text>
+                    <View style={styles.passwordRow}>
+                      <TextInput
+                        style={[styles.input, styles.passwordInput]}
+                        value={password}
+                        onChangeText={setPassword}
+                        placeholder="At least 8 characters"
+                        placeholderTextColor={Colors.textTertiary}
+                        secureTextEntry={!showPassword}
+                        autoCapitalize="none"
+                        testID="paywall-register-password"
+                      />
+                      <Pressable
+                        style={styles.eyeButton}
+                        onPress={() => setShowPassword(!showPassword)}
+                      >
+                        <Ionicons
+                          name={showPassword ? 'eye-off' : 'eye'}
+                          size={20}
+                          color={Colors.textTertiary}
+                        />
+                      </Pressable>
+                    </View>
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Confirm Password</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={confirmPassword}
+                      onChangeText={setConfirmPassword}
+                      placeholder="Confirm your password"
+                      placeholderTextColor={Colors.textTertiary}
+                      secureTextEntry={!showPassword}
+                      autoCapitalize="none"
+                      testID="paywall-register-confirm-password"
+                    />
+                  </View>
+
+                  <Pressable
+                    style={[styles.ctaButton, registering && styles.ctaDisabled]}
+                    onPress={handleRegisterAndPurchase}
+                    disabled={isActionDisabled}
+                    testID="paywall-register-submit"
+                  >
+                    {registering ? (
+                      <ActivityIndicator color={Colors.white} />
+                    ) : (
+                      <Text style={styles.ctaText}>Create Account & Start Trial</Text>
+                    )}
+                  </Pressable>
+
+                  <Pressable
+                    style={styles.restoreButton}
+                    onPress={() => {
+                      setShowAccountForm(false);
+                      setAuthError('');
+                    }}
+                    testID="paywall-back-to-paywall"
+                  >
+                    <Text style={styles.restoreText}>Back</Text>
+                  </Pressable>
+                </>
+              )}
+            </ScrollView>
+          </Animated.View>
         </Animated.View>
-      </Animated.View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -313,5 +490,53 @@ const styles = StyleSheet.create({
     color: Colors.textTertiary,
     textAlign: 'center',
     lineHeight: 14,
+  },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: Colors.negativeLight,
+    padding: spacing.md,
+    borderRadius: borderRadius.sm,
+    marginBottom: spacing.lg,
+  },
+  errorText: {
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.sm,
+    color: Colors.negative,
+    flex: 1,
+  },
+  inputGroup: {
+    marginBottom: spacing.lg,
+  },
+  label: {
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.sm,
+    color: Colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  input: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.md,
+    color: Colors.text,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: borderRadius.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  passwordRow: {
+    position: 'relative' as const,
+  },
+  passwordInput: {
+    paddingRight: 48,
+  },
+  eyeButton: {
+    position: 'absolute' as const,
+    right: spacing.md,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center' as const,
   },
 });
