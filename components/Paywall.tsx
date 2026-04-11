@@ -26,7 +26,7 @@ interface PaywallProps {
 
 export default function Paywall({ visible, onDismiss, allowDismiss = false }: PaywallProps) {
   const { setIsPro } = useAppStore();
-  const { isAuthenticated, register } = useAuth();
+  const { isAuthenticated, register, login } = useAuth();
   const [loading, setLoading] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [monthlyPkg, setMonthlyPkg] = useState<PurchasesPackage | null>(null);
@@ -40,6 +40,8 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
   const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState('');
   const [registering, setRegistering] = useState(false);
+  const [signInMode, setSignInMode] = useState(false);
+  const [loggingIn, setLoggingIn] = useState(false);
   const translateY = useSharedValue(600);
   const opacity = useSharedValue(0);
 
@@ -52,6 +54,7 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
       );
       loadOfferings();
       setShowAccountForm(false);
+      setSignInMode(false);
       setSelectedPlan('annual');
       setEmail('');
       setPassword('');
@@ -202,6 +205,37 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
     }
   };
 
+  const handleLoginAndPurchase = async () => {
+    setAuthError('');
+    if (!email || !password) {
+      setAuthError('Email and password are required');
+      return;
+    }
+
+    setLoggingIn(true);
+    try {
+      const result = await login(email, password, false);
+      if (result.success) {
+        try {
+          await savePortfolioToServer();
+        } catch (err) {
+          console.warn('Failed to sync portfolio after login:', err);
+        }
+        setShowAccountForm(false);
+        setSignInMode(false);
+        setEmail('');
+        setPassword('');
+        setConfirmPassword('');
+        setAuthError('');
+        await proceedWithPurchase();
+      } else {
+        setAuthError(result.error || 'Login failed');
+      }
+    } finally {
+      setLoggingIn(false);
+    }
+  };
+
   const handleRestore = async () => {
     setRestoring(true);
     try {
@@ -230,7 +264,7 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
 
   if (!visible) return null;
 
-  const isActionDisabled = loading || restoring || registering || (!packagesLoaded && sdkAvailable);
+  const isActionDisabled = loading || restoring || registering || loggingIn || (!packagesLoaded && sdkAvailable);
   const savings = getSavingsPercent();
 
   return (
@@ -381,12 +415,14 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
               ) : (
                 <>
                   <View style={styles.iconContainer}>
-                    <Ionicons name="person-add" size={40} color={Colors.primary} />
+                    <Ionicons name={signInMode ? "log-in" : "person-add"} size={40} color={Colors.primary} />
                   </View>
 
-                  <Text style={styles.title}>Create Your Account</Text>
+                  <Text style={styles.title}>{signInMode ? 'Sign In' : 'Create Your Account'}</Text>
                   <Text style={styles.subtitle}>
-                    Sign up to get started with your subscription
+                    {signInMode
+                      ? 'Log in to access your existing account'
+                      : 'Sign up to get started with your subscription'}
                   </Text>
 
                   {!!authError && (
@@ -407,7 +443,7 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
                       keyboardType="email-address"
                       autoCapitalize="none"
                       autoCorrect={false}
-                      testID="paywall-register-email"
+                      testID={signInMode ? "paywall-login-email" : "paywall-register-email"}
                     />
                   </View>
 
@@ -418,11 +454,11 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
                         style={[styles.input, styles.passwordInput]}
                         value={password}
                         onChangeText={setPassword}
-                        placeholder="At least 8 characters"
+                        placeholder={signInMode ? "Enter your password" : "At least 8 characters"}
                         placeholderTextColor={Colors.textTertiary}
                         secureTextEntry={!showPassword}
                         autoCapitalize="none"
-                        testID="paywall-register-password"
+                        testID={signInMode ? "paywall-login-password" : "paywall-register-password"}
                       />
                       <Pressable
                         style={styles.eyeButton}
@@ -437,54 +473,80 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
                     </View>
                   </View>
 
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Confirm Password</Text>
-                    <TextInput
-                      style={styles.input}
-                      value={confirmPassword}
-                      onChangeText={setConfirmPassword}
-                      placeholder="Confirm your password"
-                      placeholderTextColor={Colors.textTertiary}
-                      secureTextEntry={!showPassword}
-                      autoCapitalize="none"
-                      testID="paywall-register-confirm-password"
-                    />
-                  </View>
+                  {!signInMode && (
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.label}>Confirm Password</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={confirmPassword}
+                        onChangeText={setConfirmPassword}
+                        placeholder="Confirm your password"
+                        placeholderTextColor={Colors.textTertiary}
+                        secureTextEntry={!showPassword}
+                        autoCapitalize="none"
+                        testID="paywall-register-confirm-password"
+                      />
+                    </View>
+                  )}
 
-                  <Text style={styles.legalText}>
-                    {'By continuing you are agreeing to our '}
-                    <Text
-                      style={styles.legalLink}
-                      onPress={() => Linking.openURL('https://placeholder.example.com/privacy-policy')}
-                    >
-                      Privacy Policy
+                  {!signInMode && (
+                    <Text style={styles.legalText}>
+                      {'By continuing you are agreeing to our '}
+                      <Text
+                        style={styles.legalLink}
+                        onPress={() => Linking.openURL('https://placeholder.example.com/privacy-policy')}
+                      >
+                        Privacy Policy
+                      </Text>
+                      {' and '}
+                      <Text
+                        style={styles.legalLink}
+                        onPress={() => Linking.openURL('https://placeholder.example.com/terms-and-conditions')}
+                      >
+                        Terms and Conditions
+                      </Text>
                     </Text>
-                    {' and '}
-                    <Text
-                      style={styles.legalLink}
-                      onPress={() => Linking.openURL('https://placeholder.example.com/terms-and-conditions')}
-                    >
-                      Terms and Conditions
-                    </Text>
-                  </Text>
+                  )}
 
                   <Pressable
-                    style={[styles.ctaButton, registering && styles.ctaDisabled]}
-                    onPress={handleRegisterAndPurchase}
+                    style={[styles.ctaButton, (signInMode ? loggingIn : registering) && styles.ctaDisabled]}
+                    onPress={signInMode ? handleLoginAndPurchase : handleRegisterAndPurchase}
                     disabled={isActionDisabled}
-                    testID="paywall-register-submit"
+                    testID={signInMode ? "paywall-login-submit" : "paywall-register-submit"}
                   >
-                    {registering ? (
+                    {(signInMode ? loggingIn : registering) ? (
                       <ActivityIndicator color={Colors.white} />
                     ) : (
-                      <Text style={styles.ctaText}>Create Account & Subscribe</Text>
+                      <Text style={styles.ctaText}>
+                        {signInMode ? 'Sign In & Subscribe' : 'Create Account & Subscribe'}
+                      </Text>
                     )}
+                  </Pressable>
+
+                  <Pressable
+                    style={styles.switchAuthMode}
+                    onPress={() => {
+                      setSignInMode(!signInMode);
+                      setAuthError('');
+                      setPassword('');
+                      setConfirmPassword('');
+                      setShowPassword(false);
+                    }}
+                    testID="paywall-toggle-auth-mode"
+                  >
+                    <Text style={styles.switchAuthModeText}>
+                      {signInMode ? "Don't have an account? " : 'Already have an account? '}
+                    </Text>
+                    <Text style={styles.switchAuthModeLink}>
+                      {signInMode ? 'Create Account' : 'Sign In'}
+                    </Text>
                   </Pressable>
 
                   <Pressable
                     style={styles.restoreButton}
                     onPress={() => {
                       setShowAccountForm(false);
+                      setSignInMode(false);
                       setAuthError('');
                     }}
                     testID="paywall-back-to-paywall"
@@ -765,5 +827,22 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.regular,
     fontSize: fontSize.sm,
     color: Colors.textTertiary,
+  },
+  switchAuthMode: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    marginBottom: spacing.xs,
+  },
+  switchAuthModeText: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.sm,
+    color: Colors.textSecondary,
+  },
+  switchAuthModeLink: {
+    fontFamily: fontFamily.semibold,
+    fontSize: fontSize.sm,
+    color: Colors.primary,
   },
 });
