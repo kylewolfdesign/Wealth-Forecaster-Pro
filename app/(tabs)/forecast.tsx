@@ -368,7 +368,7 @@ export default function ForecastScreen() {
       </AnimatedEntry>
 
       <Paywall
-        visible={showPaywall && !isPro}
+        visible={showPaywall}
         onDismiss={() => setShowPaywall(false)}
         allowDismiss={false}
       />

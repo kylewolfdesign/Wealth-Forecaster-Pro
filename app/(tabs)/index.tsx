@@ -546,7 +546,7 @@ export default function PortfolioScreen() {
       })}
 
       <Paywall
-        visible={showPaywall && !isPro}
+        visible={showPaywall}
         onDismiss={() => setShowPaywall(false)}
         allowDismiss={false}
       />
