@@ -81,7 +81,11 @@ constants/
 - `react-native-purchases` SDK integrated, initialized in `app/_layout.tsx`
 - API key stored as `REVENUECAT_API_KEY` secret (also checks `EXPO_PUBLIC_REVENUECAT_API_KEY`)
 - `isPro` flag in Zustand store driven by RevenueCat entitlement (`pro`)
-- Paywall component: `components/Paywall.tsx` - slide-up modal with free trial CTA, restore purchases
+- Paywall component: `components/Paywall.tsx` - slide-up modal with two-tier plan selector (monthly + annual)
+- Prices and plan names fetched dynamically from RevenueCat offerings (no hardcoded prices)
+- Annual plan displayed as monthly-equivalent price with "billed annually" and savings badge
+- Plan cards only render when their corresponding package is available from RevenueCat
+- App Store Connect product IDs: `WealthForecasterPro_monthly`, `WealthForecasterPro_annual`
 - After onboarding, portfolio screen shows net worth count-up animation, then paywall 1s after
 - All editing/adding gated behind `isPro` check in portfolio screen
 - Forecast tab shows paywall for non-Pro users
@@ -102,8 +106,9 @@ constants/
 - Database connection is verified on server startup with `verifyDatabaseConnection()`
 
 ## Recent Changes
+- 2026-04-11: Replaced free-trial paywall with two-tier subscription selector (monthly + annual), dynamic pricing from RevenueCat, annual shown as discounted monthly rate
 - 2026-04-06: Fixed production database connection - provisioned Neon PostgreSQL for production, added SSL support and startup connection verification, added db:push to deployment build step
-- 2026-04-06: RevenueCat subscription paywall integration with 3-day free trial, count-up animation, feature gating
+- 2026-04-06: RevenueCat subscription paywall integration with count-up animation, feature gating
 - 2026-04-05: Email/password authentication with optional account creation, portfolio sync, login/register modals, settings account section, session management with remember-me
 - 2026-03-15: Restructured asset categories from 7 to 6: added Real Estate, merged Offset into Cash / Savings, removed Mortgage from grid, renamed "Stocks/ETFs" to "Stocks & ETFs", renamed "Other" to "Assets"
 - 2026-02-25: Animated splash screen from Figma design — dark navy bg (#0F172A), SVG chart with purple gradient animates upward, "Wealth Forecaster" text fades in, displays for 3000ms then fades out
