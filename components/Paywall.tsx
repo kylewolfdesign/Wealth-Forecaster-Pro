@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, Modal, Pressable,
   ActivityIndicator, Alert, Platform, TextInput,
@@ -7,7 +7,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   useSharedValue, useAnimatedStyle, withTiming, withDelay,
-  Easing,
+  withSpring, withSequence, Easing,
 } from 'react-native-reanimated';
 import Purchases, { PurchasesPackage } from 'react-native-purchases';
 import { useAppStore } from '@/lib/store';
@@ -44,9 +44,17 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
   const [registering, setRegistering] = useState(false);
   const [signInMode, setSignInMode] = useState(false);
   const [loggingIn, setLoggingIn] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successCtaReady, setSuccessCtaReady] = useState(false);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const translateY = useSharedValue(600);
   const opacity = useSharedValue(0);
+  const successCheckScale = useSharedValue(0);
+  const successCheckOpacity = useSharedValue(0);
+  const successTextOpacity = useSharedValue(0);
+  const successButtonOpacity = useSharedValue(0);
+  const successConfettiScale = useSharedValue(0);
 
   useEffect(() => {
     return () => {
@@ -54,13 +62,23 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
         clearTimeout(retryTimerRef.current);
         retryTimerRef.current = null;
       }
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current);
+        successTimerRef.current = null;
+      }
     };
   }, []);
 
   useEffect(() => {
-    if (!visible && retryTimerRef.current) {
-      clearTimeout(retryTimerRef.current);
-      retryTimerRef.current = null;
+    if (!visible) {
+      if (retryTimerRef.current) {
+        clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current);
+        successTimerRef.current = null;
+      }
     }
   }, [visible]);
 
@@ -73,8 +91,15 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
       );
       loadOfferings();
       setShowAccountForm(false);
+      setShowSuccess(false);
+      setSuccessCtaReady(false);
       setSignInMode(false);
       setSelectedPlan('annual');
+      successCheckScale.value = 0;
+      successCheckOpacity.value = 0;
+      successTextOpacity.value = 0;
+      successButtonOpacity.value = 0;
+      successConfettiScale.value = 0;
       setEmail('');
       setPassword('');
       setConfirmPassword('');
@@ -179,6 +204,21 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
     }
   };
 
+  const animateSuccess = useCallback(() => {
+    setShowSuccess(true);
+    setSuccessCtaReady(false);
+    setShowAccountForm(false);
+    successCheckScale.value = withDelay(100, withSpring(1, { damping: 12, stiffness: 150 }));
+    successCheckOpacity.value = withDelay(100, withTiming(1, { duration: 400 }));
+    successConfettiScale.value = withDelay(200, withSequence(
+      withSpring(1.2, { damping: 8, stiffness: 120 }),
+      withSpring(1, { damping: 10 })
+    ));
+    successTextOpacity.value = withDelay(500, withTiming(1, { duration: 500 }));
+    successButtonOpacity.value = withDelay(900, withTiming(1, { duration: 400 }));
+    successTimerRef.current = setTimeout(() => setSuccessCtaReady(true), 1400);
+  }, []);
+
   const proceedWithPurchase = async () => {
     if (!selectedPackage) {
       if (!sdkAvailable) {
@@ -201,7 +241,7 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
       const { customerInfo } = await Purchases.purchasePackage(selectedPackage);
       if (customerInfo.entitlements.active['pro']) {
         setIsPro(true);
-        onDismiss?.();
+        animateSuccess();
       }
     } catch (e: unknown) {
       const err = e as { userCancelled?: boolean };
@@ -296,8 +336,7 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
       const customerInfo = await Purchases.restorePurchases();
       if (customerInfo.entitlements.active['pro']) {
         setIsPro(true);
-        onDismiss?.();
-        Alert.alert('Restored!', 'Your subscription has been restored.');
+        animateSuccess();
       } else {
         Alert.alert('No Subscription Found', 'We couldn\'t find an active subscription for this account.');
       }
@@ -314,6 +353,24 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
 
   const sheetStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],
+  }));
+
+  const successCheckStyle = useAnimatedStyle(() => ({
+    opacity: successCheckOpacity.value,
+    transform: [{ scale: successCheckScale.value }],
+  }));
+
+  const successConfettiStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: successConfettiScale.value }],
+    opacity: successCheckOpacity.value,
+  }));
+
+  const successTextStyle = useAnimatedStyle(() => ({
+    opacity: successTextOpacity.value,
+  }));
+
+  const successButtonStyle = useAnimatedStyle(() => ({
+    opacity: successButtonOpacity.value,
   }));
 
   if (!visible) return null;
@@ -345,7 +402,48 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
                 </Pressable>
               )}
 
-              {!showAccountForm ? (
+              {showSuccess ? (
+                <View style={styles.successContainer}>
+                  <Animated.View style={[styles.successConfettiRing, successConfettiStyle]}>
+                    <View style={styles.confettiDot1} />
+                    <View style={styles.confettiDot2} />
+                    <View style={styles.confettiDot3} />
+                    <View style={styles.confettiDot4} />
+                    <View style={styles.confettiDot5} />
+                    <View style={styles.confettiDot6} />
+                  </Animated.View>
+
+                  <Animated.View style={[styles.successCheckContainer, successCheckStyle]}>
+                    <View style={styles.successCheckCircle}>
+                      <Ionicons name="checkmark" size={52} color={Colors.white} />
+                    </View>
+                  </Animated.View>
+
+                  <Animated.View style={successTextStyle}>
+                    <Text style={styles.successTitle}>You're All Set!</Text>
+                    <Text style={styles.successSubtitle}>
+                      Welcome to Wealth Forecaster Pro.{'\n'}You now have full access to all features.
+                    </Text>
+                  </Animated.View>
+
+                  <Animated.View style={[styles.successFeatures, successTextStyle]}>
+                    <FeatureRow icon="checkmark-circle" text="Unlimited portfolio tracking" />
+                    <FeatureRow icon="checkmark-circle" text="Advanced forecasting tools" />
+                    <FeatureRow icon="checkmark-circle" text="Full editing capabilities" />
+                  </Animated.View>
+
+                  <Animated.View style={successButtonStyle} pointerEvents={successCtaReady ? 'auto' : 'none'}>
+                    <Pressable
+                      style={styles.successButton}
+                      onPress={() => onDismiss?.()}
+                      testID="paywall-get-started"
+                    >
+                      <Text style={styles.successButtonText}>Get Started</Text>
+                      <Ionicons name="arrow-forward" size={20} color={Colors.white} />
+                    </Pressable>
+                  </Animated.View>
+                </View>
+              ) : !showAccountForm ? (
                 <>
                   <View style={styles.iconContainer}>
                     <Ionicons name="diamond" size={48} color={Colors.primary} />
@@ -372,7 +470,7 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
 
                   {sdkAvailable && offeringsError && (
                     <View style={styles.loadingPackages}>
-                      <Ionicons name="warning" size={20} color={Colors.warning || '#F59E0B'} />
+                      <Ionicons name="warning" size={20} color={'#F59E0B'} />
                       <Text style={styles.loadingText}>{offeringsError}</Text>
                       <Pressable onPress={() => loadOfferings(0)} style={styles.retryButton}>
                         <Text style={styles.retryButtonText}>Retry</Text>
@@ -913,5 +1011,120 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.semibold,
     fontSize: fontSize.sm,
     color: Colors.primary,
+  },
+  successContainer: {
+    alignItems: 'center',
+    paddingVertical: spacing.xxl,
+    paddingHorizontal: spacing.lg,
+  },
+  successCheckContainer: {
+    marginBottom: spacing.xxl,
+    zIndex: 2,
+  },
+  successCheckCircle: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: Colors.positive,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  successConfettiRing: {
+    position: 'absolute',
+    top: spacing.xxl - 12,
+    width: 120,
+    height: 120,
+    zIndex: 1,
+  },
+  confettiDot1: {
+    position: 'absolute',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.primary,
+    top: -4,
+    left: 56,
+  },
+  confettiDot2: {
+    position: 'absolute',
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#F59E0B',
+    top: 16,
+    right: -2,
+  },
+  confettiDot3: {
+    position: 'absolute',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#0EA5E9',
+    bottom: 16,
+    right: 2,
+  },
+  confettiDot4: {
+    position: 'absolute',
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#10B981',
+    bottom: -2,
+    left: 48,
+  },
+  confettiDot5: {
+    position: 'absolute',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#F43F5E',
+    bottom: 20,
+    left: -2,
+  },
+  confettiDot6: {
+    position: 'absolute',
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#D946EF',
+    top: 20,
+    left: 2,
+  },
+  successTitle: {
+    fontFamily: fontFamily.bold,
+    fontSize: fontSize.xxxl,
+    color: Colors.text,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+  },
+  successSubtitle: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.md,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: spacing.xxl,
+  },
+  successFeatures: {
+    gap: spacing.lg,
+    marginBottom: spacing.xxxl,
+    alignSelf: 'stretch',
+  },
+  successButton: {
+    backgroundColor: Colors.primary,
+    borderRadius: borderRadius.lg,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xxxl,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    alignSelf: 'stretch',
+    width: '100%',
+  },
+  successButtonText: {
+    fontFamily: fontFamily.bold,
+    fontSize: fontSize.lg,
+    color: Colors.white,
   },
 });
