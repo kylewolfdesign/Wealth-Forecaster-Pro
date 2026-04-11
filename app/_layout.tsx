@@ -23,14 +23,15 @@ import {
 SplashScreen.preventAutoHideAsync();
 
 function getRevenueCatKey(): string {
-  if (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_REVENUECAT_API_KEY) {
-    return process.env.EXPO_PUBLIC_REVENUECAT_API_KEY;
-  }
-  if (typeof process !== 'undefined' && process.env?.REVENUECAT_API_KEY) {
-    return process.env.REVENUECAT_API_KEY;
-  }
+  const publicKey = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY;
+  if (publicKey) return publicKey;
+
+  const envKey = process.env.REVENUECAT_API_KEY;
+  if (envKey) return envKey;
+
   const extra = Constants.expoConfig?.extra;
   if (extra?.revenueCatApiKey) return extra.revenueCatApiKey;
+
   return '';
 }
 
@@ -39,7 +40,10 @@ function useRevenueCat() {
 
   useEffect(() => {
     const apiKey = getRevenueCatKey();
-    if (!apiKey) return;
+    if (!apiKey) {
+      console.warn('RevenueCat API key not found. Ensure EXPO_PUBLIC_REVENUECAT_API_KEY is set in the build environment.');
+      return;
+    }
 
     try {
       Purchases.configure({ apiKey });

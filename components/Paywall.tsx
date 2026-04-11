@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, Modal, Pressable,
   ActivityIndicator, Alert, Platform, TextInput,
@@ -33,6 +33,8 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
   const [annualPkg, setAnnualPkg] = useState<PurchasesPackage | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<PlanType>('annual');
   const [sdkAvailable, setSdkAvailable] = useState(true);
+  const [offeringsLoading, setOfferingsLoading] = useState(false);
+  const [offeringsError, setOfferingsError] = useState<string | null>(null);
   const [showAccountForm, setShowAccountForm] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -42,8 +44,25 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
   const [registering, setRegistering] = useState(false);
   const [signInMode, setSignInMode] = useState(false);
   const [loggingIn, setLoggingIn] = useState(false);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const translateY = useSharedValue(600);
   const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    return () => {
+      if (retryTimerRef.current) {
+        clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!visible && retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+  }, [visible]);
 
   useEffect(() => {
     if (visible) {
@@ -67,11 +86,16 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
     }
   }, [visible]);
 
-  const loadOfferings = async () => {
-    setMonthlyPkg(null);
-    setAnnualPkg(null);
+  const loadOfferings = async (retryCount = 0) => {
+    setOfferingsLoading(true);
+    setOfferingsError(null);
+    if (retryCount === 0) {
+      setMonthlyPkg(null);
+      setAnnualPkg(null);
+    }
     try {
       const offerings = await Purchases.getOfferings();
+      setSdkAvailable(true);
       if (offerings.current?.availablePackages?.length) {
         const packages = offerings.current.availablePackages;
         const monthly = packages.find(p => p.packageType === 'MONTHLY') || null;
@@ -83,11 +107,33 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
         } else if (monthly) {
           setSelectedPlan('monthly');
         }
+        setOfferingsError(null);
+      } else {
+        setOfferingsError('No subscription plans are currently available. Please try again later.');
       }
-      setSdkAvailable(true);
-    } catch (e) {
-      console.log('RevenueCat offerings error (expected in Expo Go):', e);
-      setSdkAvailable(false);
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      console.warn('RevenueCat offerings error:', errorMessage);
+
+      const isStoreUnavailable =
+        errorMessage.includes('purchases are not available') ||
+        errorMessage.includes('store is not available') ||
+        errorMessage.includes('PurchasesAreCompletedBy') ||
+        errorMessage.includes('Platform not supported') ||
+        (Platform.OS === 'web');
+
+      if (isStoreUnavailable) {
+        setSdkAvailable(false);
+      } else if (retryCount < 2) {
+        const delay = (retryCount + 1) * 1500;
+        retryTimerRef.current = setTimeout(() => loadOfferings(retryCount + 1), delay);
+        return;
+      } else {
+        setSdkAvailable(true);
+        setOfferingsError('Unable to load subscription options. Please check your connection and try again.');
+      }
+    } finally {
+      setOfferingsLoading(false);
     }
   };
 
@@ -139,7 +185,15 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
         Alert.alert('Not Available', 'In-app purchases are not available in this environment. Please use a device with the App Store or Google Play.');
         return;
       }
-      Alert.alert('Unavailable', 'Subscription packages are loading. Please try again in a moment.');
+      if (offeringsLoading) {
+        Alert.alert('Loading', 'Subscription options are still loading. Please wait a moment and try again.');
+        return;
+      }
+      if (offeringsError) {
+        loadOfferings(0);
+        return;
+      }
+      Alert.alert('Unavailable', 'Subscription packages could not be loaded. Please try again.');
       return;
     }
     setLoading(true);
@@ -312,7 +366,24 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
                   {!sdkAvailable && (
                     <View style={styles.loadingPackages}>
                       <Ionicons name="information-circle" size={20} color={Colors.textTertiary} />
-                      <Text style={styles.loadingText}>In-app purchases are not available in this environment.</Text>
+                      <Text style={styles.loadingText}>In-app purchases are not available in this environment. Please use a device with the App Store or Google Play.</Text>
+                    </View>
+                  )}
+
+                  {sdkAvailable && offeringsError && (
+                    <View style={styles.loadingPackages}>
+                      <Ionicons name="warning" size={20} color={Colors.warning || '#F59E0B'} />
+                      <Text style={styles.loadingText}>{offeringsError}</Text>
+                      <Pressable onPress={() => loadOfferings(0)} style={styles.retryButton}>
+                        <Text style={styles.retryButtonText}>Retry</Text>
+                      </Pressable>
+                    </View>
+                  )}
+
+                  {sdkAvailable && offeringsLoading && !packagesLoaded && (
+                    <View style={styles.loadingPackages}>
+                      <ActivityIndicator size="small" color={Colors.primary} />
+                      <Text style={styles.loadingText}>Loading subscription options...</Text>
                     </View>
                   )}
 
@@ -339,7 +410,7 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
                           <Text style={styles.planBilledText}>Billed annually</Text>
                         </View>
                         <View style={styles.planPriceCol}>
-                          <Text style={[styles.planPrice, selectedPlan === 'annual' && styles.planPriceSelected]}>{getAnnualMonthlyPrice() || '$X.XX'}</Text>
+                          <Text style={[styles.planPrice, selectedPlan === 'annual' && styles.planPriceSelected]}>{getAnnualMonthlyPrice() || '—'}</Text>
                           <Text style={styles.planPeriod}>/month</Text>
                         </View>
                       </View>
@@ -362,7 +433,7 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
                           <Text style={styles.planBilledText}>Billed monthly</Text>
                         </View>
                         <View style={styles.planPriceCol}>
-                          <Text style={[styles.planPrice, selectedPlan === 'monthly' && styles.planPriceSelected]}>{getMonthlyPrice() || '$X.XX'}</Text>
+                          <Text style={[styles.planPrice, selectedPlan === 'monthly' && styles.planPriceSelected]}>{getMonthlyPrice() || '—'}</Text>
                           <Text style={styles.planPeriod}>/month</Text>
                         </View>
                       </View>
@@ -804,6 +875,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    flexWrap: 'wrap',
     gap: spacing.sm,
     paddingVertical: spacing.lg,
     marginBottom: spacing.md,
@@ -812,6 +884,18 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.regular,
     fontSize: fontSize.sm,
     color: Colors.textTertiary,
+    flexShrink: 1,
+  },
+  retryButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    backgroundColor: Colors.primary,
+    borderRadius: borderRadius.sm,
+  },
+  retryButtonText: {
+    fontFamily: fontFamily.semibold,
+    fontSize: fontSize.sm,
+    color: '#FFFFFF',
   },
   switchAuthMode: {
     flexDirection: 'row',
