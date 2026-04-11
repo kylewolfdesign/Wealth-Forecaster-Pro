@@ -478,7 +478,7 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
 
                   {!signInMode && (
                     <Text style={styles.legalText}>
-                      {'By continuing you are agreeing to our '}
+                      {'By continuing you are agreeing to our\n'}
                       <Text
                         style={styles.legalLink}
                         onPress={() => Linking.openURL('https://placeholder.example.com/privacy-policy')}
