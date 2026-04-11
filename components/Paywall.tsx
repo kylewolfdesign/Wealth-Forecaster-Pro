@@ -336,7 +336,7 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
                         </View>
                         <View style={styles.planInfo}>
                           <Text style={[styles.planLabel, selectedPlan === 'annual' && styles.planLabelSelected]}>Annual</Text>
-                          <Text style={styles.planBilledText}>Billed annually at {getAnnualFullPrice() || '$X.XX/year'}</Text>
+                          <Text style={styles.planBilledText}>Billed annually</Text>
                         </View>
                         <View style={styles.planPriceCol}>
                           <Text style={[styles.planPrice, selectedPlan === 'annual' && styles.planPriceSelected]}>{getAnnualMonthlyPrice() || '$X.XX'}</Text>
