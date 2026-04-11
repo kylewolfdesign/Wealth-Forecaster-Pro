@@ -95,12 +95,12 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
   const packagesLoaded = monthlyPkg !== null || annualPkg !== null;
 
   const getMonthlyPrice = (): string => {
-    if (!monthlyPkg) return '...';
+    if (!monthlyPkg) return '';
     return monthlyPkg.product.priceString;
   };
 
   const getAnnualMonthlyPrice = (): string => {
-    if (!annualPkg) return '...';
+    if (!annualPkg) return '';
     const annualPrice = annualPkg.product.price;
     const monthlyEquivalent = annualPrice / 12;
     const currencyCode = annualPkg.product.currencyCode;
@@ -309,13 +309,6 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
                     <FeatureRow icon="shield-checkmark" text="Cancel anytime" />
                   </View>
 
-                  {!packagesLoaded && sdkAvailable && (
-                    <View style={styles.loadingPackages}>
-                      <ActivityIndicator color={Colors.primary} size="small" />
-                      <Text style={styles.loadingText}>Loading plans...</Text>
-                    </View>
-                  )}
-
                   {!sdkAvailable && (
                     <View style={styles.loadingPackages}>
                       <Ionicons name="information-circle" size={20} color={Colors.textTertiary} />
@@ -324,60 +317,56 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
                   )}
 
                   <View style={styles.planSelector}>
-                    {annualPkg && (
-                      <Pressable
-                        style={[
-                          styles.planCard,
-                          selectedPlan === 'annual' && styles.planCardSelected,
-                        ]}
-                        onPress={() => setSelectedPlan('annual')}
-                        testID="paywall-plan-annual"
-                      >
-                        {savings > 0 && (
-                          <View style={styles.savingsBadge}>
-                            <Text style={styles.savingsBadgeText}>SAVE {savings}%</Text>
-                          </View>
-                        )}
-                        <View style={styles.planRadioRow}>
-                          <View style={[styles.radio, selectedPlan === 'annual' && styles.radioSelected]}>
-                            {selectedPlan === 'annual' && <View style={styles.radioInner} />}
-                          </View>
-                          <View style={styles.planInfo}>
-                            <Text style={[styles.planLabel, selectedPlan === 'annual' && styles.planLabelSelected]}>Annual</Text>
-                            <Text style={styles.planBilledText}>Billed annually at {getAnnualFullPrice()}</Text>
-                          </View>
-                          <View style={styles.planPriceCol}>
-                            <Text style={[styles.planPrice, selectedPlan === 'annual' && styles.planPriceSelected]}>{getAnnualMonthlyPrice()}</Text>
-                            <Text style={styles.planPeriod}>/month</Text>
-                          </View>
+                    <Pressable
+                      style={[
+                        styles.planCard,
+                        selectedPlan === 'annual' && styles.planCardSelected,
+                      ]}
+                      onPress={() => setSelectedPlan('annual')}
+                      testID="paywall-plan-annual"
+                    >
+                      {savings > 0 && (
+                        <View style={styles.savingsBadge}>
+                          <Text style={styles.savingsBadgeText}>SAVE {savings}%</Text>
                         </View>
-                      </Pressable>
-                    )}
+                      )}
+                      <View style={styles.planRadioRow}>
+                        <View style={[styles.radio, selectedPlan === 'annual' && styles.radioSelected]}>
+                          {selectedPlan === 'annual' && <View style={styles.radioInner} />}
+                        </View>
+                        <View style={styles.planInfo}>
+                          <Text style={[styles.planLabel, selectedPlan === 'annual' && styles.planLabelSelected]}>Annual</Text>
+                          <Text style={styles.planBilledText}>Billed annually at {getAnnualFullPrice() || '$X.XX/year'}</Text>
+                        </View>
+                        <View style={styles.planPriceCol}>
+                          <Text style={[styles.planPrice, selectedPlan === 'annual' && styles.planPriceSelected]}>{getAnnualMonthlyPrice() || '$X.XX'}</Text>
+                          <Text style={styles.planPeriod}>/month</Text>
+                        </View>
+                      </View>
+                    </Pressable>
 
-                    {monthlyPkg && (
-                      <Pressable
-                        style={[
-                          styles.planCard,
-                          selectedPlan === 'monthly' && styles.planCardSelected,
-                        ]}
-                        onPress={() => setSelectedPlan('monthly')}
-                        testID="paywall-plan-monthly"
-                      >
-                        <View style={styles.planRadioRow}>
-                          <View style={[styles.radio, selectedPlan === 'monthly' && styles.radioSelected]}>
-                            {selectedPlan === 'monthly' && <View style={styles.radioInner} />}
-                          </View>
-                          <View style={styles.planInfo}>
-                            <Text style={[styles.planLabel, selectedPlan === 'monthly' && styles.planLabelSelected]}>Monthly</Text>
-                            <Text style={styles.planBilledText}>Billed monthly</Text>
-                          </View>
-                          <View style={styles.planPriceCol}>
-                            <Text style={[styles.planPrice, selectedPlan === 'monthly' && styles.planPriceSelected]}>{getMonthlyPrice()}</Text>
-                            <Text style={styles.planPeriod}>/month</Text>
-                          </View>
+                    <Pressable
+                      style={[
+                        styles.planCard,
+                        selectedPlan === 'monthly' && styles.planCardSelected,
+                      ]}
+                      onPress={() => setSelectedPlan('monthly')}
+                      testID="paywall-plan-monthly"
+                    >
+                      <View style={styles.planRadioRow}>
+                        <View style={[styles.radio, selectedPlan === 'monthly' && styles.radioSelected]}>
+                          {selectedPlan === 'monthly' && <View style={styles.radioInner} />}
                         </View>
-                      </Pressable>
-                    )}
+                        <View style={styles.planInfo}>
+                          <Text style={[styles.planLabel, selectedPlan === 'monthly' && styles.planLabelSelected]}>Monthly</Text>
+                          <Text style={styles.planBilledText}>Billed monthly</Text>
+                        </View>
+                        <View style={styles.planPriceCol}>
+                          <Text style={[styles.planPrice, selectedPlan === 'monthly' && styles.planPriceSelected]}>{getMonthlyPrice() || '$X.XX'}</Text>
+                          <Text style={styles.planPeriod}>/month</Text>
+                        </View>
+                      </View>
+                    </Pressable>
                   </View>
 
                   <Pressable
@@ -389,9 +378,7 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
                     {loading ? (
                       <ActivityIndicator color={Colors.white} />
                     ) : (
-                      <Text style={styles.ctaText}>
-                        {selectedPlan === 'annual' ? 'Subscribe Annually' : 'Subscribe Monthly'}
-                      </Text>
+                      <Text style={styles.ctaText}>Continue</Text>
                     )}
                   </Pressable>
 
@@ -517,9 +504,7 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
                     {(signInMode ? loggingIn : registering) ? (
                       <ActivityIndicator color={Colors.white} />
                     ) : (
-                      <Text style={styles.ctaText}>
-                        {signInMode ? 'Sign In & Subscribe' : 'Create Account & Subscribe'}
-                      </Text>
+                      <Text style={styles.ctaText}>Continue</Text>
                     )}
                   </Pressable>
 
