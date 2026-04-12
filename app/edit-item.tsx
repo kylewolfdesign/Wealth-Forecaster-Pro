@@ -52,6 +52,13 @@ export default function EditItemScreen() {
   const store = useAppStore();
   const { isPro, onboardingComplete } = store;
   const [showPaywall, setShowPaywall] = useState(!isPro && onboardingComplete);
+
+  useEffect(() => {
+    if (isPro) {
+      setShowPaywall(false);
+    }
+  }, [isPro]);
+
   const topInset = Platform.OS === 'web' ? 67 : insets.top;
   const bottomInset = Platform.OS === 'web' ? 34 : insets.bottom;
 

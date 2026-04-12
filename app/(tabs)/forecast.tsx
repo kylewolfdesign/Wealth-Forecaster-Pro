@@ -55,6 +55,12 @@ export default function ForecastScreen() {
     }
   }, [isPro]));
 
+  useEffect(() => {
+    if (isPro) {
+      setShowPaywall(false);
+    }
+  }, [isPro]);
+
   const [selectedHorizon, setSelectedHorizon] = useState<string>('10Y');
   const [touchValue, setTouchValue] = useState<number | null>(null);
   const [displayMonths, setDisplayMonths] = useState(10 * 12);

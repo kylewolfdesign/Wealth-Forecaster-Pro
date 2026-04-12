@@ -239,7 +239,7 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
     setLoading(true);
     try {
       await Purchases.purchasePackage(selectedPackage);
-      setIsPro(true);
+      setIsPro(true, true);
       animateSuccess();
     } catch (e: unknown) {
       const err = e as { userCancelled?: boolean };
@@ -333,7 +333,7 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
     try {
       const customerInfo = await Purchases.restorePurchases();
       if (customerInfo.entitlements.active['pro']) {
-        setIsPro(true);
+        setIsPro(true, true);
         animateSuccess();
       } else {
         Alert.alert(

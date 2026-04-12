@@ -24,6 +24,7 @@ export interface AppState {
   settings: Settings;
   onboardingComplete: boolean;
   isPro: boolean;
+  purchasedThisSession: boolean;
 
   addHolding: (h: Holding) => void;
   updateHolding: (id: string, h: Partial<Holding>) => void;
@@ -72,7 +73,7 @@ export interface AppState {
   addSnapshot: (s: Snapshot) => void;
 
   setSettings: (s: Partial<Settings>) => void;
-  setIsPro: (val: boolean) => void;
+  setIsPro: (val: boolean, fromPurchase?: boolean) => void;
   completeOnboarding: () => void;
   loadDemoData: () => void;
   clearAllData: () => void;
@@ -96,6 +97,7 @@ export const useAppStore = create<AppState>()(
       settings: { ...DEFAULT_SETTINGS },
       onboardingComplete: false,
       isPro: false,
+      purchasedThisSession: false,
 
       addHolding: (h) => set((s) => ({ holdings: [...s.holdings, h] })),
       updateHolding: (id, updates) =>
@@ -193,7 +195,7 @@ export const useAppStore = create<AppState>()(
       setSettings: (updates) =>
         set((s) => ({ settings: { ...s.settings, ...updates } })),
 
-      setIsPro: (val) => set({ isPro: val }),
+      setIsPro: (val, fromPurchase) => set({ isPro: val, ...(fromPurchase && val ? { purchasedThisSession: true } : {}) }),
 
       completeOnboarding: () => set({ onboardingComplete: true }),
 
@@ -239,6 +241,10 @@ export const useAppStore = create<AppState>()(
       name: 'networth-app-storage',
       storage: createJSONStorage(() => AsyncStorage),
       version: 2,
+      partialize: (state) => {
+        const { purchasedThisSession, ...rest } = state;
+        return rest;
+      },
       migrate: (persistedState, version) => {
         const state = persistedState as AppState;
         if (version === 0 && Array.isArray(state.realEstate)) {

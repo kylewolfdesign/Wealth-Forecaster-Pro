@@ -50,14 +50,22 @@ function useRevenueCat() {
 
       const listener = (info: CustomerInfo) => {
         const hasPro = !!info.entitlements.active['pro'];
-        setIsPro(hasPro);
+        if (hasPro) {
+          setIsPro(true);
+        } else if (!useAppStore.getState().purchasedThisSession) {
+          setIsPro(false);
+        }
       };
 
       Purchases.addCustomerInfoUpdateListener(listener);
 
       Purchases.getCustomerInfo().then((info) => {
         const hasPro = !!info.entitlements.active['pro'];
-        setIsPro(hasPro);
+        if (hasPro) {
+          setIsPro(true);
+        } else if (!useAppStore.getState().purchasedThisSession) {
+          setIsPro(false);
+        }
       }).catch(() => {});
 
       return () => {

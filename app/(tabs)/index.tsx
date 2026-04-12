@@ -109,6 +109,16 @@ export default function PortfolioScreen() {
     };
   }, []);
 
+  useEffect(() => {
+    if (isPro) {
+      setShowPaywall(false);
+      if (paywallTimerRef.current) {
+        clearTimeout(paywallTimerRef.current);
+        paywallTimerRef.current = null;
+      }
+    }
+  }, [isPro]);
+
   const handleCountUpComplete = useCallback(() => {
     setCountUpDone(true);
     if (!isPro && !paywallShownRef.current) {
