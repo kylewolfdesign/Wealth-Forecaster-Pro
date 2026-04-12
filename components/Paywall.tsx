@@ -433,7 +433,7 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
                     <FeatureRow icon="checkmark-circle" text="Full editing capabilities" />
                   </Animated.View>
 
-                  <Animated.View style={successButtonStyle} pointerEvents={successCtaReady ? 'auto' : 'none'}>
+                  <Animated.View style={[successButtonStyle, { alignSelf: 'stretch' }]} pointerEvents={successCtaReady ? 'auto' : 'none'}>
                     <Pressable
                       style={styles.successButton}
                       onPress={() => onDismiss?.()}
