@@ -238,11 +238,9 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
     }
     setLoading(true);
     try {
-      const { customerInfo } = await Purchases.purchasePackage(selectedPackage);
-      if (customerInfo.entitlements.active['pro']) {
-        setIsPro(true);
-        animateSuccess();
-      }
+      await Purchases.purchasePackage(selectedPackage);
+      setIsPro(true);
+      animateSuccess();
     } catch (e: unknown) {
       const err = e as { userCancelled?: boolean };
       if (!err.userCancelled) {
@@ -338,7 +336,10 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
         setIsPro(true);
         animateSuccess();
       } else {
-        Alert.alert('No Subscription Found', 'We couldn\'t find an active subscription for this account.');
+        Alert.alert(
+          'No Subscription Found',
+          'We couldn\'t find an active subscription for this account. If you recently purchased, it may take a moment to activate. Please try again shortly.'
+        );
       }
     } catch (e) {
       Alert.alert('Restore Error', 'Something went wrong. Please try again.');
