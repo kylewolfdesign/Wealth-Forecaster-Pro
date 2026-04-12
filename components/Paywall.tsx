@@ -647,7 +647,7 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false }: Pa
                   )}
 
                   {!signInMode && (
-                    <Text style={styles.legalText}>
+                    <Text style={[styles.legalText, { marginBottom: spacing.lg }]}>
                       {'By continuing you are agreeing to our\n'}
                       <Text
                         style={styles.legalLink}
