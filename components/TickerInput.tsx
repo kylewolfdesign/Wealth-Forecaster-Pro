@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
-  View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator,
+  View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '@/constants/colors';
@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.regular,
     fontSize: fontSize.md,
     color: Colors.text,
-    outlineStyle: 'none' as any,
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any } : {}),
   },
   dropdown: {
     position: 'absolute',
