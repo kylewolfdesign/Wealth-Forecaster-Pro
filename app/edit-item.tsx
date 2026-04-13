@@ -11,6 +11,7 @@ import * as Crypto from 'expo-crypto';
 import { Picker } from '@react-native-picker/picker';
 import { useAppStore, AppState } from '@/lib/store';
 import Paywall from '@/components/Paywall';
+import PurchaseSuccessModal from '@/components/PurchaseSuccessModal';
 import { Holding, RSUGrant, CashAccount, Mortgage, OtherAsset, RealEstate, RetirementAccount, StockOption, Bond, Business, Vehicle } from '@/lib/types';
 import { computeCurrentTotals } from '@/lib/calculations';
 import { createSnapshot } from '@/lib/snapshot';
@@ -52,12 +53,7 @@ export default function EditItemScreen() {
   const store = useAppStore();
   const { isPro, onboardingComplete } = store;
   const [showPaywall, setShowPaywall] = useState(!isPro && onboardingComplete);
-
-  useEffect(() => {
-    if (isPro) {
-      setShowPaywall(false);
-    }
-  }, [isPro]);
+  const [showPurchaseSuccess, setShowPurchaseSuccess] = useState(false);
 
   const topInset = Platform.OS === 'web' ? 67 : insets.top;
   const bottomInset = Platform.OS === 'web' ? 34 : insets.bottom;
@@ -227,6 +223,14 @@ export default function EditItemScreen() {
           router.back();
         }}
         allowDismiss
+        onPurchaseSuccess={() => {
+          setShowPaywall(false);
+          setShowPurchaseSuccess(true);
+        }}
+      />
+      <PurchaseSuccessModal
+        visible={showPurchaseSuccess}
+        onDismiss={() => setShowPurchaseSuccess(false)}
       />
     </View>
   );

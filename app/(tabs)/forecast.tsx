@@ -22,6 +22,7 @@ import Card from '@/components/Card';
 import LineChart from '@/components/LineChart';
 import AnimatedEntry from '@/components/AnimatedEntry';
 import Paywall from '@/components/Paywall';
+import PurchaseSuccessModal from '@/components/PurchaseSuccessModal';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
 
@@ -48,18 +49,13 @@ export default function ForecastScreen() {
   } = useAppStore();
 
   const [showPaywall, setShowPaywall] = useState(!isPro);
+  const [showPurchaseSuccess, setShowPurchaseSuccess] = useState(false);
 
   useFocusEffect(useCallback(() => {
     if (!isPro) {
       setShowPaywall(true);
     }
   }, [isPro]));
-
-  useEffect(() => {
-    if (isPro) {
-      setShowPaywall(false);
-    }
-  }, [isPro]);
 
   const [selectedHorizon, setSelectedHorizon] = useState<string>('10Y');
   const [touchValue, setTouchValue] = useState<number | null>(null);
@@ -377,6 +373,14 @@ export default function ForecastScreen() {
         visible={showPaywall}
         onDismiss={() => setShowPaywall(false)}
         allowDismiss={false}
+        onPurchaseSuccess={() => {
+          setShowPaywall(false);
+          setShowPurchaseSuccess(true);
+        }}
+      />
+      <PurchaseSuccessModal
+        visible={showPurchaseSuccess}
+        onDismiss={() => setShowPurchaseSuccess(false)}
       />
     </ScrollView>
   );

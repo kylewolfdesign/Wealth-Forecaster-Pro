@@ -25,6 +25,7 @@ import TickerLogo from '@/components/TickerLogo';
 import Card from '@/components/Card';
 import AnimatedEntry from '@/components/AnimatedEntry';
 import Paywall from '@/components/Paywall';
+import PurchaseSuccessModal from '@/components/PurchaseSuccessModal';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily } from '@/constants/theme';
 
@@ -98,6 +99,7 @@ export default function PortfolioScreen() {
   } = store;
 
   const [showPaywall, setShowPaywall] = useState(false);
+  const [showPurchaseSuccess, setShowPurchaseSuccess] = useState(false);
   const [countUpDone, setCountUpDone] = useState(false);
   const paywallShownRef = useRef(false);
 
@@ -110,12 +112,9 @@ export default function PortfolioScreen() {
   }, []);
 
   useEffect(() => {
-    if (isPro) {
-      setShowPaywall(false);
-      if (paywallTimerRef.current) {
-        clearTimeout(paywallTimerRef.current);
-        paywallTimerRef.current = null;
-      }
+    if (isPro && paywallTimerRef.current) {
+      clearTimeout(paywallTimerRef.current);
+      paywallTimerRef.current = null;
     }
   }, [isPro]);
 
@@ -559,6 +558,14 @@ export default function PortfolioScreen() {
         visible={showPaywall}
         onDismiss={() => setShowPaywall(false)}
         allowDismiss={false}
+        onPurchaseSuccess={() => {
+          setShowPaywall(false);
+          setShowPurchaseSuccess(true);
+        }}
+      />
+      <PurchaseSuccessModal
+        visible={showPurchaseSuccess}
+        onDismiss={() => setShowPurchaseSuccess(false)}
       />
     </ScrollView>
   );

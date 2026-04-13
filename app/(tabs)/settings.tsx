@@ -13,6 +13,7 @@ import Card from '@/components/Card';
 import WealthChart from '@/components/WealthChart';
 import AnimatedEntry from '@/components/AnimatedEntry';
 import Paywall from '@/components/Paywall';
+import PurchaseSuccessModal from '@/components/PurchaseSuccessModal';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
 
@@ -107,6 +108,7 @@ export default function SettingsScreen() {
   const { user, isAuthenticated, logout } = useAuth();
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [showPurchaseSuccess, setShowPurchaseSuccess] = useState(false);
 
   const handleLoadDemo = () => {
     if (!isPro) {
@@ -298,6 +300,14 @@ export default function SettingsScreen() {
         visible={showPaywall}
         onDismiss={() => setShowPaywall(false)}
         allowDismiss
+        onPurchaseSuccess={() => {
+          setShowPaywall(false);
+          setShowPurchaseSuccess(true);
+        }}
+      />
+      <PurchaseSuccessModal
+        visible={showPurchaseSuccess}
+        onDismiss={() => setShowPurchaseSuccess(false)}
       />
     </ScrollView>
   );
