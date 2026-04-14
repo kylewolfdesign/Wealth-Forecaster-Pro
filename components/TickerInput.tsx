@@ -238,6 +238,8 @@ export default function TickerInput({
           placeholderTextColor={darkMode ? DARK.muted : Colors.textTertiary}
           autoCapitalize="characters"
           autoCorrect={false}
+          textContentType="none"
+          autoComplete="off"
         />
         {isLoading && (
           <ActivityIndicator size="small" color={darkMode ? DARK.muted : Colors.textTertiary} style={{ marginRight: 6 }} />
