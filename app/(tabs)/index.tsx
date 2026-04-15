@@ -122,7 +122,7 @@ export default function PortfolioScreen() {
     setCountUpDone(true);
     if (!isPro && !paywallShownRef.current) {
       paywallShownRef.current = true;
-      paywallTimerRef.current = setTimeout(() => setShowPaywall(true), 3000);
+      paywallTimerRef.current = setTimeout(() => setShowPaywall(true), 5000);
     }
   }, [isPro]);
 
