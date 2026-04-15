@@ -52,7 +52,9 @@ export default function ForecastScreen() {
   const [showPurchaseSuccess, setShowPurchaseSuccess] = useState(false);
 
   useFocusEffect(useCallback(() => {
-    if (!isPro) {
+    if (isPro) {
+      setShowPaywall(false);
+    } else {
       setShowPaywall(true);
     }
   }, [isPro]));
