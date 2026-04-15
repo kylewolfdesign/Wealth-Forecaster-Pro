@@ -1,0 +1,112 @@
+⌛️ Submitting iOS build...
+- [1mDashboard[22m:    https://appstoreconnect.apple.com/apps/6761288883/distribution
+- [1mApp[22m:          Wealth forecaster (com.kylewolfdesign.wealthforecaster)
+- [1mBuild number[22m: 7
+- [1mBinary path[22m:  ./ios/build/Wealthforecaster.ipa
+[32m-------------------[0m
+[32m--- Step: pilot ---[0m
+[32m-------------------[0m
+Creating authorization token for App Store Connect API
+[32mReady to upload new build to TestFlight (App: 6761288883)...[0m
+Going to upload updated app to App Store Connect
+[32mThis might take a few minutes. Please don't interrupt the script.[0m
+[33m[altool] Running altool at path '/Applications/Xcode.app/Contents/SharedFrameworks/ContentDeliveryServices.framework/Frameworks/AppStoreService.framework/Support/altool'...
+[0m
+[33m[altool] 
+[0m
+[33m[altool] 2026-04-15 08:14:03.075 [1m[31mERROR: [altool.6000028AC200] logKpiName: Expecting status 2xx, but received status 403.
+[0m
+[33m[altool] Response: <NSHTTPURLResponse: 0x600003dacb80> { URL: https://contentdelivery.itunes.apple.com/MZContentDeliveryService/iris/v1/metricsAndLogging } { Status Code: 403, Headers {
+[0m
+[33m[altool]     "Content-Type" =     (
+[0m
+[33m[altool]         "application/json"
+[0m
+[33m[altool]     );
+[0m
+[33m[altool]     Date =     (
+[0m
+[33m[altool]         "Wed, 15 Apr 2026 15:14:03 GMT"
+[0m
+[33m[altool]     );
+[0m
+[33m[altool]     Server =     (
+[0m
+[33m[altool]         "daiquiri/5"
+[0m
+[33m[altool]     );
+[0m
+[33m[altool]     "Strict-Transport-Security" =     (
+[0m
+[33m[altool]         "max-age=31536000; includeSubDomains"
+[0m
+[33m[altool]     );
+[0m
+[33m[altool]     "x-apple-jingle-correlation-key" =     (
+[0m
+[33m[altool]         ALO6LSQFITOX2767VPR3UR4NEQ
+[0m
+[33m[altool]     );
+[0m
+[33m[altool]     "x-daiquiri-debug-worker-pid" =     (
+[0m
+[33m[altool]         3761,
+[0m
+[33m[altool]         64268
+[0m
+[33m[altool]     );
+[0m
+[33m[altool]     "x-daiquiri-instance" =     (
+[0m
+[33m[altool]         "daiquiri:33624001:pv50p00it-hyhk10063801:7987:26HOTFIX15:daiquiri-amp-processing-shared-int-001-pv",
+[0m
+[33m[altool]         "daiquiri:18493001:mr85p00it-hyhk03154801:7987:26HOTFIX15:daiquiri-amp-all-shared-ext-001-mr"
+[0m
+[33m[altool]     );
+[0m
+[33m[altool] } }[0m
+[0m
+[33m[altool] 2026-04-15 08:14:05.165 [1m[31mERROR: [altool.6000028BC140] [ContentDelivery.Uploader.6000028BC140] A required agreement is missing or has expired. (403) This request requires an in-effect agreement that has not been signed or has expired. (ID: JI3XADYWL7ZVJWURPL7DDGQMWA)
+[0m
+[33m[altool]    NSUnderlyingError : A required agreement is missing or has expired. (-19241) This request requires an in-effect agreement that has not been signed or has expired.
+[0m
+[33m[altool]       status : 403
+[0m
+[33m[altool]       detail : This request requires an in-effect agreement that has not been signed or has expired.
+[0m
+[33m[altool]       id : JI3XADYWL7ZVJWURPL7DDGQMWA
+[0m
+[33m[altool]       code : FORBIDDEN.REQUIRED_AGREEMENTS_MISSING_OR_EXPIRED
+[0m
+[33m[altool]       title : A required agreement is missing or has expired.
+[0m
+[33m[altool]       links : 
+[0m
+[33m[altool]          see : /business
+[0m
+[33m[altool]    iris-code : FORBIDDEN.REQUIRED_AGREEMENTS_MISSING_OR_EXPIRED[0m
+[0m
+[33m[altool] 2026-04-15 08:14:05.165 [1m[31mERROR: [altool.6000028BC140] Error uploading '/var/folders/5_/4knlryn57n39p2c_jw8567z00000gn/T/c65f8bf7-b7dc-4521-9a36-fbd76a92ab21.ipa'.[0m
+[0m
+[33m[altool] 2026-04-15 08:14:05.165 [1m[31mERROR: [altool.6000028BC140] A required agreement is missing or has expired. This request requires an in-effect agreement that has not been signed or has expired. (ID: JI3XADYWL7ZVJWURPL7DDGQMWA) (403)
+[0m
+[33m[altool]  {
+[0m
+[33m[altool]     NSLocalizedDescription = "A required agreement is missing or has expired.";
+[0m
+[33m[altool]     NSLocalizedFailureReason = "This request requires an in-effect agreement that has not been signed or has expired. (ID: JI3XADYWL7ZVJWURPL7DDGQMWA)";
+[0m
+[33m[altool]     NSUnderlyingError = "Error Domain=IrisAPI Code=-19241 \"A required agreement is missing or has expired.\" UserInfo={status=403, detail=This request requires an in-effect agreement that has not been signed or has expired., id=JI3XADYWL7ZVJWURPL7DDGQMWA, code=FORBIDDEN.REQUIRED_AGREEMENTS_MISSING_OR_EXPIRED, title=A required agreement is missing or has expired., links={\n    see = \"/business\";\n}, NSLocalizedDescription=A required agreement is missing or has expired., NSLocalizedFailureReason=This request requires an in-effect agreement that has not been signed or has expired.}";
+[0m
+[33m[altool]     "iris-code" = "FORBIDDEN.REQUIRED_AGREEMENTS_MISSING_OR_EXPIRED";
+[0m
+[33m[altool] }[0m
+[0m
+Application Loader output above ^
+[31mThe call to the altool completed with a non-zero exit status: 1. This indicates a failure.[0m
+[31mCould not download/upload from App Store Connect![0m
+[31m
+[!] Error uploading ipa file: 
+ [Application Loader Error Output]: The call to the altool completed with a non-zero exit status: 1. This indicates a failure.[0m
+[31mError: fastlane run pilot ipa:app-b842e868-7c99-4212-afc0-cd8ac309d792.ipa apple_id:6761288883 skip_waiting_for_build_processing:true api_key_path:asc_api_key-2f3798e6-bd6c-4d79-80f8-cb449c2d478c.json exited with non-zero code: 1[39m
+/bin/bash -eo pipefail /var/folders/5_/4knlryn57n39p2c_jw8567z00000gn/T/eas-build/84cc0c58-4eff-45f3-812c-2ae02c270097/steps/step-018/scripts/726f8eae-f09a-4758-abae-6751492b7b51.sh exited with non-zero code: 1
