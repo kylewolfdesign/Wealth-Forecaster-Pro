@@ -1,0 +1,49 @@
+Guideline 3.1.2(c) - Business - Payments - Subscriptions
+Issue Description
+
+The submission did not include all the required information for apps offering auto-renewable subscriptions.
+
+The following information needs to be included within the app:
+
+- A functional link to the Terms of Use (EULA)
+- A functional link to the privacy policy
+
+You can use SubscriptionStoreView to easily include all of the required information in the app's purchase flow.
+
+The following information needs to be included in the App Store metadata:
+
+- A functional link to the Terms of Use (EULA). If you are using the standard Apple Terms of Use (EULA), include a link to the Terms of Use in the App Description. If you are using a custom EULA, add it in App Store Connect.
+
+Next Steps
+
+Update the app and App Store metadata to include the information specified above.
+
+Once the app and metadata includes all of the required information, or if they already do, reply to this message with a screen recording to confirm. Include this information in the Notes field of the App Review Information section in App Store Connect for future submissions.
+
+Resources
+
+Apps offering auto-renewable subscriptions must include all of the following required information in the app itself:
+
+- Title of auto-renewing subscription (this may be the same as the In-App Purchase product name)
+- Length of subscription
+- Price of subscription, and price per unit if appropriate
+- Functional links to the privacy policy and Terms of Use (EULA)
+
+The app metadata must also include functional links to the privacy policy in the Privacy Policy field in App Store Connect and the Terms of Use (EULA) in the App Description or EULA field in App Store Connect.
+
+Review Schedule 2 of the Apple Developer Program License Agreement to learn more.
+Guideline 3.1.2(c) - Business - Payments - Subscriptions
+
+Issue Description
+
+One or more auto-renewable subscriptions are marketed in the purchase flow in a way that may mislead or confuse users about the subscription terms or pricing. Specifically:
+
+- The auto-renewable subscription displays the monthly calculated pricing for the subscription more clearly and conspicuously than the billed amount.
+
+- The annually billed amount of the auto-renewable subscription is not clearly and conspicuously displayed to the customer.
+
+Next Steps
+
+To resolve this issue, it would be appropriate to:
+
+- Revise the auto-renewable subscription purchase flow to ensure that the billed amount is the most clear and conspicuous pricing element in the layout. Any other pricing elements, including free trial, introductory pricing, and calculated pricing information, must be displayed in a subordinate position and size to the total billed amount. Factors that contribute to whether the billed amount is clear and conspicuous include, but are not limited to, the font, size, color, and location of the billed amount in the auto-renewable subscription purchase flow.
