@@ -15,6 +15,7 @@ import { useAuth } from '@/lib/auth-context';
 import { savePortfolioToServer } from '@/lib/portfolio-sync';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
+import { PRIVACY_POLICY_URL, TERMS_OF_USE_URL } from '@/constants/config';
 
 type PlanType = 'monthly' | 'annual';
 
@@ -417,13 +418,19 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
                           {selectedPlan === 'annual' && <View style={styles.radioInner} />}
                         </View>
                         <View style={styles.planInfo}>
-                          <Text style={[styles.planLabel, selectedPlan === 'annual' && styles.planLabelSelected]}>Annual</Text>
-                          <Text style={styles.planBilledText}>Billed annually</Text>
+                          <Text style={[styles.planLabel, selectedPlan === 'annual' && styles.planLabelSelected]}>
+                            {annualPkg?.product?.title || 'Annual'}
+                          </Text>
+                          <Text style={styles.planBilledText}>12 months — billed annually</Text>
                         </View>
-                        <View style={styles.planPriceCol}>
-                          <Text style={[styles.planPrice, selectedPlan === 'annual' && styles.planPriceSelected]}>{getAnnualMonthlyPrice() || '—'}</Text>
-                          <Text style={styles.planPeriod}>/month</Text>
-                        </View>
+                      </View>
+                      <View style={styles.planPriceBlock}>
+                        <Text style={[styles.planPricePrimary, selectedPlan === 'annual' && styles.planPriceSelectedPrimary]}>
+                          {getAnnualFullPrice() || '—'}
+                        </Text>
+                        <Text style={styles.planPriceSecondary}>
+                          {getAnnualMonthlyPrice() ? `${getAnnualMonthlyPrice()}/mo` : ''}
+                        </Text>
                       </View>
                     </Pressable>
 
@@ -440,13 +447,16 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
                           {selectedPlan === 'monthly' && <View style={styles.radioInner} />}
                         </View>
                         <View style={styles.planInfo}>
-                          <Text style={[styles.planLabel, selectedPlan === 'monthly' && styles.planLabelSelected]}>Monthly</Text>
-                          <Text style={styles.planBilledText}>Billed monthly</Text>
+                          <Text style={[styles.planLabel, selectedPlan === 'monthly' && styles.planLabelSelected]}>
+                            {monthlyPkg?.product?.title || 'Monthly'}
+                          </Text>
+                          <Text style={styles.planBilledText}>1 month — billed monthly</Text>
                         </View>
-                        <View style={styles.planPriceCol}>
-                          <Text style={[styles.planPrice, selectedPlan === 'monthly' && styles.planPriceSelected]}>{getMonthlyPrice() || '—'}</Text>
-                          <Text style={styles.planPeriod}>/month</Text>
-                        </View>
+                      </View>
+                      <View style={styles.planPriceBlock}>
+                        <Text style={[styles.planPricePrimary, selectedPlan === 'monthly' && styles.planPriceSelectedPrimary]}>
+                          {getMonthlyPrice() ? `${getMonthlyPrice()}/mo` : '—'}
+                        </Text>
                       </View>
                     </Pressable>
                   </View>
@@ -479,6 +489,22 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
 
                   <Text style={styles.legalText}>
                     Subscription automatically renews unless cancelled at least 24 hours before the end of the current period. You can manage or cancel your subscription in your device settings.
+                  </Text>
+
+                  <Text style={styles.legalText}>
+                    <Text
+                      style={styles.legalLink}
+                      onPress={() => Linking.openURL(PRIVACY_POLICY_URL)}
+                    >
+                      Privacy Policy
+                    </Text>
+                    {'  •  '}
+                    <Text
+                      style={styles.legalLink}
+                      onPress={() => Linking.openURL(TERMS_OF_USE_URL)}
+                    >
+                      Terms of Use (EULA)
+                    </Text>
                   </Text>
                 </>
               ) : (
@@ -563,16 +589,16 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
                       {'By continuing you are agreeing to our\n'}
                       <Text
                         style={styles.legalLink}
-                        onPress={() => Linking.openURL('https://placeholder.example.com/privacy-policy')}
+                        onPress={() => Linking.openURL(PRIVACY_POLICY_URL)}
                       >
                         Privacy Policy
                       </Text>
                       {' and '}
                       <Text
                         style={styles.legalLink}
-                        onPress={() => Linking.openURL('https://placeholder.example.com/terms-and-conditions')}
+                        onPress={() => Linking.openURL(TERMS_OF_USE_URL)}
                       >
-                        Terms and Conditions
+                        Terms of Use (EULA)
                       </Text>
                     </Text>
                   )}
@@ -780,21 +806,23 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: Colors.textTertiary,
   },
-  planPriceCol: {
-    alignItems: 'flex-end',
+  planPriceBlock: {
+    marginTop: spacing.sm,
+    marginLeft: 34,
   },
-  planPrice: {
+  planPricePrimary: {
     fontFamily: fontFamily.bold,
-    fontSize: fontSize.lg,
+    fontSize: fontSize.xl,
     color: Colors.text,
   },
-  planPriceSelected: {
+  planPriceSelectedPrimary: {
     color: Colors.primary,
   },
-  planPeriod: {
+  planPriceSecondary: {
     fontFamily: fontFamily.regular,
     fontSize: fontSize.xs,
     color: Colors.textTertiary,
+    marginTop: 2,
   },
   ctaButton: {
     backgroundColor: Colors.primary,
