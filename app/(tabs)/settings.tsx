@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Platform,
-  Pressable, Alert, TextInput, ActivityIndicator, Linking,
+  Pressable, Alert, TextInput, ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -240,44 +240,6 @@ export default function SettingsScreen() {
           </AnimatedEntry>
         </>
       )}
-
-      <AnimatedEntry delay={175} duration={300}>
-        <Text style={styles.sectionTitle}>Subscription</Text>
-      </AnimatedEntry>
-      <AnimatedEntry delay={200} duration={300}>
-        <Card style={styles.settingsCard}>
-          <Pressable
-            style={styles.actionRow}
-            onPress={() => {
-              if (isPro) {
-                if (Platform.OS === 'ios') {
-                  Linking.openURL('https://apps.apple.com/account/subscriptions');
-                } else if (Platform.OS === 'android') {
-                  Linking.openURL('https://play.google.com/store/account/subscriptions');
-                } else {
-                  Alert.alert('Manage Subscription', 'To manage your subscription, visit the App Store or Google Play subscription settings on your device.');
-                }
-              } else {
-                setShowPaywall(true);
-              }
-            }}
-            testID="subscription-row"
-          >
-            <Ionicons name="diamond" size={20} color={Colors.primary} />
-            <Text style={styles.actionText}>
-              {isPro ? 'Manage Subscription' : 'Upgrade to Pro'}
-            </Text>
-            <View style={{ flex: 1 }} />
-            {isPro ? (
-              <View style={styles.proBadge}>
-                <Text style={styles.proBadgeText}>PRO</Text>
-              </View>
-            ) : (
-              <Ionicons name="chevron-forward" size={16} color={Colors.textTertiary} />
-            )}
-          </Pressable>
-        </Card>
-      </AnimatedEntry>
 
       <AnimatedEntry delay={250} duration={300}>
         <Text style={styles.sectionTitle}>Data</Text>
