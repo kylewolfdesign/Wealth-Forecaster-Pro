@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Platform,
-  Pressable, Alert, TextInput, ActivityIndicator,
+  Pressable, Alert, TextInput, ActivityIndicator, Linking,
 } from 'react-native';
+import { PRIVACY_POLICY_URL, TERMS_OF_USE_URL } from '@/constants/config';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -255,6 +256,35 @@ export default function SettingsScreen() {
           <Ionicons name="trash" size={20} color={Colors.negative} />
           <Text style={[styles.actionText, { color: Colors.negative }]}>Clear All Data</Text>
         </Pressable>
+        </Card>
+      </AnimatedEntry>
+
+      <AnimatedEntry delay={300} duration={300}>
+        <Text style={styles.sectionTitle}>Legal</Text>
+      </AnimatedEntry>
+      <AnimatedEntry delay={300} duration={300}>
+        <Card style={styles.settingsCard}>
+          <Pressable
+            style={styles.actionRow}
+            onPress={() => Linking.openURL(PRIVACY_POLICY_URL)}
+            testID="privacy-policy-link"
+          >
+            <Ionicons name="shield-checkmark" size={20} color={Colors.primary} />
+            <Text style={styles.actionText}>Privacy Policy</Text>
+            <View style={{ flex: 1 }} />
+            <Ionicons name="open-outline" size={16} color={Colors.textTertiary} />
+          </Pressable>
+          <View style={styles.rowDivider} />
+          <Pressable
+            style={styles.actionRow}
+            onPress={() => Linking.openURL(TERMS_OF_USE_URL)}
+            testID="terms-of-use-link"
+          >
+            <Ionicons name="document-text" size={20} color={Colors.primary} />
+            <Text style={styles.actionText}>Terms of Use</Text>
+            <View style={{ flex: 1 }} />
+            <Ionicons name="open-outline" size={16} color={Colors.textTertiary} />
+          </Pressable>
         </Card>
       </AnimatedEntry>
 
