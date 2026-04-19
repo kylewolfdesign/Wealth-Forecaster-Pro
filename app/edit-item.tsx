@@ -982,7 +982,7 @@ function DarkInput({ value, onChangeText, placeholder, keyboardType, editable = 
       placeholder={placeholder}
       placeholderTextColor={TEXT_MUTED}
       keyboardType={keyboardType || 'default'}
-      textContentType="none"
+      textContentType={keyboardType === 'numeric' ? 'oneTimeCode' : 'none'}
       autoComplete="off"
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
@@ -1123,7 +1123,7 @@ const s = StyleSheet.create({
     marginTop: 20,
   },
   input: {
-    backgroundColor: CARD_BG,
+    backgroundColor: Colors.surfaceFlat,
     borderWidth: 1,
     borderColor: BORDER,
     borderRadius: 12,
