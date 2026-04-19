@@ -982,6 +982,8 @@ function DarkInput({ value, onChangeText, placeholder, keyboardType, editable = 
       placeholder={placeholder}
       placeholderTextColor={TEXT_MUTED}
       keyboardType={keyboardType || 'default'}
+      textContentType="none"
+      autoComplete="off"
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
       editable={editable}
