@@ -553,6 +553,8 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
                         placeholderTextColor={Colors.textTertiary}
                         secureTextEntry={!showPassword}
                         autoCapitalize="none"
+                        textContentType="oneTimeCode"
+                        autoComplete="off"
                         testID={signInMode ? "paywall-login-password" : "paywall-register-password"}
                       />
                       <Pressable
@@ -579,6 +581,8 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
                         placeholderTextColor={Colors.textTertiary}
                         secureTextEntry={!showPassword}
                         autoCapitalize="none"
+                        textContentType="oneTimeCode"
+                        autoComplete="off"
                         testID="paywall-register-confirm-password"
                       />
                     </View>
