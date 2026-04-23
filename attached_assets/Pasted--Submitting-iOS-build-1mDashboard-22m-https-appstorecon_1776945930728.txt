@@ -1,0 +1,62 @@
+⌛️ Submitting iOS build...
+- [1mDashboard[22m:    https://appstoreconnect.apple.com/apps/6761288883/distribution
+- [1mApp[22m:          Wealth forecaster (com.kylewolfdesign.wealthforecaster)
+- [1mBuild number[22m: 14
+- [1mBinary path[22m:  ./ios/build/Wealthforecaster.ipa
+[32m-------------------[0m
+[32m--- Step: pilot ---[0m
+[32m-------------------[0m
+Creating authorization token for App Store Connect API
+[32mReady to upload new build to TestFlight (App: 6761288883)...[0m
+Going to upload updated app to App Store Connect
+[32mThis might take a few minutes. Please don't interrupt the script.[0m
+[33m[altool] Running altool at path '/Applications/Xcode.app/Contents/SharedFrameworks/ContentDeliveryServices.framework/Frameworks/AppStoreService.framework/Support/altool'...
+[0m
+[33m[altool] 
+[0m
+[33m[altool] 2026-04-23 05:03:27.560 [1m[31mERROR: [altool.600001188140] [ContentDelivery.Uploader.600001188140] 
+[0m
+[33m[altool] =======================================
+[0m
+[33m[altool] UPLOAD FAILED with 2 errors
+[0m
+[33m[altool] =======================================[0m
+[0m
+[33m[altool] 2026-04-23 05:03:27.562 [1m[31mERROR: [altool.600001188140] Error uploading '/var/folders/5_/4knlryn57n39p2c_jw8567z00000gn/T/d06ea16d-65c7-4bb1-8b06-e1173c337287.ipa'.[0m
+[0m
+[33m[altool] 2026-04-23 05:03:27.562 [1m[31mERROR: [altool.600001188140] Validation failed Invalid Pre-Release Train. The train version '1.0.1' is closed for new build submissions (ID: 48fc6aba-6cd6-4a82-b2b8-bced9a15a329) (409)
+[0m
+[33m[altool]  {
+[0m
+[33m[altool]     NSLocalizedDescription = "Validation failed";
+[0m
+[33m[altool]     NSLocalizedFailureReason = "Invalid Pre-Release Train. The train version '1.0.1' is closed for new build submissions (ID: 48fc6aba-6cd6-4a82-b2b8-bced9a15a329)";
+[0m
+[33m[altool]     NSUnderlyingError = "Error Domain=IrisAPI Code=-19241 \"Validation failed\" UserInfo={status=409, detail=Invalid Pre-Release Train. The train version '1.0.1' is closed for new build submissions, id=48fc6aba-6cd6-4a82-b2b8-bced9a15a329, code=STATE_ERROR.VALIDATION_ERROR, title=Validation failed, NSLocalizedFailureReason=Invalid Pre-Release Train. The train version '1.0.1' is closed for new build submissions, NSLocalizedDescription=Validation failed}";
+[0m
+[33m[altool]     "iris-code" = "STATE_ERROR.VALIDATION_ERROR";
+[0m
+[33m[altool] }[0m
+[0m
+[33m[altool] 2026-04-23 05:03:27.562 [1m[31mERROR: [altool.600001188140] Validation failed This bundle is invalid. The value for key CFBundleShortVersionString [1.0.1] in the Info.plist file must contain a higher version than that of the previously approved version [1.0.1]. Please find more information about CFBundleShortVersionString at https://developer.apple.com/documentation/bundleresources/information_property_list/cfbundleshortversionstring (ID: 154968b9-f2bf-4978-bec7-2d3f03cf4098) (409)
+[0m
+[33m[altool]  {
+[0m
+[33m[altool]     NSLocalizedDescription = "Validation failed";
+[0m
+[33m[altool]     NSLocalizedFailureReason = "This bundle is invalid. The value for key CFBundleShortVersionString [1.0.1] in the Info.plist file must contain a higher version than that of the previously approved version [1.0.1]. Please find more information about CFBundleShortVersionString at https://developer.apple.com/documentation/bundleresources/information_property_list/cfbundleshortversionstring (ID: 154968b9-f2bf-4978-bec7-2d3f03cf4098)";
+[0m
+[33m[altool]     NSUnderlyingError = "Error Domain=IrisAPI Code=-19241 \"Validation failed\" UserInfo={status=409, detail=This bundle is invalid. The value for key CFBundleShortVersionString [1.0.1] in the Info.plist file must contain a higher version than that of the previously approved version [1.0.1]. Please find more information about CFBundleShortVersionString at https://developer.apple.com/documentation/bundleresources/information_property_list/cfbundleshortversionstring, id=154968b9-f2bf-4978-bec7-2d3f03cf4098, code=STATE_ERROR.VALIDATION_ERROR, title=Validation failed, NSLocalizedFailureReason=This bundle is invalid. The value for key CFBundleShortVersionString [1.0.1] in the Info.plist file must contain a higher version than that of the previously approved version [1.0.1]. Please find more information about CFBundleShortVersionString at https://developer.apple.com/documentation/bundleresources/information_property_list/cfbundleshortversionstring, NSLocalizedDescription=Validation failed}";
+[0m
+[33m[altool]     "iris-code" = "STATE_ERROR.VALIDATION_ERROR";
+[0m
+[33m[altool] }[0m
+[0m
+Application Loader output above ^
+[31mThe call to the altool completed with a non-zero exit status: 1. This indicates a failure.[0m
+[31mCould not download/upload from App Store Connect![0m
+[31m
+[!] Error uploading ipa file: 
+ [Application Loader Error Output]: The call to the altool completed with a non-zero exit status: 1. This indicates a failure.[0m
+[31mError: fastlane run pilot ipa:app-7d431893-5ec9-4871-a543-1fee5aaf6ae8.ipa apple_id:6761288883 skip_waiting_for_build_processing:true api_key_path:asc_api_key-79b0037c-5ec3-4f1f-ae63-5ffceb83bbce.json exited with non-zero code: 1[39m
+/bin/bash -eo pipefail /var/folders/5_/4knlryn57n39p2c_jw8567z00000gn/T/eas-build/0e200cef-815b-43e4-9979-53826b8f383b/steps/step-018/scripts/750c2e5f-9ae4-422d-b860-c97ba0c9426f.sh exited with non-zero code: 1
