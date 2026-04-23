@@ -17,8 +17,6 @@ import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
 import { PRIVACY_POLICY_URL, TERMS_OF_USE_URL } from '@/constants/config';
 
-type PlanType = 'monthly' | 'annual';
-
 interface PaywallProps {
   visible: boolean;
   onDismiss?: () => void;
@@ -26,14 +24,14 @@ interface PaywallProps {
   onPurchaseSuccess?: () => void;
 }
 
+const TRIAL_DAYS = 3;
+
 export default function Paywall({ visible, onDismiss, allowDismiss = false, onPurchaseSuccess }: PaywallProps) {
   const { setIsPro } = useAppStore();
   const { isAuthenticated, register, login } = useAuth();
   const [loading, setLoading] = useState(false);
   const [restoring, setRestoring] = useState(false);
-  const [monthlyPkg, setMonthlyPkg] = useState<PurchasesPackage | null>(null);
   const [annualPkg, setAnnualPkg] = useState<PurchasesPackage | null>(null);
-  const [selectedPlan, setSelectedPlan] = useState<PlanType>('annual');
   const [sdkAvailable, setSdkAvailable] = useState(true);
   const [offeringsLoading, setOfferingsLoading] = useState(false);
   const [offeringsError, setOfferingsError] = useState<string | null>(null);
@@ -78,7 +76,6 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
       loadOfferings();
       setShowAccountForm(false);
       setSignInMode(false);
-      setSelectedPlan('annual');
       setEmail('');
       setPassword('');
       setConfirmPassword('');
@@ -94,7 +91,6 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
     setOfferingsLoading(true);
     setOfferingsError(null);
     if (retryCount === 0) {
-      setMonthlyPkg(null);
       setAnnualPkg(null);
     }
     try {
@@ -102,16 +98,13 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
       setSdkAvailable(true);
       if (offerings.current?.availablePackages?.length) {
         const packages = offerings.current.availablePackages;
-        const monthly = packages.find(p => p.packageType === 'MONTHLY') || null;
         const annual = packages.find(p => p.packageType === 'ANNUAL') || null;
-        setMonthlyPkg(monthly);
         setAnnualPkg(annual);
         if (annual) {
-          setSelectedPlan('annual');
-        } else if (monthly) {
-          setSelectedPlan('monthly');
+          setOfferingsError(null);
+        } else {
+          setOfferingsError('No subscription plans are currently available. Please try again later.');
         }
-        setOfferingsError(null);
       } else {
         setOfferingsError('No subscription plans are currently available. Please try again later.');
       }
@@ -141,13 +134,8 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
     }
   };
 
-  const selectedPackage = selectedPlan === 'annual' ? annualPkg : monthlyPkg;
-  const packagesLoaded = monthlyPkg !== null || annualPkg !== null;
-
-  const getMonthlyPrice = (): string => {
-    if (!monthlyPkg) return '';
-    return monthlyPkg.product.priceString;
-  };
+  const selectedPackage = annualPkg;
+  const packagesLoaded = annualPkg !== null;
 
   const getAnnualMonthlyPrice = (): string => {
     if (!annualPkg) return '';
@@ -159,15 +147,7 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
 
   const getAnnualFullPrice = (): string => {
     if (!annualPkg) return '';
-    return annualPkg.product.priceString + '/year';
-  };
-
-  const getSavingsPercent = (): number => {
-    if (!monthlyPkg || !annualPkg) return 0;
-    const monthlyTotal = monthlyPkg.product.price * 12;
-    const annualTotal = annualPkg.product.price;
-    if (monthlyTotal <= 0) return 0;
-    return Math.round(((monthlyTotal - annualTotal) / monthlyTotal) * 100);
+    return annualPkg.product.priceString;
   };
 
   const formatCurrency = (amount: number, currencyCode: string): string => {
@@ -330,8 +310,9 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
 
   if (!visible) return null;
 
-  const isActionDisabled = loading || restoring || registering || loggingIn || (!packagesLoaded && sdkAvailable);
-  const savings = getSavingsPercent();
+  const isActionDisabled = loading || restoring || registering || loggingIn || !packagesLoaded;
+  const annualMonthlyPrice = getAnnualMonthlyPrice();
+  const annualFullPrice = getAnnualFullPrice();
 
   return (
     <Modal transparent visible={visible} animationType="none" statusBarTranslucent>
@@ -399,67 +380,23 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
                     </View>
                   )}
 
-                  <View style={styles.planSelector}>
-                    <Pressable
-                      style={[
-                        styles.planCard,
-                        selectedPlan === 'annual' && styles.planCardSelected,
-                      ]}
-                      onPress={() => setSelectedPlan('annual')}
-                      testID="paywall-plan-annual"
-                    >
-                      {savings > 0 && (
-                        <View style={styles.savingsBadge}>
-                          <Text style={styles.savingsBadgeText}>SAVE {savings}%</Text>
-                        </View>
-                      )}
-                      <View style={styles.planRadioRow}>
-                        <View style={[styles.radio, selectedPlan === 'annual' && styles.radioSelected]}>
-                          {selectedPlan === 'annual' && <View style={styles.radioInner} />}
-                        </View>
-                        <View style={styles.planInfo}>
-                          <Text style={[styles.planLabel, selectedPlan === 'annual' && styles.planLabelSelected]}>
-                            {annualPkg?.product?.title || 'Annual'}
-                          </Text>
-                          <Text style={styles.planBilledText}>12 months — billed annually</Text>
-                        </View>
+                  {packagesLoaded && (
+                    <View style={styles.planSummary} testID="paywall-plan-annual">
+                      <View style={styles.trialBadge}>
+                        <Text style={styles.trialBadgeText}>{TRIAL_DAYS}-DAY FREE TRIAL</Text>
                       </View>
-                      <View style={styles.planPriceBlock}>
-                        <Text style={[styles.planPricePrimary, selectedPlan === 'annual' && styles.planPriceSelectedPrimary]}>
-                          {getAnnualFullPrice() || '—'}
-                        </Text>
-                        <Text style={styles.planPriceSecondary}>
-                          {getAnnualMonthlyPrice() ? `${getAnnualMonthlyPrice()}/mo` : ''}
-                        </Text>
+                      <Text style={styles.planSummaryTitle}>
+                        {annualPkg?.product?.title || 'Annual'}
+                      </Text>
+                      <View style={styles.planSummaryPriceRow}>
+                        <Text style={styles.planSummaryMonthly}>{annualMonthlyPrice}</Text>
+                        <Text style={styles.planSummaryPerMonth}>/month</Text>
                       </View>
-                    </Pressable>
-
-                    <Pressable
-                      style={[
-                        styles.planCard,
-                        selectedPlan === 'monthly' && styles.planCardSelected,
-                      ]}
-                      onPress={() => setSelectedPlan('monthly')}
-                      testID="paywall-plan-monthly"
-                    >
-                      <View style={styles.planRadioRow}>
-                        <View style={[styles.radio, selectedPlan === 'monthly' && styles.radioSelected]}>
-                          {selectedPlan === 'monthly' && <View style={styles.radioInner} />}
-                        </View>
-                        <View style={styles.planInfo}>
-                          <Text style={[styles.planLabel, selectedPlan === 'monthly' && styles.planLabelSelected]}>
-                            {monthlyPkg?.product?.title || 'Monthly'}
-                          </Text>
-                          <Text style={styles.planBilledText}>1 month — billed monthly</Text>
-                        </View>
-                      </View>
-                      <View style={styles.planPriceBlock}>
-                        <Text style={[styles.planPricePrimary, selectedPlan === 'monthly' && styles.planPriceSelectedPrimary]}>
-                          {getMonthlyPrice() ? `${getMonthlyPrice()}/mo` : '—'}
-                        </Text>
-                      </View>
-                    </Pressable>
-                  </View>
+                      <Text style={styles.planSummaryAnnual}>
+                        {annualFullPrice} billed annually
+                      </Text>
+                    </View>
+                  )}
 
                   <Pressable
                     style={[styles.ctaButton, loading && styles.ctaDisabled]}
@@ -470,9 +407,15 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
                     {loading ? (
                       <ActivityIndicator color={Colors.white} />
                     ) : (
-                      <Text style={styles.ctaText}>Continue</Text>
+                      <Text style={styles.ctaText}>Start {TRIAL_DAYS}-Day Free Trial</Text>
                     )}
                   </Pressable>
+
+                  {packagesLoaded && (
+                    <Text style={styles.trialDisclosure} testID="paywall-trial-disclosure">
+                      {TRIAL_DAYS} days free, then {annualMonthlyPrice}/month ({annualFullPrice}/year, billed annually). Auto-renews until cancelled.
+                    </Text>
+                  )}
 
                   <Pressable
                     style={styles.restoreButton}
@@ -737,96 +680,68 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     color: Colors.text,
   },
-  planSelector: {
-    gap: spacing.md,
-    marginBottom: spacing.xl,
-  },
-  planCard: {
-    backgroundColor: Colors.surface,
+  planSummary: {
+    backgroundColor: 'rgba(139,92,246,0.08)',
     borderWidth: 1.5,
-    borderColor: Colors.border,
+    borderColor: Colors.primary,
     borderRadius: borderRadius.md,
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.lg,
+    marginBottom: spacing.xl,
     position: 'relative' as const,
     overflow: 'visible' as const,
+    alignItems: 'center' as const,
   },
-  planCardSelected: {
-    borderColor: Colors.primary,
-    backgroundColor: 'rgba(139,92,246,0.08)',
-  },
-  savingsBadge: {
-    position: 'absolute',
+  trialBadge: {
+    position: 'absolute' as const,
     top: -10,
-    right: spacing.lg,
     backgroundColor: Colors.positive,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
     borderRadius: borderRadius.sm,
   },
-  savingsBadgeText: {
+  trialBadgeText: {
     fontFamily: fontFamily.bold,
     fontSize: 10,
     color: Colors.white,
     letterSpacing: 0.5,
   },
-  planRadioRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  radio: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
-    borderColor: Colors.textTertiary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  radioSelected: {
-    borderColor: Colors.primary,
-  },
-  radioInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: Colors.primary,
-  },
-  planInfo: {
-    flex: 1,
-  },
-  planLabel: {
+  planSummaryTitle: {
     fontFamily: fontFamily.semibold,
     fontSize: fontSize.md,
     color: Colors.text,
-    marginBottom: 2,
+    marginTop: spacing.xs,
+    marginBottom: spacing.sm,
   },
-  planLabelSelected: {
-    color: Colors.text,
+  planSummaryPriceRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'baseline' as const,
   },
-  planBilledText: {
-    fontFamily: fontFamily.regular,
-    fontSize: fontSize.xs,
-    color: Colors.textTertiary,
-  },
-  planPriceBlock: {
-    marginTop: spacing.sm,
-    marginLeft: 34,
-  },
-  planPricePrimary: {
+  planSummaryMonthly: {
     fontFamily: fontFamily.bold,
-    fontSize: fontSize.xl,
-    color: Colors.text,
-  },
-  planPriceSelectedPrimary: {
+    fontSize: fontSize.hero,
     color: Colors.primary,
   },
-  planPriceSecondary: {
+  planSummaryPerMonth: {
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.md,
+    color: Colors.textSecondary,
+    marginLeft: 4,
+  },
+  planSummaryAnnual: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.sm,
+    color: Colors.textSecondary,
+    marginTop: spacing.xs,
+  },
+  trialDisclosure: {
     fontFamily: fontFamily.regular,
     fontSize: fontSize.xs,
     color: Colors.textTertiary,
-    marginTop: 2,
+    textAlign: 'center' as const,
+    marginBottom: spacing.md,
+    lineHeight: 18,
+    paddingHorizontal: spacing.sm,
   },
   ctaButton: {
     backgroundColor: Colors.primary,

@@ -1,0 +1,30 @@
+Paywall Free Trial Update
+What & Why
+The subscription offering changed: the monthly plan is gone, and the annual plan now includes a 3-day free trial. Update the paywall to reflect a single annual-with-trial offer, with the free trial as the main CTA and Apple-required disclosures in supporting text.
+
+Done looks like
+Paywall no longer shows a monthly plan or a plan selector — only the annual plan is presented.
+Primary CTA reads as a free trial action (e.g. "Start 3-Day Free Trial").
+Directly under the CTA, supporting text discloses: trial length, that it auto-converts to a paid annual subscription after the trial, the per-month equivalent price, the full annual price, and that it is billed annually (e.g. "3 days free, then $X.XX/month ($XX.XX/year, billed annually)").
+All prices and the currency shown anywhere on the paywall (CTA subtext, summary block, etc.) are pulled dynamically from the RevenueCat annual package at runtime — no hardcoded amounts, currency symbols, or fallback strings. The per-month equivalent is computed from the annual package's price / 12 and formatted using the package's currency code (via priceString / price + currencyCode from the RevenueCat package), so it automatically reflects the user's locale and any price changes made in the RevenueCat dashboard.
+Existing Apple-required legal copy remains visible: auto-renewal terms, cancellation instructions, Restore Purchases, Privacy Policy, and Terms of Use (EULA) links.
+Visual style (colors, spacing, typography, card treatment, badges) matches the current paywall — no redesign.
+If the annual package fails to load, the existing error / retry / SDK-unavailable states still work.
+Purchase, registration, login, and restore flows continue to work end-to-end with the annual package.
+Out of scope
+Any change to RevenueCat dashboard configuration, product IDs, or trial setup on the store side (assumed already done).
+Redesigning the paywall, account form, or legal copy beyond what the new single-plan layout requires.
+Changes to non-paywall surfaces (settings, onboarding copy, etc.).
+Steps
+Remove monthly-plan state, selection, and the plan selector UI; treat annual as the only package and drive purchase directly off it.
+Replace the two plan cards with a single annual summary block (reusing existing card styles) showing the trial, per-month equivalent (computed from the annual package price / 12 and formatted with the package's currency code), full annual price (from the package's localized price string), and "billed annually" line. No hardcoded amounts or currency symbols.
+Update the primary CTA label and loading state to reflect starting the free trial, and update the disabled-state logic to depend only on the annual package being loaded.
+Add the Apple-required trial disclosure line directly beneath the CTA, and keep the existing auto-renew legal paragraph and Privacy/Terms links intact.
+Verify the SDK-unavailable, offerings-loading, offerings-error/retry, register-then-purchase, login-then-purchase, and restore flows still behave correctly with the simplified single-plan model.
+Relevant files
+components/Paywall.tsx
+app/_layout.tsx
+app/(tabs)/settings.tsx
+app/(tabs)/index.tsx
+constants/theme.ts
+constants/colors.ts
