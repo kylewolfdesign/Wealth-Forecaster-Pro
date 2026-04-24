@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, Modal, Pressable,
-  ActivityIndicator, Alert, Platform, TextInput,
+  ActivityIndicator, Alert, Platform,
   KeyboardAvoidingView, ScrollView, Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,8 +12,6 @@ import Animated, {
 import Purchases, { PurchasesPackage } from 'react-native-purchases';
 import * as Localization from 'expo-localization';
 import { useAppStore } from '@/lib/store';
-import { useAuth } from '@/lib/auth-context';
-import { savePortfolioToServer } from '@/lib/portfolio-sync';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
 import { PRIVACY_POLICY_URL, TERMS_OF_USE_URL } from '@/constants/config';
@@ -29,22 +27,12 @@ const TRIAL_DAYS = 3;
 
 export default function Paywall({ visible, onDismiss, allowDismiss = false, onPurchaseSuccess }: PaywallProps) {
   const { setIsPro } = useAppStore();
-  const { isAuthenticated, register, login } = useAuth();
   const [loading, setLoading] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [annualPkg, setAnnualPkg] = useState<PurchasesPackage | null>(null);
   const [sdkAvailable, setSdkAvailable] = useState(true);
   const [offeringsLoading, setOfferingsLoading] = useState(false);
   const [offeringsError, setOfferingsError] = useState<string | null>(null);
-  const [showAccountForm, setShowAccountForm] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [authError, setAuthError] = useState('');
-  const [registering, setRegistering] = useState(false);
-  const [signInMode, setSignInMode] = useState(false);
-  const [loggingIn, setLoggingIn] = useState(false);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const translateY = useSharedValue(600);
   const opacity = useSharedValue(0);
@@ -75,13 +63,6 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
         withTiming(0, { duration: 400, easing: Easing.out(Easing.cubic) })
       );
       loadOfferings();
-      setShowAccountForm(false);
-      setSignInMode(false);
-      setEmail('');
-      setPassword('');
-      setConfirmPassword('');
-      setShowPassword(false);
-      setAuthError('');
     } else {
       translateY.value = 600;
       opacity.value = 0;
@@ -181,7 +162,7 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
     }
   };
 
-  const proceedWithPurchase = async () => {
+  const handleSubscribe = async () => {
     if (!selectedPackage) {
       if (!sdkAvailable) {
         Alert.alert('Not Available', 'In-app purchases are not available in this environment. Please use a device with the App Store or Google Play.');
@@ -214,83 +195,6 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
       }
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleSubscribe = () => {
-    if (isAuthenticated) {
-      proceedWithPurchase();
-    } else {
-      setShowAccountForm(true);
-    }
-  };
-
-  const handleRegisterAndPurchase = async () => {
-    setAuthError('');
-    if (!email || !password || !confirmPassword) {
-      setAuthError('All fields are required');
-      return;
-    }
-    if (password !== confirmPassword) {
-      setAuthError('Passwords do not match');
-      return;
-    }
-    if (password.length < 8) {
-      setAuthError('Password must be at least 8 characters');
-      return;
-    }
-
-    setRegistering(true);
-    try {
-      const result = await register(email, password, confirmPassword, false);
-      if (result.success) {
-        try {
-          await savePortfolioToServer();
-        } catch (err) {
-          console.warn('Failed to sync portfolio after registration:', err);
-        }
-        setShowAccountForm(false);
-        setEmail('');
-        setPassword('');
-        setConfirmPassword('');
-        setAuthError('');
-        await proceedWithPurchase();
-      } else {
-        setAuthError(result.error || 'Registration failed');
-      }
-    } finally {
-      setRegistering(false);
-    }
-  };
-
-  const handleLoginAndPurchase = async () => {
-    setAuthError('');
-    if (!email || !password) {
-      setAuthError('Email and password are required');
-      return;
-    }
-
-    setLoggingIn(true);
-    try {
-      const result = await login(email, password, false);
-      if (result.success) {
-        try {
-          await savePortfolioToServer();
-        } catch (err) {
-          console.warn('Failed to sync portfolio after login:', err);
-        }
-        setShowAccountForm(false);
-        setSignInMode(false);
-        setEmail('');
-        setPassword('');
-        setConfirmPassword('');
-        setAuthError('');
-        await proceedWithPurchase();
-      } else {
-        setAuthError(result.error || 'Login failed');
-      }
-    } finally {
-      setLoggingIn(false);
     }
   };
 
@@ -328,7 +232,7 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
 
   if (!visible) return null;
 
-  const isActionDisabled = loading || restoring || registering || loggingIn || !packagesLoaded;
+  const isActionDisabled = loading || restoring || !packagesLoaded;
   const annualMonthlyPrice = getAnnualMonthlyPrice();
   const annualFullPrice = getAnnualFullPrice();
 
@@ -356,263 +260,115 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
                 </Pressable>
               )}
 
-              {!showAccountForm ? (
-                <>
-                  <View style={styles.iconContainer}>
-                    <Ionicons name="diamond" size={48} color={Colors.primary} />
-                  </View>
+              <View style={styles.iconContainer}>
+                <Ionicons name="diamond" size={48} color={Colors.primary} />
+              </View>
 
-                  <Text style={styles.title}>Unlock Wealth Forecaster</Text>
-                  <Text style={styles.subtitle}>
-                    Get full access to all premium features
-                  </Text>
+              <Text style={styles.title}>Unlock Wealth Forecaster</Text>
+              <Text style={styles.subtitle}>
+                Get full access to all premium features
+              </Text>
 
-                  <View style={styles.features}>
-                    <FeatureRow icon="pie-chart" text="Full portfolio tracking & analytics" />
-                    <FeatureRow icon="trending-up" text="Advanced wealth forecasting" />
-                    <FeatureRow icon="create" text="Unlimited editing & additions" />
-                    <FeatureRow icon="shield-checkmark" text="Cancel anytime" />
-                  </View>
+              <View style={styles.features}>
+                <FeatureRow icon="pie-chart" text="Full portfolio tracking & analytics" />
+                <FeatureRow icon="trending-up" text="Advanced wealth forecasting" />
+                <FeatureRow icon="create" text="Unlimited editing & additions" />
+                <FeatureRow icon="shield-checkmark" text="Cancel anytime" />
+              </View>
 
-                  {!sdkAvailable && (
-                    <View style={styles.loadingPackages}>
-                      <Ionicons name="information-circle" size={20} color={Colors.textTertiary} />
-                      <Text style={styles.loadingText}>In-app purchases are not available in this environment. Please use a device with the App Store or Google Play.</Text>
-                    </View>
-                  )}
-
-                  {sdkAvailable && offeringsError && (
-                    <View style={styles.loadingPackages}>
-                      <Ionicons name="warning" size={20} color={'#F59E0B'} />
-                      <Text style={styles.loadingText}>{offeringsError}</Text>
-                      <Pressable onPress={() => loadOfferings(0)} style={styles.retryButton}>
-                        <Text style={styles.retryButtonText}>Retry</Text>
-                      </Pressable>
-                    </View>
-                  )}
-
-                  {sdkAvailable && offeringsLoading && !packagesLoaded && (
-                    <View style={styles.loadingPackages}>
-                      <ActivityIndicator size="small" color={Colors.primary} />
-                      <Text style={styles.loadingText}>Loading subscription options...</Text>
-                    </View>
-                  )}
-
-                  {packagesLoaded && (
-                    <View style={styles.planSummary} testID="paywall-plan-annual">
-                      <View style={styles.trialBadge}>
-                        <Text style={styles.trialBadgeText}>{TRIAL_DAYS}-DAY FREE TRIAL</Text>
-                      </View>
-                      <Text style={styles.planSummaryTitle}>
-                        {annualPkg?.product?.title || 'Annual'}
-                      </Text>
-                      <View style={styles.planSummaryPriceRow}>
-                        <Text style={styles.planSummaryMonthly}>{annualMonthlyPrice}</Text>
-                        <Text style={styles.planSummaryPerMonth}>/month</Text>
-                      </View>
-                      <Text style={styles.planSummaryAnnual}>
-                        {annualFullPrice} billed annually
-                      </Text>
-                    </View>
-                  )}
-
-                  <Pressable
-                    style={[styles.ctaButton, loading && styles.ctaDisabled]}
-                    onPress={handleSubscribe}
-                    disabled={isActionDisabled}
-                    testID="paywall-subscribe"
-                  >
-                    {loading ? (
-                      <ActivityIndicator color={Colors.white} />
-                    ) : (
-                      <Text style={styles.ctaText}>Start {TRIAL_DAYS}-Day Free Trial</Text>
-                    )}
-                  </Pressable>
-
-                  {packagesLoaded && (
-                    <Text style={styles.trialDisclosure} testID="paywall-trial-disclosure">
-                      {TRIAL_DAYS} days free, then {annualMonthlyPrice}/month ({annualFullPrice}/year, billed annually). Auto-renews until cancelled.
-                    </Text>
-                  )}
-
-                  <Pressable
-                    style={styles.restoreButton}
-                    onPress={handleRestore}
-                    disabled={isActionDisabled}
-                    testID="paywall-restore"
-                  >
-                    {restoring ? (
-                      <ActivityIndicator color={Colors.textTertiary} size="small" />
-                    ) : (
-                      <Text style={styles.restoreText}>Restore Purchases</Text>
-                    )}
-                  </Pressable>
-
-                  <Text style={styles.legalText}>
-                    Subscription automatically renews unless cancelled at least 24 hours before the end of the current period. You can manage or cancel your subscription in your device settings.
-                  </Text>
-
-                  <Text style={styles.legalText}>
-                    <Text
-                      style={styles.legalLink}
-                      onPress={() => Linking.openURL(PRIVACY_POLICY_URL)}
-                    >
-                      Privacy Policy
-                    </Text>
-                    {'  •  '}
-                    <Text
-                      style={styles.legalLink}
-                      onPress={() => Linking.openURL(TERMS_OF_USE_URL)}
-                    >
-                      Terms of Use (EULA)
-                    </Text>
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <View style={styles.iconContainer}>
-                    <Ionicons name={signInMode ? "log-in" : "person-add"} size={40} color={Colors.primary} />
-                  </View>
-
-                  <Text style={styles.title}>{signInMode ? 'Sign In' : 'Create Your Account'}</Text>
-                  <Text style={styles.subtitle}>
-                    {signInMode
-                      ? 'Log in to access your existing account'
-                      : 'Sign up to get started with your subscription'}
-                  </Text>
-
-                  {!!authError && (
-                    <View style={styles.errorBox}>
-                      <Ionicons name="alert-circle" size={16} color={Colors.negative} />
-                      <Text style={styles.errorText}>{authError}</Text>
-                    </View>
-                  )}
-
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Email</Text>
-                    <TextInput
-                      style={styles.input}
-                      value={email}
-                      onChangeText={setEmail}
-                      placeholder="you@example.com"
-                      placeholderTextColor={Colors.textTertiary}
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      testID={signInMode ? "paywall-login-email" : "paywall-register-email"}
-                    />
-                  </View>
-
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Password</Text>
-                    <View style={styles.passwordRow}>
-                      <TextInput
-                        style={[styles.input, styles.passwordInput]}
-                        value={password}
-                        onChangeText={setPassword}
-                        placeholder={signInMode ? "Enter your password" : "At least 8 characters"}
-                        placeholderTextColor={Colors.textTertiary}
-                        secureTextEntry={!showPassword}
-                        autoCapitalize="none"
-                        textContentType="oneTimeCode"
-                        autoComplete="off"
-                        testID={signInMode ? "paywall-login-password" : "paywall-register-password"}
-                      />
-                      <Pressable
-                        style={styles.eyeButton}
-                        onPress={() => setShowPassword(!showPassword)}
-                      >
-                        <Ionicons
-                          name={showPassword ? 'eye-off' : 'eye'}
-                          size={20}
-                          color={Colors.textTertiary}
-                        />
-                      </Pressable>
-                    </View>
-                  </View>
-
-                  {!signInMode && (
-                    <View style={styles.inputGroup}>
-                      <Text style={styles.label}>Confirm Password</Text>
-                      <TextInput
-                        style={styles.input}
-                        value={confirmPassword}
-                        onChangeText={setConfirmPassword}
-                        placeholder="Confirm your password"
-                        placeholderTextColor={Colors.textTertiary}
-                        secureTextEntry={!showPassword}
-                        autoCapitalize="none"
-                        textContentType="oneTimeCode"
-                        autoComplete="off"
-                        testID="paywall-register-confirm-password"
-                      />
-                    </View>
-                  )}
-
-                  {!signInMode && (
-                    <Text style={[styles.legalText, { marginBottom: spacing.lg }]}>
-                      {'By continuing you are agreeing to our\n'}
-                      <Text
-                        style={styles.legalLink}
-                        onPress={() => Linking.openURL(PRIVACY_POLICY_URL)}
-                      >
-                        Privacy Policy
-                      </Text>
-                      {' and '}
-                      <Text
-                        style={styles.legalLink}
-                        onPress={() => Linking.openURL(TERMS_OF_USE_URL)}
-                      >
-                        Terms of Use (EULA)
-                      </Text>
-                    </Text>
-                  )}
-
-                  <Pressable
-                    style={[styles.ctaButton, (signInMode ? loggingIn : registering) && styles.ctaDisabled]}
-                    onPress={signInMode ? handleLoginAndPurchase : handleRegisterAndPurchase}
-                    disabled={isActionDisabled}
-                    testID={signInMode ? "paywall-login-submit" : "paywall-register-submit"}
-                  >
-                    {(signInMode ? loggingIn : registering) ? (
-                      <ActivityIndicator color={Colors.white} />
-                    ) : (
-                      <Text style={styles.ctaText}>Continue</Text>
-                    )}
-                  </Pressable>
-
-                  <Pressable
-                    style={styles.switchAuthMode}
-                    onPress={() => {
-                      setSignInMode(!signInMode);
-                      setAuthError('');
-                      setPassword('');
-                      setConfirmPassword('');
-                      setShowPassword(false);
-                    }}
-                    testID="paywall-toggle-auth-mode"
-                  >
-                    <Text style={styles.switchAuthModeText}>
-                      {signInMode ? "Don't have an account? " : 'Already have an account? '}
-                    </Text>
-                    <Text style={styles.switchAuthModeLink}>
-                      {signInMode ? 'Create Account' : 'Sign In'}
-                    </Text>
-                  </Pressable>
-
-                  <Pressable
-                    style={styles.restoreButton}
-                    onPress={() => {
-                      setShowAccountForm(false);
-                      setSignInMode(false);
-                      setAuthError('');
-                    }}
-                    testID="paywall-back-to-paywall"
-                  >
-                    <Text style={styles.restoreText}>Back</Text>
-                  </Pressable>
-                </>
+              {!sdkAvailable && (
+                <View style={styles.loadingPackages}>
+                  <Ionicons name="information-circle" size={20} color={Colors.textTertiary} />
+                  <Text style={styles.loadingText}>In-app purchases are not available in this environment. Please use a device with the App Store or Google Play.</Text>
+                </View>
               )}
+
+              {sdkAvailable && offeringsError && (
+                <View style={styles.loadingPackages}>
+                  <Ionicons name="warning" size={20} color={'#F59E0B'} />
+                  <Text style={styles.loadingText}>{offeringsError}</Text>
+                  <Pressable onPress={() => loadOfferings(0)} style={styles.retryButton}>
+                    <Text style={styles.retryButtonText}>Retry</Text>
+                  </Pressable>
+                </View>
+              )}
+
+              {sdkAvailable && offeringsLoading && !packagesLoaded && (
+                <View style={styles.loadingPackages}>
+                  <ActivityIndicator size="small" color={Colors.primary} />
+                  <Text style={styles.loadingText}>Loading subscription options...</Text>
+                </View>
+              )}
+
+              {packagesLoaded && (
+                <View style={styles.planSummary} testID="paywall-plan-annual">
+                  <View style={styles.trialBadge}>
+                    <Text style={styles.trialBadgeText}>{TRIAL_DAYS}-DAY FREE TRIAL</Text>
+                  </View>
+                  <Text style={styles.planSummaryTitle}>
+                    {annualPkg?.product?.title || 'Annual'}
+                  </Text>
+                  <View style={styles.planSummaryPriceRow}>
+                    <Text style={styles.planSummaryMonthly}>{annualMonthlyPrice}</Text>
+                    <Text style={styles.planSummaryPerMonth}>/month</Text>
+                  </View>
+                  <Text style={styles.planSummaryAnnual}>
+                    {annualFullPrice} billed annually
+                  </Text>
+                </View>
+              )}
+
+              <Pressable
+                style={[styles.ctaButton, loading && styles.ctaDisabled]}
+                onPress={handleSubscribe}
+                disabled={isActionDisabled}
+                testID="paywall-subscribe"
+              >
+                {loading ? (
+                  <ActivityIndicator color={Colors.white} />
+                ) : (
+                  <Text style={styles.ctaText}>Start {TRIAL_DAYS}-Day Free Trial</Text>
+                )}
+              </Pressable>
+
+              {packagesLoaded && (
+                <Text style={styles.trialDisclosure} testID="paywall-trial-disclosure">
+                  {TRIAL_DAYS} days free, then {annualMonthlyPrice}/month ({annualFullPrice}/year, billed annually). Auto-renews until cancelled.
+                </Text>
+              )}
+
+              <Pressable
+                style={styles.restoreButton}
+                onPress={handleRestore}
+                disabled={isActionDisabled}
+                testID="paywall-restore"
+              >
+                {restoring ? (
+                  <ActivityIndicator color={Colors.textTertiary} size="small" />
+                ) : (
+                  <Text style={styles.restoreText}>Restore Purchases</Text>
+                )}
+              </Pressable>
+
+              <Text style={styles.legalText}>
+                Subscription automatically renews unless cancelled at least 24 hours before the end of the current period. You can manage or cancel your subscription in your device settings.
+              </Text>
+
+              <Text style={styles.legalText}>
+                <Text
+                  style={styles.legalLink}
+                  onPress={() => Linking.openURL(PRIVACY_POLICY_URL)}
+                >
+                  Privacy Policy
+                </Text>
+                {'  •  '}
+                <Text
+                  style={styles.legalLink}
+                  onPress={() => Linking.openURL(TERMS_OF_USE_URL)}
+                >
+                  Terms of Use (EULA)
+                </Text>
+              </Text>
             </ScrollView>
           </Animated.View>
         </Animated.View>
@@ -799,54 +555,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: Colors.textTertiary,
   },
-  errorBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: Colors.negativeLight,
-    padding: spacing.md,
-    borderRadius: borderRadius.sm,
-    marginBottom: spacing.lg,
-  },
-  errorText: {
-    fontFamily: fontFamily.medium,
-    fontSize: fontSize.sm,
-    color: Colors.negative,
-    flex: 1,
-  },
-  inputGroup: {
-    marginBottom: spacing.lg,
-  },
-  label: {
-    fontFamily: fontFamily.medium,
-    fontSize: fontSize.sm,
-    color: Colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  input: {
-    fontFamily: fontFamily.regular,
-    fontSize: fontSize.md,
-    color: Colors.text,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: borderRadius.sm,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  passwordRow: {
-    position: 'relative' as const,
-  },
-  passwordInput: {
-    paddingRight: 48,
-  },
-  eyeButton: {
-    position: 'absolute' as const,
-    right: spacing.md,
-    top: 0,
-    bottom: 0,
-    justifyContent: 'center' as const,
-  },
   loadingPackages: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -872,22 +580,5 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.semibold,
     fontSize: fontSize.sm,
     color: '#FFFFFF',
-  },
-  switchAuthMode: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    marginBottom: spacing.xs,
-  },
-  switchAuthModeText: {
-    fontFamily: fontFamily.regular,
-    fontSize: fontSize.sm,
-    color: Colors.textSecondary,
-  },
-  switchAuthModeLink: {
-    fontFamily: fontFamily.semibold,
-    fontSize: fontSize.sm,
-    color: Colors.primary,
   },
 });

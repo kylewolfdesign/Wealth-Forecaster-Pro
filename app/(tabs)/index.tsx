@@ -26,6 +26,8 @@ import Card from '@/components/Card';
 import AnimatedEntry from '@/components/AnimatedEntry';
 import Paywall from '@/components/Paywall';
 import PurchaseSuccessModal from '@/components/PurchaseSuccessModal';
+import PostPurchaseAccountModal from '@/components/PostPurchaseAccountModal';
+import { useAuth } from '@/lib/auth-context';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily } from '@/constants/theme';
 
@@ -98,8 +100,10 @@ export default function PortfolioScreen() {
     isPro,
   } = store;
 
+  const { isAuthenticated } = useAuth();
   const [showPaywall, setShowPaywall] = useState(false);
   const [showPurchaseSuccess, setShowPurchaseSuccess] = useState(false);
+  const [showPostPurchaseAccount, setShowPostPurchaseAccount] = useState(false);
   const [countUpDone, setCountUpDone] = useState(false);
   const paywallShownRef = useRef(false);
 
@@ -565,7 +569,16 @@ export default function PortfolioScreen() {
       />
       <PurchaseSuccessModal
         visible={showPurchaseSuccess}
-        onDismiss={() => setShowPurchaseSuccess(false)}
+        onDismiss={() => {
+          setShowPurchaseSuccess(false);
+          if (!isAuthenticated) {
+            setShowPostPurchaseAccount(true);
+          }
+        }}
+      />
+      <PostPurchaseAccountModal
+        visible={showPostPurchaseAccount}
+        onDismiss={() => setShowPostPurchaseAccount(false)}
       />
     </ScrollView>
   );
