@@ -119,29 +119,34 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
   const selectedPackage = annualPkg;
   const packagesLoaded = annualPkg !== null;
 
-  const getDeviceLocale = (): string => {
+  const getDeviceLocale = (): string | undefined => {
     try {
-      const locales = Localization.getLocales();
-      return locales?.[0]?.languageTag || 'en-US';
+      return Localization.getLocales()?.[0]?.languageTag ?? undefined;
     } catch {
-      return 'en-US';
+      return undefined;
     }
+  };
+
+  type LocalizedProduct = PurchasesPackage['product'] & {
+    pricePerMonthString?: string;
+    defaultOption?: {
+      pricePerMonthString?: string;
+      pricePerMonth?: { formatted?: string };
+    };
   };
 
   const getAnnualMonthlyPrice = (): string => {
     if (!annualPkg) return '';
-    const product: any = annualPkg.product;
+    const product = annualPkg.product as LocalizedProduct;
     const sdkMonthlyString =
-      product?.pricePerMonthString ||
-      product?.defaultOption?.pricePerMonth?.formatted ||
-      product?.defaultOption?.pricePerMonthString;
+      product.pricePerMonthString ??
+      product.defaultOption?.pricePerMonthString ??
+      product.defaultOption?.pricePerMonth?.formatted;
     if (typeof sdkMonthlyString === 'string' && sdkMonthlyString.length > 0) {
       return sdkMonthlyString;
     }
-    const annualPrice = annualPkg.product.price;
-    const monthlyEquivalent = annualPrice / 12;
-    const currencyCode = annualPkg.product.currencyCode;
-    return formatCurrency(monthlyEquivalent, currencyCode);
+    const monthlyEquivalent = product.price / 12;
+    return formatCurrency(monthlyEquivalent, product.currencyCode);
   };
 
   const getAnnualFullPrice = (): string => {
@@ -150,22 +155,13 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
   };
 
   const formatCurrency = (amount: number, currencyCode: string): string => {
-    const locale = getDeviceLocale();
-    const currency = currencyCode || 'USD';
     try {
-      return new Intl.NumberFormat(locale, {
+      return new Intl.NumberFormat(getDeviceLocale(), {
         style: 'currency',
-        currency,
+        currency: currencyCode,
       }).format(amount);
     } catch {
-      try {
-        return new Intl.NumberFormat(locale, {
-          style: 'currency',
-          currency: 'USD',
-        }).format(amount);
-      } catch {
-        return `${currency} ${amount.toFixed(2)}`;
-      }
+      return '';
     }
   };
 
