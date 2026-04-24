@@ -343,7 +343,7 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
 
               {packagesLoaded && (
                 <Text style={styles.trialDisclosure} testID="paywall-trial-disclosure">
-                  {TRIAL_DAYS} days free, then {annualMonthlyPrice}/month ({annualFullPrice}/year, billed annually). Auto-renews until cancelled.
+                  {TRIAL_DAYS} days free, then {annualMonthlyPrice}/month ({annualFullPrice}/year, billed annually).
                 </Text>
               )}
 
@@ -514,8 +514,8 @@ const styles = StyleSheet.create({
   },
   planSummaryAnnual: {
     fontFamily: fontFamily.regular,
-    fontSize: fontSize.sm,
-    color: Colors.textSecondary,
+    fontSize: fontSize.xs,
+    color: Colors.textTertiary,
     marginTop: spacing.xs,
   },
   trialDisclosure: {
@@ -563,7 +563,7 @@ const styles = StyleSheet.create({
   restoreText: {
     fontFamily: fontFamily.medium,
     fontSize: fontSize.sm,
-    color: Colors.textTertiary,
+    color: Colors.primary,
   },
   loadingPackages: {
     flexDirection: 'row',
