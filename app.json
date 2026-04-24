@@ -2,7 +2,7 @@
   "expo": {
     "name": "Wealth forecaster",
     "slug": "wealthforecaster",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "wealthforecaster",
@@ -15,7 +15,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.wealthforecaster.app",
-      "buildNumber": "26"
+      "buildNumber": "27"
     },
     "android": {
       "package": "com.wealthforecaster.app",
