@@ -15,6 +15,7 @@ import { useAppStore } from '@/lib/store';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
 import { PRIVACY_POLICY_URL, TERMS_OF_USE_URL } from '@/constants/config';
+import { presentAppleCodeRedemption, isAppleCodeRedemptionAvailable } from '@/lib/iap';
 
 interface PaywallProps {
   visible: boolean;
@@ -27,6 +28,7 @@ const TRIAL_DAYS = 3;
 
 export default function Paywall({ visible, onDismiss, allowDismiss = false, onPurchaseSuccess }: PaywallProps) {
   const { setIsPro } = useAppStore();
+  const isPro = useAppStore((s) => s.isPro);
   const [loading, setLoading] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [annualPkg, setAnnualPkg] = useState<PurchasesPackage | null>(null);
@@ -34,8 +36,19 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
   const [offeringsLoading, setOfferingsLoading] = useState(false);
   const [offeringsError, setOfferingsError] = useState<string | null>(null);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const completedRef = useRef(false);
   const translateY = useSharedValue(600);
   const opacity = useSharedValue(0);
+
+  const completeUnlock = () => {
+    if (completedRef.current) return;
+    completedRef.current = true;
+    if (onPurchaseSuccess) {
+      onPurchaseSuccess();
+    } else {
+      onDismiss?.();
+    }
+  };
 
   useEffect(() => {
     return () => {
@@ -52,8 +65,15 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
         clearTimeout(retryTimerRef.current);
         retryTimerRef.current = null;
       }
+      completedRef.current = false;
     }
   }, [visible]);
+
+  useEffect(() => {
+    if (visible && isPro) {
+      completeUnlock();
+    }
+  }, [visible, isPro]);
 
   useEffect(() => {
     if (visible) {
@@ -193,11 +213,7 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
     try {
       await Purchases.purchasePackage(selectedPackage);
       setIsPro(true, true);
-      if (onPurchaseSuccess) {
-        onPurchaseSuccess();
-      } else {
-        onDismiss?.();
-      }
+      completeUnlock();
     } catch (e: unknown) {
       const err = e as { userCancelled?: boolean };
       if (!err.userCancelled) {
@@ -214,11 +230,7 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
       const customerInfo = await Purchases.restorePurchases();
       if (customerInfo.entitlements.active['pro']) {
         setIsPro(true, true);
-        if (onPurchaseSuccess) {
-          onPurchaseSuccess();
-        } else {
-          onDismiss?.();
-        }
+        completeUnlock();
       } else {
         Alert.alert(
           'No Subscription Found',
@@ -359,6 +371,17 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
                   <Text style={styles.restoreText}>Restore Purchases</Text>
                 )}
               </Pressable>
+
+              {isAppleCodeRedemptionAvailable() && (
+                <Pressable
+                  style={styles.redeemButton}
+                  onPress={presentAppleCodeRedemption}
+                  disabled={loading || restoring}
+                  testID="paywall-redeem-code"
+                >
+                  <Text style={styles.redeemText}>Redeem Code</Text>
+                </Pressable>
+              )}
 
               <Text style={styles.legalText}>
                 Subscription automatically renews unless cancelled at least 24 hours before the end of the current period. You can manage or cancel your subscription in your device settings.
@@ -559,6 +582,16 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     alignItems: 'center',
     marginBottom: spacing.md,
+  },
+  redeemButton: {
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  redeemText: {
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.sm,
+    color: Colors.primary,
   },
   restoreText: {
     fontFamily: fontFamily.medium,

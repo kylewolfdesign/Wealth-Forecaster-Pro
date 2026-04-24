@@ -17,6 +17,7 @@ import Paywall from '@/components/Paywall';
 import PurchaseSuccessModal from '@/components/PurchaseSuccessModal';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
+import { presentAppleCodeRedemption, isAppleCodeRedemptionAvailable } from '@/lib/iap';
 
 function ChangePasswordForm() {
   const { changePassword } = useAuth();
@@ -237,6 +238,26 @@ export default function SettingsScreen() {
               <Ionicons name="log-out" size={20} color={Colors.negative} />
               <Text style={[styles.actionText, { color: Colors.negative }]}>Log Out</Text>
             </Pressable>
+            </Card>
+          </AnimatedEntry>
+        </>
+      )}
+
+      {isAppleCodeRedemptionAvailable() && (
+        <>
+          <AnimatedEntry delay={225} duration={300}>
+            <Text style={styles.sectionTitle}>Subscription</Text>
+          </AnimatedEntry>
+          <AnimatedEntry delay={225} duration={300}>
+            <Card style={styles.settingsCard}>
+              <Pressable
+                style={styles.actionRow}
+                onPress={presentAppleCodeRedemption}
+                testID="settings-redeem-code"
+              >
+                <Ionicons name="pricetag" size={20} color={Colors.primary} />
+                <Text style={styles.actionText}>Redeem Code</Text>
+              </Pressable>
             </Card>
           </AnimatedEntry>
         </>
