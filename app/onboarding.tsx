@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, Pressable, TextInput, FlatList,
-  KeyboardAvoidingView, Platform, ScrollView, Alert,
+  KeyboardAvoidingView, Platform, ScrollView,
   Animated, useWindowDimensions,
 } from 'react-native';
 import { router } from 'expo-router';
@@ -338,29 +338,6 @@ export default function OnboardingScreen() {
     router.replace('/(tabs)');
   };
 
-  const handleSkipOnboarding = () => {
-    Alert.alert(
-      'Skip Setup',
-      'You can add your assets anytime from the Portfolio screen.',
-      [
-        {
-          text: 'Got it',
-          onPress: () => {
-            store.completeOnboarding();
-            const totals = computeCurrentTotals(
-              store.holdings, store.rsuGrants, store.cashAccounts,
-              store.mortgages, store.otherAssets, store.realEstate,
-              store.retirementAccounts, store.stockOptions, store.bonds,
-              store.businesses, store.vehicles,
-            );
-            store.addSnapshot(createSnapshot(totals));
-            router.replace('/(tabs)');
-          },
-        },
-      ],
-    );
-  };
-
   type CardItem = { id: string; name: string; value: string; editType: string };
   const getCardInfo = (catKey: CategoryKey): { label: string; icon: keyof typeof Ionicons.glyphMap; items: CardItem[]; value: string } => {
     switch (catKey) {
@@ -455,9 +432,6 @@ export default function OnboardingScreen() {
     const hasSelection = selectedCategories.size > 0;
     return (
       <View style={[catStyles.container, { paddingTop: topInset }]}>
-        <Pressable style={catStyles.skipBtn} onPress={handleSkipOnboarding} hitSlop={16}>
-          <Text style={catStyles.skipBtnText}>Skip</Text>
-        </Pressable>
         <View style={catStyles.content}>
           <View style={catStyles.dots}>
             <View style={[catStyles.dot, catStyles.dotActive]} />
@@ -510,9 +484,6 @@ export default function OnboardingScreen() {
 
   return (
     <View style={[catStyles.container, { paddingTop: topInset }]}>
-      <Pressable style={catStyles.skipBtn} onPress={handleSkipOnboarding} hitSlop={16}>
-        <Text style={catStyles.skipBtnText}>Skip</Text>
-      </Pressable>
       <View style={setupStyles.header}>
         <View style={catStyles.dots}>
           <View style={catStyles.dot} />
@@ -641,6 +612,7 @@ const graphicStyles = StyleSheet.create({
     backgroundColor: Colors.surfaceFlat,
     alignItems: 'center',
     overflow: 'hidden',
+    transform: [{ scale: 1.5 }],
   },
   phoneNotch: {
     width: 40,
@@ -689,6 +661,7 @@ const graphicStyles = StyleSheet.create({
     width: 200,
     height: 110,
     position: 'relative',
+    transform: [{ scale: 1.5 }],
   },
   gridLine: {
     position: 'absolute',
@@ -711,6 +684,7 @@ const graphicStyles = StyleSheet.create({
     justifyContent: 'center',
     gap: 16,
     width: 200,
+    transform: [{ scale: 1.5 }],
   },
   assetIcon: {
     width: 52,
