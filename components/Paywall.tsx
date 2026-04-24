@@ -150,15 +150,22 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
   };
 
   const formatCurrency = (amount: number, currencyCode: string): string => {
+    const locale = getDeviceLocale();
+    const currency = currencyCode || 'USD';
     try {
-      return new Intl.NumberFormat(getDeviceLocale(), {
+      return new Intl.NumberFormat(locale, {
         style: 'currency',
-        currency: currencyCode || 'USD',
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
+        currency,
       }).format(amount);
     } catch {
-      return `$${amount.toFixed(2)}`;
+      try {
+        return new Intl.NumberFormat(locale, {
+          style: 'currency',
+          currency: 'USD',
+        }).format(amount);
+      } catch {
+        return `${currency} ${amount.toFixed(2)}`;
+      }
     }
   };
 
