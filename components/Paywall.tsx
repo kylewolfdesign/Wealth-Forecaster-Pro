@@ -10,6 +10,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import Purchases, { PurchasesPackage } from 'react-native-purchases';
+import * as Localization from 'expo-localization';
 import { useAppStore } from '@/lib/store';
 import { useAuth } from '@/lib/auth-context';
 import { savePortfolioToServer } from '@/lib/portfolio-sync';
@@ -137,8 +138,25 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
   const selectedPackage = annualPkg;
   const packagesLoaded = annualPkg !== null;
 
+  const getDeviceLocale = (): string => {
+    try {
+      const locales = Localization.getLocales();
+      return locales?.[0]?.languageTag || 'en-US';
+    } catch {
+      return 'en-US';
+    }
+  };
+
   const getAnnualMonthlyPrice = (): string => {
     if (!annualPkg) return '';
+    const product: any = annualPkg.product;
+    const sdkMonthlyString =
+      product?.pricePerMonthString ||
+      product?.defaultOption?.pricePerMonth?.formatted ||
+      product?.defaultOption?.pricePerMonthString;
+    if (typeof sdkMonthlyString === 'string' && sdkMonthlyString.length > 0) {
+      return sdkMonthlyString;
+    }
     const annualPrice = annualPkg.product.price;
     const monthlyEquivalent = annualPrice / 12;
     const currencyCode = annualPkg.product.currencyCode;
@@ -152,7 +170,7 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
 
   const formatCurrency = (amount: number, currencyCode: string): string => {
     try {
-      return new Intl.NumberFormat('en-US', {
+      return new Intl.NumberFormat(getDeviceLocale(), {
         style: 'currency',
         currency: currencyCode || 'USD',
         minimumFractionDigits: 2,
