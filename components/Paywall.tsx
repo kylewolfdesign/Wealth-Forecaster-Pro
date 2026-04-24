@@ -161,7 +161,14 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
         currency: currencyCode,
       }).format(amount);
     } catch {
-      return '';
+      try {
+        return amount.toLocaleString(undefined, {
+          style: 'currency',
+          currency: currencyCode,
+        });
+      } catch {
+        return `${currencyCode} ${amount.toFixed(2)}`;
+      }
     }
   };
 
