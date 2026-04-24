@@ -15,7 +15,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.wealthforecaster.app",
-      "buildNumber": "27"
+      "buildNumber": "28"
     },
     "android": {
       "package": "com.wealthforecaster.app",
