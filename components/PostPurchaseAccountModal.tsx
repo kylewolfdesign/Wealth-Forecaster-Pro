@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, Modal, Pressable, TextInput,
-  ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Linking,
+  ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, {
@@ -11,7 +11,6 @@ import { useAuth } from '@/lib/auth-context';
 import { savePortfolioToServer } from '@/lib/portfolio-sync';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
-import { PRIVACY_POLICY_URL, TERMS_OF_USE_URL } from '@/constants/config';
 
 interface PostPurchaseAccountModalProps {
   visible: boolean;
@@ -148,6 +147,7 @@ export default function PostPurchaseAccountModal({ visible, onDismiss }: PostPur
               bounces={false}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
+              contentContainerStyle={styles.scrollContent}
             >
               <View style={styles.handle} />
 
@@ -160,12 +160,12 @@ export default function PostPurchaseAccountModal({ visible, onDismiss }: PostPur
               </View>
 
               <Text style={styles.title}>
-                {signInMode ? 'Sign in to your account' : 'Save your subscription'}
+                {signInMode ? 'Sign in to your account' : 'Save your data'}
               </Text>
               <Text style={styles.subtitle}>
                 {signInMode
                   ? 'Log in to link this device to your existing account.'
-                  : 'Create a free account so your data and Pro subscription stay with you.'}
+                  : 'Create an account so your data and Pro subscription stay with you.'}
               </Text>
 
               {!signInMode && (
@@ -177,10 +177,6 @@ export default function PostPurchaseAccountModal({ visible, onDismiss }: PostPur
                   <BenefitRow
                     icon="phone-portrait"
                     text="Never lose your data if you change phones"
-                  />
-                  <BenefitRow
-                    icon="diamond"
-                    text="Sign in to your Pro subscription from another device"
                   />
                 </View>
               )}
@@ -253,25 +249,6 @@ export default function PostPurchaseAccountModal({ visible, onDismiss }: PostPur
                 </View>
               )}
 
-              {!signInMode && (
-                <Text style={[styles.legalText, { marginBottom: spacing.lg }]}>
-                  {'By continuing you are agreeing to our\n'}
-                  <Text
-                    style={styles.legalLink}
-                    onPress={() => Linking.openURL(PRIVACY_POLICY_URL)}
-                  >
-                    Privacy Policy
-                  </Text>
-                  {' and '}
-                  <Text
-                    style={styles.legalLink}
-                    onPress={() => Linking.openURL(TERMS_OF_USE_URL)}
-                  >
-                    Terms of Use (EULA)
-                  </Text>
-                </Text>
-              )}
-
               <Pressable
                 style={[styles.ctaButton, submitting && styles.ctaDisabled]}
                 onPress={signInMode ? handleSignIn : handleCreateAccount}
@@ -331,6 +308,9 @@ const styles = StyleSheet.create({
     paddingBottom: Platform.OS === 'web' ? 34 : 40,
     paddingTop: spacing.md,
     maxHeight: '92%',
+  },
+  scrollContent: {
+    paddingBottom: spacing.xl,
   },
   handle: {
     width: 36,
@@ -478,18 +458,6 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.semibold,
     fontSize: fontSize.sm,
     color: Colors.textTertiary,
-    textDecorationLine: 'underline',
-  },
-  legalText: {
-    fontFamily: fontFamily.regular,
-    fontSize: fontSize.xs,
-    color: Colors.textTertiary,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-    lineHeight: 18,
-  },
-  legalLink: {
-    color: Colors.primary,
     textDecorationLine: 'underline',
   },
 });
