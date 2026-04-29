@@ -160,7 +160,7 @@ export default function TabLayout() {
       <View style={[floatStyles.loginContainer, { top: isWeb ? 20 : 54 }]}>
         <LoginButton />
       </View>
-      {isLiquidGlassAvailable() ? <NativeTabLayout /> : <ClassicTabLayout />}
+      {(() => { try { return isLiquidGlassAvailable(); } catch { return false; } })() ? <NativeTabLayout /> : <ClassicTabLayout />}
     </View>
   );
 }

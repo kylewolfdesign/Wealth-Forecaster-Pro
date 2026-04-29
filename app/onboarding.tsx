@@ -254,8 +254,8 @@ export default function OnboardingScreen() {
   const [introPage, setIntroPage] = useState(0);
   const [selectedCategories, setSelectedCategories] = useState<Set<CategoryKey>>(new Set());
   const [expandedCards, setExpandedCards] = useState<Set<CategoryKey>>(new Set());
-  const [displayCurrency, setDisplayCurrency] = useState<Currency>(store.settings.displayCurrency ?? 'USD');
   const store = useAppStore();
+  const [displayCurrency, setDisplayCurrency] = useState<Currency>(store.settings.displayCurrency ?? 'USD');
   const scrollRef = useRef<FlatList>(null);
 
   const topInset = Platform.OS === 'web' ? 67 : insets.top;
