@@ -112,8 +112,6 @@ function CurrencyPickerModal({ value, onSelect, onClose }: {
   onSelect: (c: Currency) => void;
   onClose: () => void;
 }) {
-  const [draft, setDraft] = useState<Currency>(value);
-
   if (Platform.OS === 'web') {
     return (
       <View style={styles.currencyModalOverlay}>
@@ -125,13 +123,10 @@ function CurrencyPickerModal({ value, onSelect, onClose }: {
           </View>
           {/* @ts-ignore */}
           <select
-            value={draft}
-            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
-              setDraft(e.target.value as Currency);
-              onSelect(e.target.value as Currency);
-            }}
+            value={value}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => onSelect(e.target.value as Currency)}
             style={{
-              backgroundColor: Colors.surface,
+              backgroundColor: Colors.surfaceFlat,
               color: Colors.text,
               border: `1px solid ${Colors.border}`,
               borderRadius: 8,
@@ -155,14 +150,14 @@ function CurrencyPickerModal({ value, onSelect, onClose }: {
       <Pressable style={styles.currencyModalOverlay} onPress={onClose}>
         <View style={styles.currencyModalContent}>
           <View style={styles.currencyModalHeader}>
-            <Pressable onPress={() => { onSelect(draft); onClose(); }}>
+            <Pressable onPress={onClose}>
               <Text style={styles.currencyModalDone}>Done</Text>
             </Pressable>
           </View>
           <Picker
-            selectedValue={draft}
-            onValueChange={(val) => setDraft(val as Currency)}
-            style={{ backgroundColor: Colors.surface }}
+            selectedValue={value}
+            onValueChange={(val) => onSelect(val as Currency)}
+            style={{ backgroundColor: Colors.surfaceFlat }}
             itemStyle={{ color: Colors.text, fontSize: 18 }}
           >
             {CURRENCIES.map(c => (
@@ -610,7 +605,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
   currencyModalContent: {
-    backgroundColor: Colors.surface,
+    backgroundColor: Colors.surfaceFlat,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
   },
