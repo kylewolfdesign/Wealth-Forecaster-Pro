@@ -2,7 +2,6 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { apiRequest, getApiUrl } from '@/lib/query-client';
 import { loadPortfolioFromServer, hydrateStoreFromServer, debouncedSaveToServer } from '@/lib/portfolio-sync';
 import { useAppStore } from '@/lib/store';
-import { fetch } from 'expo/fetch';
 
 interface AuthUser {
   id: string;

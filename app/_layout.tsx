@@ -52,8 +52,6 @@ function useRevenueCat() {
         const hasPro = !!info.entitlements.active['pro'];
         if (hasPro) {
           setIsPro(true);
-        } else if (!useAppStore.getState().purchasedThisSession) {
-          setIsPro(false);
         }
       };
 
@@ -63,8 +61,6 @@ function useRevenueCat() {
         const hasPro = !!info.entitlements.active['pro'];
         if (hasPro) {
           setIsPro(true);
-        } else if (!useAppStore.getState().purchasedThisSession) {
-          setIsPro(false);
         }
       }).catch(() => {});
 

@@ -1,5 +1,4 @@
 import { apiRequest, getApiUrl } from '@/lib/query-client';
-import { fetch } from 'expo/fetch';
 import { useAppStore, type AppState } from '@/lib/store';
 import type {
   Holding, RSUGrant, CashAccount, Mortgage, OtherAsset,

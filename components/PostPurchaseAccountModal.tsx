@@ -93,7 +93,7 @@ export default function PostPurchaseAccountModal({ visible, onDismiss }: PostPur
     }
     setSubmitting(true);
     try {
-      const result = await register(email, password, confirmPassword, false);
+      const result = await register(email, password, confirmPassword, true);
       if (result.success) {
         await syncPortfolio();
         onDismiss();
@@ -113,7 +113,7 @@ export default function PostPurchaseAccountModal({ visible, onDismiss }: PostPur
     }
     setSubmitting(true);
     try {
-      const result = await login(email, password, false);
+      const result = await login(email, password, true);
       if (result.success) {
         await syncPortfolio();
         onDismiss();
