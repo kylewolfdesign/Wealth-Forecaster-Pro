@@ -19,7 +19,8 @@ import { getInstantPrice } from '@/lib/price-service';
 import { useStockPrices } from '@/hooks/useStockPrices';
 import { createSnapshot, shouldTakeSnapshot } from '@/lib/snapshot';
 import { formatCurrency, formatShares } from '@/lib/format';
-import { Holding, RSUGrant, CashAccount, Mortgage, OtherAsset, RealEstate, RetirementAccount, StockOption, Bond, Business, Vehicle } from '@/lib/types';
+import { convertAmount } from '@/lib/currency';
+import { Holding, RSUGrant, CashAccount, Mortgage, OtherAsset, RealEstate, RetirementAccount, StockOption, Bond, Business, Vehicle, Currency } from '@/lib/types';
 import DonutChart from '@/components/DonutChart';
 import TickerLogo from '@/components/TickerLogo';
 import Card from '@/components/Card';
@@ -97,8 +98,13 @@ export default function PortfolioScreen() {
     onboardingComplete, holdings, rsuGrants, cashAccounts,
     mortgages, otherAssets, realEstate, snapshots, addSnapshot,
     retirementAccounts, stockOptions, bonds, businesses, vehicles,
+    settings, exchangeRates,
     isPro,
   } = store;
+  const displayCurrency = settings.displayCurrency ?? 'USD';
+  const fmt = (v: number) => formatCurrency(v, displayCurrency);
+  const cx = (amount: number, from?: Currency) =>
+    convertAmount(amount, from ?? 'USD', displayCurrency, exchangeRates);
 
   const { isAuthenticated } = useAuth();
   const [showPaywall, setShowPaywall] = useState(false);
@@ -186,8 +192,8 @@ export default function PortfolioScreen() {
   }, [livePrices]);
 
   const totals = useMemo(
-    () => computeCurrentTotals(holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate, retirementAccounts, stockOptions, bonds, businesses, vehicles),
-    [holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate, retirementAccounts, stockOptions, bonds, businesses, vehicles, livePrices]
+    () => computeCurrentTotals(holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate, retirementAccounts, stockOptions, bonds, businesses, vehicles, displayCurrency, exchangeRates),
+    [holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate, retirementAccounts, stockOptions, bonds, businesses, vehicles, livePrices, displayCurrency, exchangeRates]
   );
 
   useEffect(() => {
@@ -299,37 +305,37 @@ export default function PortfolioScreen() {
     'other': 'Other',
   };
 
-  const getItemDetails = (catKey: string, item: CategoryItem): { name: string; value: number; subtitle: string; symbol?: string; badge?: string; badgeColor?: string } => {
+  const getItemDetails = (catKey: string, item: CategoryItem): { name: string; value: number; assetCurrency?: Currency; subtitle: string; symbol?: string; badge?: string; badgeColor?: string } => {
     if ((catKey === 'stocks' || catKey === 'crypto') && 'symbol' in item && 'shares' in item) {
       const h = item as Holding;
-      return { name: h.symbol, value: computeHoldingValue(h), subtitle: `${formatShares(h.shares)} shares`, symbol: h.symbol };
+      return { name: h.symbol, value: computeHoldingValue(h), assetCurrency: h.currency, subtitle: `${formatShares(h.shares)} shares`, symbol: h.symbol };
     }
     if (catKey === 'rsus' && 'totalShares' in item) {
       const g = item as RSUGrant;
       const { vested, unvested } = computeRSUVesting(g, new Date());
       const price = getInstantPrice(g.symbol, 'stock');
-      return { name: `${g.symbol} RSU`, value: vested * price, subtitle: `${formatShares(vested)} vested / ${formatShares(unvested)} unvested`, symbol: g.symbol };
+      return { name: `${g.symbol} RSU`, value: vested * price, assetCurrency: g.currency, subtitle: `${formatShares(vested)} vested / ${formatShares(unvested)} unvested`, symbol: g.symbol };
     }
     if (catKey === 'cashSavings' && 'balance' in item) {
       const c = item as CashAccount;
-      return { name: c.name, value: c.balance, subtitle: `+${formatCurrency(c.monthlyContribution)}/mo` };
+      return { name: c.name, value: c.balance, assetCurrency: c.currency, subtitle: `+${fmt(cx(c.monthlyContribution, c.currency))}/mo` };
     }
     if (catKey === 'realEstate' && 'currentValue' in item && 'equity' in item) {
       const r = item as RealEstate;
       const equityVal = r.equity ?? r.currentValue;
       const parts: string[] = [];
-      if (r.currentValue) parts.push(`Total: $${r.currentValue.toLocaleString()}`);
+      if (r.currentValue) parts.push(`Total: ${fmt(cx(r.currentValue, r.currency))}`);
       if (r.annualGrowthRate) parts.push(`${r.annualGrowthRate}% growth/yr`);
-      return { name: r.name, value: equityVal, subtitle: parts.join(' · ') };
+      return { name: r.name, value: equityVal, assetCurrency: r.currency, subtitle: parts.join(' · ') };
     }
     if (catKey === 'otherAssets' && 'value' in item && 'annualGrowthRate' in item) {
       const o = item as OtherAsset;
-      return { name: o.name, value: o.value, subtitle: o.annualGrowthRate ? `${o.annualGrowthRate}% growth/yr` : '' };
+      return { name: o.name, value: o.value, assetCurrency: o.currency, subtitle: o.annualGrowthRate ? `${o.annualGrowthRate}% growth/yr` : '' };
     }
     if (catKey === 'retirement' && 'accountType' in item) {
       const r = item as RetirementAccount;
       const label = ACCOUNT_TYPE_LABELS[r.accountType] || r.accountType;
-      return { name: r.name, value: r.balance, subtitle: `+${formatCurrency(r.monthlyContribution)}/mo`, badge: label, badgeColor: Colors.categoryRetirement };
+      return { name: r.name, value: r.balance, assetCurrency: r.currency, subtitle: `+${fmt(cx(r.monthlyContribution, r.currency))}/mo`, badge: label, badgeColor: Colors.categoryRetirement };
     }
     if (catKey === 'stockOptions' && 'strikePrice' in item) {
       const o = item as StockOption;
@@ -340,6 +346,7 @@ export default function PortfolioScreen() {
       return {
         name: `${o.symbol} ${o.optionType.toUpperCase()}`,
         value: intrinsic,
+        assetCurrency: o.currency,
         subtitle: `${vested}/${o.totalOptions} vested · Strike $${o.strikePrice}`,
         symbol: o.symbol,
         badge: isUnderwater ? 'Underwater' : undefined,
@@ -348,7 +355,7 @@ export default function PortfolioScreen() {
     }
     if (catKey === 'bonds' && 'couponRate' in item) {
       const b = item as Bond;
-      return { name: b.name, value: b.purchasePrice ?? b.faceValue, subtitle: `${b.couponRate}% coupon · Matures ${b.maturityDate}` };
+      return { name: b.name, value: b.purchasePrice ?? b.faceValue, assetCurrency: b.currency, subtitle: `${b.couponRate}% coupon · Matures ${b.maturityDate}` };
     }
     if (catKey === 'business' && 'isIlliquid' in item) {
       const biz = item as Business;
@@ -357,6 +364,7 @@ export default function PortfolioScreen() {
       return {
         name: biz.name,
         value: biz.value,
+        assetCurrency: biz.currency,
         subtitle: parts.join(' · '),
         badge: biz.isIlliquid ? 'Illiquid' : undefined,
         badgeColor: Colors.textTertiary,
@@ -364,13 +372,13 @@ export default function PortfolioScreen() {
     }
     if (catKey === 'vehicles' && 'annualDepreciationRate' in item) {
       const v = item as Vehicle;
-      return { name: v.name, value: v.currentValue, subtitle: `${v.annualDepreciationRate ?? 15}% depreciation/yr` };
+      return { name: v.name, value: v.currentValue, assetCurrency: v.currency, subtitle: `${v.annualDepreciationRate ?? 15}% depreciation/yr` };
     }
     return { name: '', value: 0, subtitle: '' };
   };
 
   const renderItem = (catKey: string, item: CategoryItem) => {
-    const { name, value, subtitle, symbol, badge, badgeColor } = getItemDetails(catKey, item);
+    const { name, value, assetCurrency, subtitle, symbol, badge, badgeColor } = getItemDetails(catKey, item);
     const cat = CATEGORY_CONFIG.find(c => c.key === catKey);
 
     const linkedMortgage = catKey === 'realEstate' && 'mortgageId' in item && (item as RealEstate).mortgageId
@@ -403,19 +411,19 @@ export default function PortfolioScreen() {
             {!!subtitle && <Text style={styles.itemSubtitle}>{subtitle}</Text>}
           </View>
           <Text style={styles.itemValue}>
-            {formatCurrency(value)}
+            {fmt(cx(value, assetCurrency))}
           </Text>
         </Pressable>
         {linkedMortgage && (
           <View style={styles.mortgageSubRows}>
             <View style={styles.mortgageSubRow}>
               <Text style={styles.mortgageSubLabel}>Mortgage: {linkedMortgage.name}</Text>
-              <Text style={styles.mortgageSubValue}>{formatCurrency(linkedMortgage.principalBalance)}</Text>
+              <Text style={styles.mortgageSubValue}>{fmt(cx(linkedMortgage.principalBalance, linkedMortgage.currency))}</Text>
             </View>
             <View style={styles.mortgageSubRow}>
               <Text style={styles.equitySubLabel}>Equity</Text>
               <Text style={styles.equitySubValue}>
-                {formatCurrency(((item as RealEstate).equity ?? (item as RealEstate).currentValue) - linkedMortgage.principalBalance)}
+                {fmt(cx((item as RealEstate).equity ?? (item as RealEstate).currentValue, (item as RealEstate).currency) - cx(linkedMortgage.principalBalance, linkedMortgage.currency))}
               </Text>
             </View>
           </View>
@@ -465,7 +473,7 @@ export default function PortfolioScreen() {
             slices={donutSlices}
             size={donutSize}
             strokeWidth={17}
-            centerLabel={formatCurrency(totals.netWorth)}
+            centerLabel={fmt(totals.netWorth)}
             centerSubLabel="NET WORTH"
             selectedLabel={selectedCategory ? (sortedCategories.find(c => c.key === selectedCategory)?.label ?? null) : null}
             animationKey={focusKey}
@@ -525,7 +533,7 @@ export default function PortfolioScreen() {
               </View>
               <View style={styles.categoryRight}>
                 <Text style={styles.categoryTotal}>
-                  {formatCurrency(total)}
+                  {fmt(total)}
                 </Text>
                 <Ionicons
                   name={isOpen ? 'chevron-up' : 'chevron-down'}

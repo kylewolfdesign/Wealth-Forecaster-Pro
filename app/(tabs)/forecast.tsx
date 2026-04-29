@@ -43,7 +43,10 @@ export default function ForecastScreen() {
     holdings, rsuGrants, cashAccounts, mortgages,
     otherAssets, realEstate, settings, setSettings,
     retirementAccounts, stockOptions, bonds, businesses, vehicles,
+    exchangeRates,
   } = useAppStore();
+  const displayCurrency = settings.displayCurrency ?? 'USD';
+  const fmt = (v: number) => formatCurrency(v, displayCurrency);
 
 
   const [selectedHorizon, setSelectedHorizon] = useState<string>('10Y');
@@ -61,8 +64,9 @@ export default function ForecastScreen() {
     () => computeForecast(
       holdings, rsuGrants, cashAccounts, mortgages, otherAssets,
       settings, 50, realEstate, retirementAccounts, stockOptions, bonds, businesses, vehicles,
+      displayCurrency, exchangeRates,
     ),
-    [holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate, retirementAccounts, stockOptions, bonds, businesses, vehicles, settings]
+    [holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate, retirementAccounts, stockOptions, bonds, businesses, vehicles, settings, displayCurrency, exchangeRates]
   );
 
   const allChartData = useMemo(() => {
@@ -171,7 +175,7 @@ export default function ForecastScreen() {
             Projected Net Worth · {selectedYears}{selectedYears === 1 ? ' Year' : ' Years'}
           </Text>
           <Text style={styles.headlineValue}>
-            {headlineValue != null ? formatCurrency(headlineValue) : '--'}
+            {headlineValue != null ? fmt(headlineValue) : '--'}
           </Text>
         </View>
       </AnimatedEntry>
@@ -181,7 +185,7 @@ export default function ForecastScreen() {
           <View style={styles.chartContainer}>
             {touchValue != null && (
               <View style={styles.touchLabelContainer}>
-                <Text style={styles.touchLabel}>{formatCurrency(touchValue)}</Text>
+                <Text style={styles.touchLabel}>{fmt(touchValue)}</Text>
               </View>
             )}
             <Animated.View style={chartAnimStyle}>
@@ -192,7 +196,7 @@ export default function ForecastScreen() {
                 color={Colors.primary}
                 showGrid
                 showLabels
-                formatY={(v) => formatCurrency(v)}
+                formatY={(v) => fmt(v)}
                 formatX={formatXLabel}
                 onTouch={(point) => setTouchValue(point.y)}
                 onTouchEnd={() => setTouchValue(null)}
@@ -294,7 +298,7 @@ export default function ForecastScreen() {
               {m.year} {m.year === 1 ? 'Year' : 'Years'}
             </Text>
             <Text style={styles.milestoneValue}>
-              {m.value != null ? formatCurrency(m.value) : '--'}
+              {m.value != null ? fmt(m.value) : '--'}
             </Text>
           </View>
         ))}

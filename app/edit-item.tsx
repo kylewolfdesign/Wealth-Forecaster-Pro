@@ -13,6 +13,8 @@ import { useAppStore, AppState } from '@/lib/store';
 import { Holding, RSUGrant, CashAccount, Mortgage, OtherAsset, RealEstate, RetirementAccount, StockOption, Bond, Business, Vehicle } from '@/lib/types';
 import { computeCurrentTotals } from '@/lib/calculations';
 import { createSnapshot } from '@/lib/snapshot';
+import { CURRENCIES, CURRENCY_PICKER_ITEMS, convertAmount, getCurrencySymbol } from '@/lib/currency';
+import type { Currency } from '@/lib/currency';
 import { priceService } from '@/lib/price-service';
 import TickerInput from '@/components/TickerInput';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
@@ -214,6 +216,58 @@ export default function EditItemScreen() {
   );
 }
 
+function useCurrencyContext() {
+  const { settings, exchangeRates } = useAppStore();
+  const displayCurrency = settings.displayCurrency ?? 'USD';
+  return { displayCurrency, exchangeRates };
+}
+
+function CurrencyConversionBanner({ nativeValue, assetCurrency }: { nativeValue: number; assetCurrency: Currency }) {
+  const { displayCurrency, exchangeRates } = useCurrencyContext();
+  if (assetCurrency === displayCurrency || !isFinite(nativeValue) || nativeValue === 0) return null;
+  const converted = convertAmount(nativeValue, assetCurrency, displayCurrency, exchangeRates);
+  const rate = convertAmount(1, assetCurrency, displayCurrency, exchangeRates);
+  const nativeSym = getCurrencySymbol(assetCurrency);
+  const displaySym = getCurrencySymbol(displayCurrency);
+  return (
+    <View style={convBannerStyle.container}>
+      <Ionicons name="swap-horizontal-outline" size={14} color={TEXT_SECONDARY} />
+      <Text style={convBannerStyle.text}>
+        {nativeSym}{nativeValue.toLocaleString('en-US', { maximumFractionDigits: 2 })} {assetCurrency}{' '}
+        = {displaySym}{converted.toLocaleString('en-US', { maximumFractionDigits: 2 })} {displayCurrency}
+        {'\n'}
+        <Text style={convBannerStyle.rate}>1 {assetCurrency} = {displaySym}{rate.toFixed(4)} {displayCurrency}</Text>
+      </Text>
+    </View>
+  );
+}
+
+const convBannerStyle = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: CARD_BG,
+    borderWidth: 1,
+    borderColor: BORDER,
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 16,
+  },
+  text: {
+    fontFamily: fontFamily.regular,
+    fontSize: 13,
+    color: TEXT_SECONDARY,
+    flex: 1,
+    lineHeight: 20,
+  },
+  rate: {
+    fontFamily: fontFamily.regular,
+    fontSize: 12,
+    color: TEXT_MUTED,
+  },
+});
+
 function useFormAction(
   onAction: (action: FormAction) => void,
   label: string,
@@ -229,6 +283,7 @@ function useFormAction(
 }
 
 function HoldingForm({ existing, isEditing, store, saveAndSnapshot, onAction, isCrypto }: FormProps & { existing: Holding | null; isCrypto: boolean }) {
+  const { displayCurrency } = useCurrencyContext();
   const [symbol, setSymbol] = useState(existing?.symbol ?? '');
   const [shares, setShares] = useState(existing?.shares?.toString() ?? '');
   const [pricePerShare, setPricePerShare] = useState(existing?.manualPrice?.toString() ?? '');
@@ -236,6 +291,7 @@ function HoldingForm({ existing, isEditing, store, saveAndSnapshot, onAction, is
   const [addingMore, setAddingMore] = useState(!!existing?.recurringShares);
   const [recurringShares, setRecurringShares] = useState(existing?.recurringShares?.toString() ?? '');
   const [cadence, setCadence] = useState<'monthly' | 'quarterly' | 'yearly'>(existing?.recurringCadence ?? 'monthly');
+  const [currency, setCurrency] = useState<Currency>(existing?.currency ?? displayCurrency);
 
   const fetchPrice = useCallback(async (ticker: string) => {
     const trimmed = ticker.trim().toUpperCase();
@@ -279,6 +335,7 @@ function HoldingForm({ existing, isEditing, store, saveAndSnapshot, onAction, is
       symbol: symbol.toUpperCase().trim(),
       shares: parsedShares,
       manualPrice: parsedPrice,
+      currency,
     };
     if (addingMore && recurringShares) {
       data.recurringShares = parseFloat(recurringShares);
@@ -310,8 +367,16 @@ function HoldingForm({ existing, isEditing, store, saveAndSnapshot, onAction, is
       <FieldLabel label={isCrypto ? "Number of coins" : "Number of shares"} />
       <DarkInput value={shares} onChangeText={setShares} keyboardType="numeric" placeholder={isCrypto ? "2.5" : "350"} />
 
-      <FieldLabel label={fetchingPrice ? (isCrypto ? "Price per coin ($) — loading..." : "Price per share ($) — loading...") : (isCrypto ? "Price per coin ($)" : "Price per share ($)")} />
+      <FieldLabel label={fetchingPrice ? `Price per ${isCrypto ? 'coin' : 'share'} — loading...` : `Price per ${isCrypto ? 'coin' : 'share'}`} />
       <DarkInput value={pricePerShare} onChangeText={setPricePerShare} keyboardType="numeric" placeholder="—" editable={false} />
+
+      <FieldLabel label="Currency" />
+      <NativePicker selectedValue={currency} onValueChange={(v) => setCurrency(v as Currency)} items={CURRENCY_PICKER_ITEMS} />
+
+      <CurrencyConversionBanner
+        nativeValue={parseFloat(pricePerShare) * parseFloat(shares) || 0}
+        assetCurrency={currency}
+      />
 
       <View style={s.toggleSection}>
         <View style={s.toggleHeader}>
@@ -350,8 +415,10 @@ function HoldingForm({ existing, isEditing, store, saveAndSnapshot, onAction, is
 }
 
 function RSUForm({ existing, isEditing, store, saveAndSnapshot, onAction }: FormProps & { existing: RSUGrant | null }) {
+  const { displayCurrency } = useCurrencyContext();
   const [symbol, setSymbol] = useState(existing?.symbol ?? '');
   const [freq, setFreq] = useState<'monthly' | 'quarterly' | 'yearly'>(existing?.vest?.frequency ?? 'quarterly');
+  const [currency, setCurrency] = useState<Currency>(existing?.currency ?? displayCurrency);
 
   const existingInterval = existing?.vest?.frequency === 'monthly' ? 1 : existing?.vest?.frequency === 'yearly' ? 12 : 3;
   const existingVests = existing ? Math.round((existing.vest?.durationMonths ?? 0) / existingInterval) : 0;
@@ -393,6 +460,7 @@ function RSUForm({ existing, isEditing, store, saveAndSnapshot, onAction }: Form
         durationMonths,
         frequency: freq,
       },
+      currency,
     };
     if (isEditing && existing) {
       store.updateRSUGrant(existing.id, data);
@@ -427,16 +495,20 @@ function RSUForm({ existing, isEditing, store, saveAndSnapshot, onAction }: Form
       <DarkInput value={alreadyVested} onChangeText={setAlreadyVested} keyboardType="numeric" placeholder="0" />
       <FieldLabel label="Next vest date" />
       <DarkInput value={nextVestDate} onChangeText={setNextVestDate} placeholder="YYYY-MM-DD" />
+      <FieldLabel label="Currency" />
+      <NativePicker selectedValue={currency} onValueChange={(v) => setCurrency(v as Currency)} items={CURRENCY_PICKER_ITEMS} />
     </View>
   );
 }
 
 function CashForm({ existing, isEditing, store, saveAndSnapshot, onAction, defaultCashType }: FormProps & { existing: CashAccount | null; defaultCashType?: 'savings' | 'offset' }) {
+  const { displayCurrency } = useCurrencyContext();
   const [cashType, setCashType] = useState<'savings' | 'offset'>(existing?.type ?? defaultCashType ?? 'savings');
   const [name, setName] = useState(existing?.name ?? '');
   const [balance, setBalance] = useState(existing?.balance?.toString() ?? '');
   const [monthly, setMonthly] = useState(existing?.monthlyContribution?.toString() ?? '');
   const [rate, setRate] = useState(existing?.annualInterestRate?.toString() ?? '');
+  const [currency, setCurrency] = useState<Currency>(existing?.currency ?? displayCurrency);
 
   const handleSave = () => {
     if (!name.trim() || !balance.trim()) {
@@ -450,6 +522,7 @@ function CashForm({ existing, isEditing, store, saveAndSnapshot, onAction, defau
       balance: parseFloat(balance),
       monthlyContribution: parseFloat(monthly) || 0,
       annualInterestRate: rate ? parseFloat(rate) : undefined,
+      currency,
     };
     if (isEditing && existing) {
       store.updateCashAccount(existing.id, data);
@@ -481,16 +554,21 @@ function CashForm({ existing, isEditing, store, saveAndSnapshot, onAction, defau
       <DarkInput value={monthly} onChangeText={setMonthly} keyboardType="numeric" placeholder="0" />
       <FieldLabel label="Annual interest rate (%)" />
       <DarkInput value={rate} onChangeText={setRate} keyboardType="numeric" placeholder="Optional" />
+      <FieldLabel label="Currency" />
+      <NativePicker selectedValue={currency} onValueChange={(v) => setCurrency(v as Currency)} items={CURRENCY_PICKER_ITEMS} />
+      <CurrencyConversionBanner nativeValue={parseFloat(balance) || 0} assetCurrency={currency} />
     </View>
   );
 }
 
 function MortgageForm({ existing, isEditing, store, saveAndSnapshot, onAction }: FormProps & { existing: Mortgage | null }) {
+  const { displayCurrency } = useCurrencyContext();
   const [name, setName] = useState(existing?.name ?? '');
   const [principal, setPrincipal] = useState(existing?.principalBalance?.toString() ?? '');
   const [rate, setRate] = useState(existing?.annualInterestRate?.toString() ?? '');
   const [payment, setPayment] = useState(existing?.monthlyPayment?.toString() ?? '');
   const [increase, setIncrease] = useState(existing?.annualPaymentIncreasePct?.toString() ?? '');
+  const [currency, setCurrency] = useState<Currency>(existing?.currency ?? displayCurrency);
 
   const handleSave = () => {
     if (!name.trim() || !principal.trim() || !rate.trim() || !payment.trim()) {
@@ -504,6 +582,7 @@ function MortgageForm({ existing, isEditing, store, saveAndSnapshot, onAction }:
       annualInterestRate: parseFloat(rate),
       monthlyPayment: parseFloat(payment),
       annualPaymentIncreasePct: increase ? parseFloat(increase) : undefined,
+      currency,
     };
     if (isEditing && existing) {
       store.updateMortgage(existing.id, data);
@@ -528,14 +607,19 @@ function MortgageForm({ existing, isEditing, store, saveAndSnapshot, onAction }:
       <DarkInput value={payment} onChangeText={setPayment} keyboardType="numeric" placeholder="0" />
       <FieldLabel label="Annual payment increase % (optional)" />
       <DarkInput value={increase} onChangeText={setIncrease} keyboardType="numeric" placeholder="e.g. 2" />
+      <FieldLabel label="Currency" />
+      <NativePicker selectedValue={currency} onValueChange={(v) => setCurrency(v as Currency)} items={CURRENCY_PICKER_ITEMS} />
+      <CurrencyConversionBanner nativeValue={parseFloat(principal) || 0} assetCurrency={currency} />
     </View>
   );
 }
 
 function OtherForm({ existing, isEditing, store, saveAndSnapshot, onAction }: FormProps & { existing: OtherAsset | null }) {
+  const { displayCurrency } = useCurrencyContext();
   const [name, setName] = useState(existing?.name ?? '');
   const [value, setValue] = useState(existing?.value?.toString() ?? '');
   const [growth, setGrowth] = useState(existing?.annualGrowthRate?.toString() ?? '');
+  const [currency, setCurrency] = useState<Currency>(existing?.currency ?? displayCurrency);
 
   const handleSave = () => {
     if (!name.trim() || !value.trim()) {
@@ -547,6 +631,7 @@ function OtherForm({ existing, isEditing, store, saveAndSnapshot, onAction }: Fo
       name: name.trim(),
       value: parseFloat(value),
       annualGrowthRate: growth ? parseFloat(growth) : undefined,
+      currency,
     };
     if (isEditing && existing) {
       store.updateOtherAsset(existing.id, data);
@@ -567,11 +652,15 @@ function OtherForm({ existing, isEditing, store, saveAndSnapshot, onAction }: Fo
       <DarkInput value={value} onChangeText={setValue} keyboardType="numeric" placeholder="0" />
       <FieldLabel label="Annual growth rate % (optional)" />
       <DarkInput value={growth} onChangeText={setGrowth} keyboardType="numeric" placeholder="e.g. -10 for depreciation" />
+      <FieldLabel label="Currency" />
+      <NativePicker selectedValue={currency} onValueChange={(v) => setCurrency(v as Currency)} items={CURRENCY_PICKER_ITEMS} />
+      <CurrencyConversionBanner nativeValue={parseFloat(value) || 0} assetCurrency={currency} />
     </View>
   );
 }
 
 function RealEstateForm({ existing, isEditing, store, saveAndSnapshot, onAction }: FormProps & { existing: RealEstate | null }) {
+  const { displayCurrency } = useCurrencyContext();
   const [name, setName] = useState(existing?.name ?? '');
   const [currentValue, setCurrentValue] = useState(existing?.currentValue?.toString() ?? '');
   const [growth, setGrowth] = useState(existing?.annualGrowthRate?.toString() ?? '');
@@ -579,6 +668,7 @@ function RealEstateForm({ existing, isEditing, store, saveAndSnapshot, onAction 
   const [additionalEquity, setAdditionalEquity] = useState(existing?.additionalEquity?.toString() ?? '');
   const [equityCadence, setEquityCadence] = useState<'monthly' | 'quarterly' | 'yearly'>(existing?.equityCadence ?? 'monthly');
   const [mortgageId, setMortgageId] = useState(existing?.mortgageId ?? '');
+  const [currency, setCurrency] = useState<Currency>(existing?.currency ?? displayCurrency);
 
   const handleSave = () => {
     if (!name.trim() || !currentValue.trim()) {
@@ -609,6 +699,7 @@ function RealEstateForm({ existing, isEditing, store, saveAndSnapshot, onAction 
       additionalEquity: parsedAdditionalEquity,
       equityCadence: parsedAdditionalEquity ? equityCadence : undefined,
       mortgageId: mortgageId || undefined,
+      currency,
     };
     if (isEditing && existing) {
       store.updateRealEstate(existing.id, data);
@@ -652,17 +743,22 @@ function RealEstateForm({ existing, isEditing, store, saveAndSnapshot, onAction 
           ...store.mortgages.map((m) => ({ label: m.name, value: m.id })),
         ]}
       />
+      <FieldLabel label="Currency" />
+      <NativePicker selectedValue={currency} onValueChange={(v) => setCurrency(v as Currency)} items={CURRENCY_PICKER_ITEMS} />
+      <CurrencyConversionBanner nativeValue={parseFloat(equity || currentValue) || 0} assetCurrency={currency} />
     </View>
   );
 }
 
 function RetirementAccountForm({ existing, isEditing, store, saveAndSnapshot, onAction }: FormProps & { existing: RetirementAccount | null }) {
+  const { displayCurrency } = useCurrencyContext();
   const [name, setName] = useState(existing?.name ?? '');
   const [accountType, setAccountType] = useState<'401k' | 'ira' | 'roth_ira' | 'pension' | 'other'>(existing?.accountType ?? '401k');
   const [balance, setBalance] = useState(existing?.balance?.toString() ?? '');
   const [monthly, setMonthly] = useState(existing?.monthlyContribution?.toString() ?? '');
   const [matchPct, setMatchPct] = useState(existing?.employerMatchPct?.toString() ?? '');
   const [matchLimit, setMatchLimit] = useState(existing?.employerMatchLimit?.toString() ?? '');
+  const [currency, setCurrency] = useState<Currency>(existing?.currency ?? displayCurrency);
 
   const handleSave = () => {
     if (!name.trim() || !balance.trim()) {
@@ -677,6 +773,7 @@ function RetirementAccountForm({ existing, isEditing, store, saveAndSnapshot, on
       monthlyContribution: parseFloat(monthly) || 0,
       employerMatchPct: matchPct ? parseFloat(matchPct) : undefined,
       employerMatchLimit: matchLimit ? parseFloat(matchLimit) : undefined,
+      currency,
     };
     if (isEditing && existing) {
       store.updateRetirementAccount(existing.id, data);
@@ -713,13 +810,18 @@ function RetirementAccountForm({ existing, isEditing, store, saveAndSnapshot, on
       <DarkInput value={matchPct} onChangeText={setMatchPct} keyboardType="numeric" placeholder="e.g. 50" />
       <FieldLabel label="Employer match annual limit $ (optional)" />
       <DarkInput value={matchLimit} onChangeText={setMatchLimit} keyboardType="numeric" placeholder="e.g. 11250" />
+      <FieldLabel label="Currency" />
+      <NativePicker selectedValue={currency} onValueChange={(v) => setCurrency(v as Currency)} items={CURRENCY_PICKER_ITEMS} />
+      <CurrencyConversionBanner nativeValue={parseFloat(balance) || 0} assetCurrency={currency} />
     </View>
   );
 }
 
 function StockOptionForm({ existing, isEditing, store, saveAndSnapshot, onAction }: FormProps & { existing: StockOption | null }) {
+  const { displayCurrency } = useCurrencyContext();
   const [symbol, setSymbol] = useState(existing?.symbol ?? '');
   const [optionType, setOptionType] = useState<'iso' | 'nso'>(existing?.optionType ?? 'iso');
+  const [currency, setCurrency] = useState<Currency>(existing?.currency ?? displayCurrency);
   const [totalOptions, setTotalOptions] = useState(existing?.totalOptions?.toString() ?? '');
   const [vestedOptions, setVestedOptions] = useState(existing?.vestedOptions?.toString() ?? '');
   const [strikePrice, setStrikePrice] = useState(existing?.strikePrice?.toString() ?? '');
@@ -768,6 +870,7 @@ function StockOptionForm({ existing, isEditing, store, saveAndSnapshot, onAction
         durationMonths: parseInt(durationMonths) || 48,
         frequency: freq,
       },
+      currency,
     };
     if (isEditing && existing) {
       store.updateStockOption(existing.id, data);
@@ -817,16 +920,20 @@ function StockOptionForm({ existing, isEditing, store, saveAndSnapshot, onAction
           { label: 'Yearly', value: 'yearly' },
         ]}
       />
+      <FieldLabel label="Currency" />
+      <NativePicker selectedValue={currency} onValueChange={(v) => setCurrency(v as Currency)} items={CURRENCY_PICKER_ITEMS} />
     </View>
   );
 }
 
 function BondForm({ existing, isEditing, store, saveAndSnapshot, onAction }: FormProps & { existing: Bond | null }) {
+  const { displayCurrency } = useCurrencyContext();
   const [name, setName] = useState(existing?.name ?? '');
   const [faceValue, setFaceValue] = useState(existing?.faceValue?.toString() ?? '');
   const [couponRate, setCouponRate] = useState(existing?.couponRate?.toString() ?? '');
   const [maturityDate, setMaturityDate] = useState(existing?.maturityDate ?? '');
   const [purchasePrice, setPurchasePrice] = useState(existing?.purchasePrice?.toString() ?? '');
+  const [currency, setCurrency] = useState<Currency>(existing?.currency ?? displayCurrency);
 
   const handleSave = () => {
     if (!name.trim() || !faceValue.trim() || !couponRate.trim() || !maturityDate.trim()) {
@@ -840,6 +947,7 @@ function BondForm({ existing, isEditing, store, saveAndSnapshot, onAction }: For
       couponRate: parseFloat(couponRate),
       maturityDate,
       purchasePrice: purchasePrice ? parseFloat(purchasePrice) : undefined,
+      currency,
     };
     if (isEditing && existing) {
       store.updateBond(existing.id, data);
@@ -864,15 +972,20 @@ function BondForm({ existing, isEditing, store, saveAndSnapshot, onAction }: For
       <DarkInput value={maturityDate} onChangeText={setMaturityDate} placeholder="YYYY-MM-DD" />
       <FieldLabel label="Purchase price $ (optional)" />
       <DarkInput value={purchasePrice} onChangeText={setPurchasePrice} keyboardType="numeric" placeholder="e.g. 48500" />
+      <FieldLabel label="Currency" />
+      <NativePicker selectedValue={currency} onValueChange={(v) => setCurrency(v as Currency)} items={CURRENCY_PICKER_ITEMS} />
+      <CurrencyConversionBanner nativeValue={parseFloat(purchasePrice || faceValue) || 0} assetCurrency={currency} />
     </View>
   );
 }
 
 function BusinessForm({ existing, isEditing, store, saveAndSnapshot, onAction }: FormProps & { existing: Business | null }) {
+  const { displayCurrency } = useCurrencyContext();
   const [name, setName] = useState(existing?.name ?? '');
   const [value, setValue] = useState(existing?.value?.toString() ?? '');
   const [growth, setGrowth] = useState(existing?.annualGrowthRate?.toString() ?? '');
   const [isIlliquid, setIsIlliquid] = useState(existing?.isIlliquid ?? true);
+  const [currency, setCurrency] = useState<Currency>(existing?.currency ?? displayCurrency);
 
   const handleSave = () => {
     if (!name.trim() || !value.trim()) {
@@ -885,6 +998,7 @@ function BusinessForm({ existing, isEditing, store, saveAndSnapshot, onAction }:
       value: parseFloat(value),
       annualGrowthRate: growth ? parseFloat(growth) : undefined,
       isIlliquid,
+      currency,
     };
     if (isEditing && existing) {
       store.updateBusiness(existing.id, data);
@@ -919,14 +1033,19 @@ function BusinessForm({ existing, isEditing, store, saveAndSnapshot, onAction }:
           />
         </View>
       </View>
+      <FieldLabel label="Currency" />
+      <NativePicker selectedValue={currency} onValueChange={(v) => setCurrency(v as Currency)} items={CURRENCY_PICKER_ITEMS} />
+      <CurrencyConversionBanner nativeValue={parseFloat(value) || 0} assetCurrency={currency} />
     </View>
   );
 }
 
 function VehicleForm({ existing, isEditing, store, saveAndSnapshot, onAction }: FormProps & { existing: Vehicle | null }) {
+  const { displayCurrency } = useCurrencyContext();
   const [name, setName] = useState(existing?.name ?? '');
   const [currentValue, setCurrentValue] = useState(existing?.currentValue?.toString() ?? '');
   const [depRate, setDepRate] = useState(existing?.annualDepreciationRate?.toString() ?? '15');
+  const [currency, setCurrency] = useState<Currency>(existing?.currency ?? displayCurrency);
 
   const handleSave = () => {
     if (!name.trim() || !currentValue.trim()) {
@@ -938,6 +1057,7 @@ function VehicleForm({ existing, isEditing, store, saveAndSnapshot, onAction }: 
       name: name.trim(),
       currentValue: parseFloat(currentValue),
       annualDepreciationRate: depRate ? parseFloat(depRate) : 15,
+      currency,
     };
     if (isEditing && existing) {
       store.updateVehicle(existing.id, data);
@@ -958,6 +1078,9 @@ function VehicleForm({ existing, isEditing, store, saveAndSnapshot, onAction }: 
       <DarkInput value={currentValue} onChangeText={setCurrentValue} keyboardType="numeric" placeholder="0" />
       <FieldLabel label="Annual depreciation rate (%)" />
       <DarkInput value={depRate} onChangeText={setDepRate} keyboardType="numeric" placeholder="15" />
+      <FieldLabel label="Currency" />
+      <NativePicker selectedValue={currency} onValueChange={(v) => setCurrency(v as Currency)} items={CURRENCY_PICKER_ITEMS} />
+      <CurrencyConversionBanner nativeValue={parseFloat(currentValue) || 0} assetCurrency={currency} />
     </View>
   );
 }

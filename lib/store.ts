@@ -6,6 +6,7 @@ import {
   RetirementAccount, StockOption, Bond, Business, Vehicle,
   Settings, Snapshot, DEFAULT_SETTINGS,
 } from './types';
+import { DEFAULT_EXCHANGE_RATES } from './currency';
 import { generateDemoData } from './demo-data';
 
 export interface AppState {
@@ -22,6 +23,8 @@ export interface AppState {
   vehicles: Vehicle[];
   snapshots: Snapshot[];
   settings: Settings;
+  exchangeRates: Record<string, number>;
+  exchangeRatesUpdatedAt: string;
   onboardingComplete: boolean;
   isPro: boolean;
   purchasedThisSession: boolean;
@@ -73,6 +76,7 @@ export interface AppState {
   addSnapshot: (s: Snapshot) => void;
 
   setSettings: (s: Partial<Settings>) => void;
+  setExchangeRates: (rates: Record<string, number>) => void;
   setIsPro: (val: boolean, fromPurchase?: boolean) => void;
   completeOnboarding: () => void;
   loadDemoData: () => void;
@@ -95,6 +99,8 @@ export const useAppStore = create<AppState>()(
       vehicles: [],
       snapshots: [],
       settings: { ...DEFAULT_SETTINGS },
+      exchangeRates: { ...DEFAULT_EXCHANGE_RATES },
+      exchangeRatesUpdatedAt: '',
       onboardingComplete: false,
       isPro: false,
       purchasedThisSession: false,
@@ -195,6 +201,9 @@ export const useAppStore = create<AppState>()(
       setSettings: (updates) =>
         set((s) => ({ settings: { ...s.settings, ...updates } })),
 
+      setExchangeRates: (rates) =>
+        set({ exchangeRates: rates, exchangeRatesUpdatedAt: new Date().toISOString() }),
+
       setIsPro: (val, fromPurchase) => set({ isPro: val, ...(fromPurchase && val ? { purchasedThisSession: true } : {}) }),
 
       completeOnboarding: () => set({ onboardingComplete: true }),
@@ -240,7 +249,7 @@ export const useAppStore = create<AppState>()(
     {
       name: 'networth-app-storage',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 2,
+      version: 3,
       partialize: (state) => {
         const { purchasedThisSession, ...rest } = state;
         return rest;
@@ -260,6 +269,11 @@ export const useAppStore = create<AppState>()(
           if (!state.businesses) state.businesses = [];
           if (!state.vehicles) state.vehicles = [];
           if (state.settings.retirementGrowthPct == null) state.settings.retirementGrowthPct = 8;
+        }
+        if (version < 3) {
+          if (!state.settings.displayCurrency) state.settings.displayCurrency = 'USD';
+          if (!state.exchangeRates) state.exchangeRates = { ...DEFAULT_EXCHANGE_RATES };
+          if (!state.exchangeRatesUpdatedAt) state.exchangeRatesUpdatedAt = '';
         }
         return state;
       },

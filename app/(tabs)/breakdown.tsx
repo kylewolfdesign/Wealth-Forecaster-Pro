@@ -12,6 +12,8 @@ import { computeCurrentTotals, computeHoldingValue, computeRSUVesting } from '@/
 import { getInstantPrice } from '@/lib/price-service';
 import { useStockPrices } from '@/hooks/useStockPrices';
 import { formatCurrency, formatShares } from '@/lib/format';
+import { convertAmount } from '@/lib/currency';
+import type { Currency } from '@/lib/currency';
 import Card from '@/components/Card';
 import TickerLogo from '@/components/TickerLogo';
 import AnimatedEntry from '@/components/AnimatedEntry';
@@ -39,9 +41,14 @@ export default function BreakdownScreen() {
   const {
     holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate,
     retirementAccounts, stockOptions, bonds, businesses, vehicles,
+    settings, exchangeRates,
     deleteHolding, deleteRSUGrant, deleteCashAccount, deleteMortgage, deleteOtherAsset, deleteRealEstate,
     deleteRetirementAccount, deleteStockOption, deleteBond, deleteBusiness, deleteVehicle,
   } = useAppStore();
+  const displayCurrency = settings.displayCurrency ?? 'USD';
+  const fmt = (v: number) => formatCurrency(v, displayCurrency);
+  const cx = (amount: number, from?: Currency) =>
+    convertAmount(amount, from ?? 'USD', displayCurrency, exchangeRates);
 
   const { stockSymbols, typedSymbols } = useMemo(() => {
     const syms = new Set<string>();
@@ -76,8 +83,8 @@ export default function BreakdownScreen() {
   }, [refetchPrices]);
 
   const totals = useMemo(
-    () => computeCurrentTotals(holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate, retirementAccounts, stockOptions, bonds, businesses, vehicles),
-    [holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate, retirementAccounts, stockOptions, bonds, businesses, vehicles, livePrices]
+    () => computeCurrentTotals(holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate, retirementAccounts, stockOptions, bonds, businesses, vehicles, displayCurrency, exchangeRates),
+    [holdings, rsuGrants, cashAccounts, mortgages, otherAssets, realEstate, retirementAccounts, stockOptions, bonds, businesses, vehicles, livePrices, displayCurrency, exchangeRates]
   );
 
   const getCategoryTotal = (key: string): number => {
@@ -186,12 +193,12 @@ export default function BreakdownScreen() {
     } else if (catKey === 'cashSavings') {
       name = item.name;
       value = item.balance;
-      subtitle = `+${formatCurrency(item.monthlyContribution)}/mo`;
+      subtitle = `+${fmt(cx(item.monthlyContribution, item.currency))}/mo`;
     } else if (catKey === 'realEstate') {
       name = item.name;
       value = item.equity ?? item.currentValue;
       const parts: string[] = [];
-      if (item.currentValue) parts.push(`Total: $${item.currentValue.toLocaleString()}`);
+      if (item.currentValue) parts.push(`Total: ${fmt(cx(item.currentValue, item.currency))}`);
       if (item.annualGrowthRate) parts.push(`${item.annualGrowthRate}% growth/yr`);
       subtitle = parts.join(' · ');
     } else if (catKey === 'other') {
@@ -201,7 +208,7 @@ export default function BreakdownScreen() {
     } else if (catKey === 'retirement') {
       name = item.name;
       value = item.balance;
-      subtitle = `+${formatCurrency(item.monthlyContribution)}/mo`;
+      subtitle = `+${fmt(cx(item.monthlyContribution, item.currency))}/mo`;
     } else if (catKey === 'stockOptions') {
       name = `${item.symbol} ${item.optionType?.toUpperCase() ?? ''}`;
       const price = item.currentPrice ?? getInstantPrice(item.symbol, 'stock');
@@ -239,7 +246,7 @@ export default function BreakdownScreen() {
           {!!subtitle && <Text style={styles.itemSubtitle}>{subtitle}</Text>}
         </View>
         <View style={styles.itemRight}>
-          <Text style={styles.itemValue}>{formatCurrency(value)}</Text>
+          <Text style={styles.itemValue}>{fmt(cx(value, item.currency))}</Text>
           <Pressable
             onPress={() => handleDelete(catKey, item.id, name)}
             hitSlop={8}
@@ -268,7 +275,7 @@ export default function BreakdownScreen() {
     >
       <AnimatedEntry delay={0} duration={350}>
         <Text style={styles.pageTitle}>Breakdown</Text>
-        <Text style={styles.netWorthSub}>Net Worth: {formatCurrency(totals.netWorth)}</Text>
+        <Text style={styles.netWorthSub}>Net Worth: {fmt(totals.netWorth)}</Text>
       </AnimatedEntry>
 
       {sortedCategories.map((cat, catIndex) => {
@@ -297,7 +304,7 @@ export default function BreakdownScreen() {
               </View>
               <View style={styles.categoryRight}>
                 <Text style={styles.categoryTotal}>
-                  {formatCurrency(total)}
+                  {fmt(total)}
                 </Text>
                 <Ionicons
                   name={isOpen ? 'chevron-up' : 'chevron-down'}

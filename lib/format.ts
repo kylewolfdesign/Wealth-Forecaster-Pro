@@ -1,26 +1,30 @@
-export function formatCurrency(value: number): string {
+import { Currency, getCurrencySymbol } from './currency';
+
+export function formatCurrency(value: number, currency: Currency = 'USD'): string {
+  const symbol = getCurrencySymbol(currency);
   const absValue = Math.abs(value);
   const sign = value < 0 ? '-' : '';
 
   if (absValue >= 1_000_000_000) {
-    return `${sign}$${(absValue / 1_000_000_000).toFixed(2)}B`;
+    return `${sign}${symbol}${(absValue / 1_000_000_000).toFixed(2)}B`;
   }
   if (absValue >= 1_000_000) {
-    return `${sign}$${(absValue / 1_000_000).toFixed(2)}M`;
+    return `${sign}${symbol}${(absValue / 1_000_000).toFixed(2)}M`;
   }
   if (absValue >= 10_000) {
-    return `${sign}$${(absValue / 1_000).toFixed(1)}K`;
+    return `${sign}${symbol}${(absValue / 1_000).toFixed(1)}K`;
   }
 
-  return `${sign}$${absValue.toLocaleString('en-US', {
+  return `${sign}${symbol}${absValue.toLocaleString('en-US', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   })}`;
 }
 
-export function formatCurrencyFull(value: number): string {
+export function formatCurrencyFull(value: number, currency: Currency = 'USD'): string {
+  const symbol = getCurrencySymbol(currency);
   const sign = value < 0 ? '-' : '';
-  return `${sign}$${Math.abs(value).toLocaleString('en-US', {
+  return `${sign}${symbol}${Math.abs(value).toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;

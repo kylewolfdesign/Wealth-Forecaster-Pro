@@ -18,6 +18,8 @@ import TickerInput from '@/components/TickerInput';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
 import type { Holding, RSUGrant, CashAccount, Mortgage, OtherAsset } from '@/lib/types';
+import { CURRENCIES, convertAmount } from '@/lib/currency';
+import type { Currency } from '@/lib/currency';
 
 function OnboardingGraphicPrivacy() {
   const pulse = useRef(new Animated.Value(1)).current;
@@ -252,6 +254,7 @@ export default function OnboardingScreen() {
   const [introPage, setIntroPage] = useState(0);
   const [selectedCategories, setSelectedCategories] = useState<Set<CategoryKey>>(new Set());
   const [expandedCards, setExpandedCards] = useState<Set<CategoryKey>>(new Set());
+  const [displayCurrency, setDisplayCurrency] = useState<Currency>(store.settings.displayCurrency ?? 'USD');
   const store = useAppStore();
   const scrollRef = useRef<FlatList>(null);
 
@@ -297,6 +300,7 @@ export default function OnboardingScreen() {
   const handleCategoriesContinue = () => {
     if (selectedCategories.size === 0) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    store.setSettings({ displayCurrency });
     store.clearAllData();
     setExpandedCards(new Set(selectedCategories));
     setPhase('setup');
@@ -338,30 +342,35 @@ export default function OnboardingScreen() {
     router.replace('/(tabs)');
   };
 
+  const rates = store.exchangeRates;
+  const fmt = (v: number) => formatCurrency(v, displayCurrency);
+
   type CardItem = { id: string; name: string; value: string; editType: string };
   const getCardInfo = (catKey: CategoryKey): { label: string; icon: keyof typeof Ionicons.glyphMap; items: CardItem[]; value: string } => {
+    const cx = (amount: number, from?: Currency) =>
+      convertAmount(amount, from ?? 'USD', displayCurrency, rates);
     switch (catKey) {
       case 'investments': {
         const items = store.holdings.filter(h => h.type === 'stock');
-        return { label: 'Stocks & ETFs', icon: 'trending-up', items: items.map(h => ({ id: h.id, name: h.symbol.toUpperCase(), value: formatCurrency((h.manualPrice || 0) * h.shares), editType: 'holding' })), value: formatCurrency(items.reduce((s, h) => s + (h.manualPrice || 0) * h.shares, 0)) };
+        return { label: 'Stocks & ETFs', icon: 'trending-up', items: items.map(h => ({ id: h.id, name: h.symbol.toUpperCase(), value: fmt(cx((h.manualPrice || 0) * h.shares, h.currency)), editType: 'holding' })), value: fmt(items.reduce((s, h) => s + cx((h.manualPrice || 0) * h.shares, h.currency), 0)) };
       }
       case 'crypto': {
         const items = store.holdings.filter(h => h.type === 'crypto');
-        return { label: 'Crypto', icon: 'logo-bitcoin', items: items.map(h => ({ id: h.id, name: h.symbol.toUpperCase(), value: formatCurrency((h.manualPrice || 0) * h.shares), editType: 'holding' })), value: formatCurrency(items.reduce((s, h) => s + (h.manualPrice || 0) * h.shares, 0)) };
+        return { label: 'Crypto', icon: 'logo-bitcoin', items: items.map(h => ({ id: h.id, name: h.symbol.toUpperCase(), value: fmt(cx((h.manualPrice || 0) * h.shares, h.currency)), editType: 'holding' })), value: fmt(items.reduce((s, h) => s + cx((h.manualPrice || 0) * h.shares, h.currency), 0)) };
       }
-      case 'rsus': return { label: 'RSUs', icon: 'layers', items: store.rsuGrants.map(r => ({ id: r.id, name: r.symbol.toUpperCase(), value: formatCurrency(r.totalShares * 0), editType: 'rsu' })), value: formatCurrency(0) };
-      case 'retirement': return { label: 'Retirement', icon: 'umbrella', items: store.retirementAccounts.map(r => ({ id: r.id, name: r.name, value: formatCurrency(r.balance), editType: 'retirement' })), value: formatCurrency(store.retirementAccounts.reduce((s, r) => s + r.balance, 0)) };
-      case 'stockOptions': return { label: 'Stock Options', icon: 'key', items: store.stockOptions.map(o => ({ id: o.id, name: `${o.symbol} ${o.optionType?.toUpperCase() ?? ''}`, value: formatCurrency(Math.max((o.currentPrice ?? 0) - o.strikePrice, 0) * (o.vestedOptions ?? 0)), editType: 'stockOption' })), value: formatCurrency(store.stockOptions.reduce((s, o) => s + Math.max((o.currentPrice ?? 0) - o.strikePrice, 0) * (o.vestedOptions ?? 0), 0)) };
-      case 'bonds': return { label: 'Bonds', icon: 'ribbon', items: store.bonds.map(b => ({ id: b.id, name: b.name, value: formatCurrency(b.purchasePrice ?? b.faceValue), editType: 'bond' })), value: formatCurrency(store.bonds.reduce((s, b) => s + (b.purchasePrice ?? b.faceValue), 0)) };
-      case 'business': return { label: 'Business / PE', icon: 'briefcase', items: store.businesses.map(b => ({ id: b.id, name: b.name, value: formatCurrency(b.value), editType: 'business' })), value: formatCurrency(store.businesses.reduce((s, b) => s + b.value, 0)) };
-      case 'vehicles': return { label: 'Vehicles', icon: 'car', items: store.vehicles.map(v => ({ id: v.id, name: v.name, value: formatCurrency(v.currentValue), editType: 'vehicle' })), value: formatCurrency(store.vehicles.reduce((s, v) => s + v.currentValue, 0)) };
-      case 'other': return { label: 'Assets', icon: 'diamond', items: store.otherAssets.map(a => ({ id: a.id, name: a.name, value: formatCurrency(a.value), editType: 'other' })), value: formatCurrency(store.otherAssets.reduce((s, a) => s + a.value, 0)) };
-      case 'realEstate': return { label: 'Real Estate', icon: 'business', items: store.realEstate.map(r => ({ id: r.id, name: r.name, value: formatCurrency(r.equity ?? r.currentValue), editType: 'realEstate' })), value: formatCurrency(store.realEstate.reduce((s, r) => s + (r.equity ?? r.currentValue), 0)) };
+      case 'rsus': return { label: 'RSUs', icon: 'layers', items: store.rsuGrants.map(r => ({ id: r.id, name: r.symbol.toUpperCase(), value: fmt(0), editType: 'rsu' })), value: fmt(0) };
+      case 'retirement': return { label: 'Retirement', icon: 'umbrella', items: store.retirementAccounts.map(r => ({ id: r.id, name: r.name, value: fmt(cx(r.balance, r.currency)), editType: 'retirement' })), value: fmt(store.retirementAccounts.reduce((s, r) => s + cx(r.balance, r.currency), 0)) };
+      case 'stockOptions': return { label: 'Stock Options', icon: 'key', items: store.stockOptions.map(o => ({ id: o.id, name: `${o.symbol} ${o.optionType?.toUpperCase() ?? ''}`, value: fmt(cx(Math.max((o.currentPrice ?? 0) - o.strikePrice, 0) * (o.vestedOptions ?? 0), o.currency)), editType: 'stockOption' })), value: fmt(store.stockOptions.reduce((s, o) => s + cx(Math.max((o.currentPrice ?? 0) - o.strikePrice, 0) * (o.vestedOptions ?? 0), o.currency), 0)) };
+      case 'bonds': return { label: 'Bonds', icon: 'ribbon', items: store.bonds.map(b => ({ id: b.id, name: b.name, value: fmt(cx(b.purchasePrice ?? b.faceValue, b.currency)), editType: 'bond' })), value: fmt(store.bonds.reduce((s, b) => s + cx(b.purchasePrice ?? b.faceValue, b.currency), 0)) };
+      case 'business': return { label: 'Business / PE', icon: 'briefcase', items: store.businesses.map(b => ({ id: b.id, name: b.name, value: fmt(cx(b.value, b.currency)), editType: 'business' })), value: fmt(store.businesses.reduce((s, b) => s + cx(b.value, b.currency), 0)) };
+      case 'vehicles': return { label: 'Vehicles', icon: 'car', items: store.vehicles.map(v => ({ id: v.id, name: v.name, value: fmt(cx(v.currentValue, v.currency)), editType: 'vehicle' })), value: fmt(store.vehicles.reduce((s, v) => s + cx(v.currentValue, v.currency), 0)) };
+      case 'other': return { label: 'Assets', icon: 'diamond', items: store.otherAssets.map(a => ({ id: a.id, name: a.name, value: fmt(cx(a.value, a.currency)), editType: 'other' })), value: fmt(store.otherAssets.reduce((s, a) => s + cx(a.value, a.currency), 0)) };
+      case 'realEstate': return { label: 'Real Estate', icon: 'business', items: store.realEstate.map(r => ({ id: r.id, name: r.name, value: fmt(cx(r.equity ?? r.currentValue, r.currency)), editType: 'realEstate' })), value: fmt(store.realEstate.reduce((s, r) => s + cx(r.equity ?? r.currentValue, r.currency), 0)) };
       case 'cashSavings': {
         const items = store.cashAccounts;
-        return { label: 'Cash / Savings', icon: 'wallet', items: items.map(c => ({ id: c.id, name: c.name, value: formatCurrency(c.balance), editType: 'cash' })), value: formatCurrency(items.reduce((s, c) => s + c.balance, 0)) };
+        return { label: 'Cash / Savings', icon: 'wallet', items: items.map(c => ({ id: c.id, name: c.name, value: fmt(cx(c.balance, c.currency)), editType: 'cash' })), value: fmt(items.reduce((s, c) => s + cx(c.balance, c.currency), 0)) };
       }
-      default: return { label: '', icon: 'help', items: [], value: '$0' };
+      default: return { label: '', icon: 'help', items: [], value: `${displayCurrency}0` };
     }
   };
 
@@ -462,6 +471,29 @@ export default function OnboardingScreen() {
                 </Pressable>
               );
             })}
+          </View>
+
+          <View style={catStyles.currencySection}>
+            <Text style={catStyles.currencyLabel}>Display currency</Text>
+            <View style={catStyles.currencyChips}>
+              {CURRENCIES.map((c) => {
+                const isSelected = displayCurrency === c.code;
+                return (
+                  <Pressable
+                    key={c.code}
+                    style={[catStyles.currencyChip, isSelected && catStyles.currencyChipSelected]}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setDisplayCurrency(c.code);
+                    }}
+                  >
+                    <Text style={[catStyles.currencyChipText, isSelected && catStyles.currencyChipTextSelected]}>
+                      {c.symbol} {c.code}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
         </View>
 
@@ -891,6 +923,42 @@ const catStyles = StyleSheet.create({
     fontFamily: fontFamily.regular,
     fontSize: fontSize.sm,
     color: Colors.textTertiary,
+  },
+  currencySection: {
+    gap: 10,
+    marginTop: 4,
+  },
+  currencyLabel: {
+    fontFamily: fontFamily.semibold,
+    fontSize: 13,
+    color: Colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  currencyChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  currencyChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  currencyChipSelected: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryLight,
+  },
+  currencyChipText: {
+    fontFamily: fontFamily.medium,
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  currencyChipTextSelected: {
+    color: Colors.primary,
   },
 });
 

@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Platform,
-  Pressable, Alert, TextInput, ActivityIndicator, Linking,
+  Pressable, Alert, TextInput, ActivityIndicator, Linking, Modal,
 } from 'react-native';
 import { PRIVACY_POLICY_URL, TERMS_OF_USE_URL } from '@/constants/config';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Constants from 'expo-constants';
+import { Picker } from '@react-native-picker/picker';
 import { useAppStore } from '@/lib/store';
 import { useAuth } from '@/lib/auth-context';
+import { CURRENCIES, CURRENCY_PICKER_ITEMS, fetchExchangeRates } from '@/lib/currency';
+import type { Currency } from '@/lib/currency';
 import Card from '@/components/Card';
 import WealthChart from '@/components/WealthChart';
 import AnimatedEntry from '@/components/AnimatedEntry';
@@ -104,13 +107,104 @@ function ChangePasswordForm() {
   );
 }
 
+function CurrencyPickerModal({ value, onSelect, onClose }: {
+  value: Currency;
+  onSelect: (c: Currency) => void;
+  onClose: () => void;
+}) {
+  const [draft, setDraft] = useState<Currency>(value);
+
+  if (Platform.OS === 'web') {
+    return (
+      <View style={styles.currencyModalOverlay}>
+        <View style={styles.currencyModalContent}>
+          <View style={styles.currencyModalHeader}>
+            <Pressable onPress={onClose}>
+              <Text style={styles.currencyModalDone}>Done</Text>
+            </Pressable>
+          </View>
+          {/* @ts-ignore */}
+          <select
+            value={draft}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+              setDraft(e.target.value as Currency);
+              onSelect(e.target.value as Currency);
+            }}
+            style={{
+              backgroundColor: Colors.surface,
+              color: Colors.text,
+              border: `1px solid ${Colors.border}`,
+              borderRadius: 8,
+              padding: '12px 16px',
+              fontSize: 16,
+              width: '100%',
+              margin: '16px',
+            }}
+          >
+            {CURRENCIES.map(c => (
+              <option key={c.code} value={c.code}>{c.symbol} {c.code} — {c.name}</option>
+            ))}
+          </select>
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={styles.currencyModalOverlay} onPress={onClose}>
+        <View style={styles.currencyModalContent}>
+          <View style={styles.currencyModalHeader}>
+            <Pressable onPress={() => { onSelect(draft); onClose(); }}>
+              <Text style={styles.currencyModalDone}>Done</Text>
+            </Pressable>
+          </View>
+          <Picker
+            selectedValue={draft}
+            onValueChange={(val) => setDraft(val as Currency)}
+            style={{ backgroundColor: Colors.surface }}
+            itemStyle={{ color: Colors.text, fontSize: 18 }}
+          >
+            {CURRENCIES.map(c => (
+              <Picker.Item key={c.code} label={`${c.symbol} ${c.code} — ${c.name}`} value={c.code} />
+            ))}
+          </Picker>
+        </View>
+      </Pressable>
+    </Modal>
+  );
+}
+
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
-  const { loadDemoData, clearAllData, isPro } = useAppStore();
+  const { loadDemoData, clearAllData, isPro, settings, setSettings, setExchangeRates, exchangeRatesUpdatedAt } = useAppStore();
   const { user, isAuthenticated, logout } = useAuth();
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [showPurchaseSuccess, setShowPurchaseSuccess] = useState(false);
+  const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
+  const [refreshingRates, setRefreshingRates] = useState(false);
+
+  const handleCurrencyChange = (currency: Currency) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSettings({ displayCurrency: currency });
+  };
+
+  const handleRefreshRates = async () => {
+    setRefreshingRates(true);
+    try {
+      const rates = await fetchExchangeRates();
+      setExchangeRates(rates);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch {
+      Alert.alert('Error', 'Could not refresh exchange rates. Using cached rates.');
+    } finally {
+      setRefreshingRates(false);
+    }
+  };
+
+  const displayCurrency = settings.displayCurrency ?? 'USD';
+  const displayCurrencyInfo = CURRENCIES.find(c => c.code === displayCurrency);
 
   const handleLoadDemo = () => {
     if (!isPro) {
@@ -245,10 +339,10 @@ export default function SettingsScreen() {
 
       {isAppleCodeRedemptionAvailable() && (
         <>
-          <AnimatedEntry delay={225} duration={300}>
+          <AnimatedEntry delay={200} duration={300}>
             <Text style={styles.sectionTitle}>Subscription</Text>
           </AnimatedEntry>
-          <AnimatedEntry delay={225} duration={300}>
+          <AnimatedEntry delay={200} duration={300}>
             <Card style={styles.settingsCard}>
               <Pressable
                 style={styles.actionRow}
@@ -261,6 +355,45 @@ export default function SettingsScreen() {
             </Card>
           </AnimatedEntry>
         </>
+      )}
+
+      <AnimatedEntry delay={225} duration={300}>
+        <Text style={styles.sectionTitle}>Preferences</Text>
+      </AnimatedEntry>
+      <AnimatedEntry delay={225} duration={300}>
+        <Card style={styles.settingsCard}>
+          <Pressable style={styles.actionRow} onPress={() => setShowCurrencyPicker(true)}>
+            <Ionicons name="globe-outline" size={20} color={Colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.actionText}>Display Currency</Text>
+            </View>
+            <Text style={styles.currencyValue}>
+              {displayCurrencyInfo?.symbol} {displayCurrency}
+            </Text>
+            <Ionicons name="chevron-forward" size={16} color={Colors.textTertiary} />
+          </Pressable>
+          <View style={styles.rowDivider} />
+          <Pressable style={styles.actionRow} onPress={handleRefreshRates} disabled={refreshingRates}>
+            <Ionicons name="refresh-outline" size={20} color={Colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.actionText}>Refresh Exchange Rates</Text>
+              {!!exchangeRatesUpdatedAt && (
+                <Text style={styles.ratesTimestamp}>
+                  Updated {new Date(exchangeRatesUpdatedAt).toLocaleString()}
+                </Text>
+              )}
+            </View>
+            {refreshingRates && <ActivityIndicator size="small" color={Colors.primary} />}
+          </Pressable>
+        </Card>
+      </AnimatedEntry>
+
+      {showCurrencyPicker && (
+        <CurrencyPickerModal
+          value={displayCurrency}
+          onSelect={handleCurrencyChange}
+          onClose={() => setShowCurrencyPicker(false)}
+        />
       )}
 
       <AnimatedEntry delay={250} duration={300}>
@@ -458,5 +591,40 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: Colors.primary,
     letterSpacing: 0.5,
+  },
+  currencyValue: {
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.md,
+    color: Colors.text,
+    marginRight: spacing.xs,
+  },
+  ratesTimestamp: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.xs,
+    color: Colors.textTertiary,
+    marginTop: 2,
+  },
+  currencyModalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  currencyModalContent: {
+    backgroundColor: Colors.surface,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+  },
+  currencyModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.border,
+  },
+  currencyModalDone: {
+    fontFamily: fontFamily.semibold,
+    fontSize: 17,
+    color: Colors.primary,
   },
 });

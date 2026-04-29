@@ -21,7 +21,9 @@ type TimeRange = '30d' | '90d' | '365d' | 'all';
 export default function HistoryScreen() {
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
-  const { snapshots, holdings, rsuGrants } = useAppStore();
+  const { snapshots, holdings, rsuGrants, settings } = useAppStore();
+  const displayCurrency = settings.displayCurrency ?? 'USD';
+  const fmt = (v: number) => formatCurrency(v, displayCurrency);
   const [range, setRange] = useState<TimeRange>('30d');
 
   const [focusKey, setFocusKey] = useState(0);
@@ -101,7 +103,7 @@ export default function HistoryScreen() {
             </View>
           )}
         </View>
-        <Text style={styles.snapshotValue}>{formatCurrency(item.totals.netWorth)}</Text>
+        <Text style={styles.snapshotValue}>{fmt(item.totals.netWorth)}</Text>
       </View>
     );
   };
@@ -140,7 +142,7 @@ export default function HistoryScreen() {
                 height={180}
                 color={Colors.primary}
                 showGrid
-                formatY={(v) => formatCurrency(v)}
+                formatY={(v) => fmt(v)}
                 animationKey={focusKey}
               />
             </Card>

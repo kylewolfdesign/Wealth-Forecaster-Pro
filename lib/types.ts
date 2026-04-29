@@ -1,3 +1,6 @@
+import type { Currency } from './currency';
+export type { Currency };
+
 export interface Holding {
   id: string;
   type: 'stock' | 'crypto';
@@ -8,6 +11,7 @@ export interface Holding {
   growthOverride?: number;
   recurringShares?: number;
   recurringCadence?: 'monthly' | 'quarterly' | 'yearly';
+  currency?: Currency;
 }
 
 export interface RSUGrant {
@@ -22,6 +26,7 @@ export interface RSUGrant {
     frequency: 'monthly' | 'quarterly' | 'yearly';
   };
   growthOverride?: number;
+  currency?: Currency;
 }
 
 export interface CashAccount {
@@ -31,6 +36,7 @@ export interface CashAccount {
   balance: number;
   monthlyContribution: number;
   annualInterestRate?: number;
+  currency?: Currency;
 }
 
 export interface Mortgage {
@@ -40,6 +46,7 @@ export interface Mortgage {
   annualInterestRate: number;
   monthlyPayment: number;
   annualPaymentIncreasePct?: number;
+  currency?: Currency;
 }
 
 export interface OtherAsset {
@@ -47,6 +54,7 @@ export interface OtherAsset {
   name: string;
   value: number;
   annualGrowthRate?: number;
+  currency?: Currency;
 }
 
 export interface RealEstate {
@@ -58,6 +66,7 @@ export interface RealEstate {
   additionalEquity?: number;
   equityCadence?: 'monthly' | 'quarterly' | 'yearly';
   mortgageId?: string;
+  currency?: Currency;
 }
 
 export interface RetirementAccount {
@@ -68,6 +77,7 @@ export interface RetirementAccount {
   monthlyContribution: number;
   employerMatchPct?: number;
   employerMatchLimit?: number;
+  currency?: Currency;
 }
 
 export interface StockOption {
@@ -85,6 +95,7 @@ export interface StockOption {
     frequency: 'monthly' | 'quarterly' | 'yearly';
   };
   expirationDate?: string;
+  currency?: Currency;
 }
 
 export interface Bond {
@@ -94,6 +105,7 @@ export interface Bond {
   couponRate: number;
   maturityDate: string;
   purchasePrice?: number;
+  currency?: Currency;
 }
 
 export interface Business {
@@ -102,6 +114,7 @@ export interface Business {
   value: number;
   annualGrowthRate?: number;
   isIlliquid?: boolean;
+  currency?: Currency;
 }
 
 export interface Vehicle {
@@ -109,6 +122,7 @@ export interface Vehicle {
   name: string;
   currentValue: number;
   annualDepreciationRate?: number;
+  currency?: Currency;
 }
 
 export interface Settings {
@@ -119,6 +133,7 @@ export interface Settings {
   retirementGrowthPct: number;
   inflationPct: number;
   showRealReturns: boolean;
+  displayCurrency: Currency;
 }
 
 export interface SnapshotTotals {
@@ -178,4 +193,5 @@ export const DEFAULT_SETTINGS: Settings = {
   retirementGrowthPct: 8,
   inflationPct: 3,
   showRealReturns: false,
+  displayCurrency: 'USD',
 };
