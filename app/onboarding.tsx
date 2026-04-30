@@ -515,10 +515,12 @@ export default function OnboardingScreen() {
                 </Pressable>
                 <Modal visible={showCurrencyPicker} transparent animationType="slide" onRequestClose={() => setShowCurrencyPicker(false)}>
                   <View style={catStyles.pickerOverlay}>
-                    <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowCurrencyPicker(false)} />
                     <View style={catStyles.pickerSheet}>
                       <View style={catStyles.pickerHeader}>
-                        <Pressable onPress={() => { setDisplayCurrency(pickerDraft); setShowCurrencyPicker(false); }}>
+                        <Pressable onPress={() => setShowCurrencyPicker(false)} hitSlop={12}>
+                          <Text style={catStyles.pickerCancel}>Cancel</Text>
+                        </Pressable>
+                        <Pressable onPress={() => { setDisplayCurrency(pickerDraft); setShowCurrencyPicker(false); }} hitSlop={12}>
                           <Text style={catStyles.pickerDone}>Select</Text>
                         </Pressable>
                       </View>
@@ -1007,11 +1009,16 @@ const catStyles = StyleSheet.create({
   },
   pickerHeader: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: Colors.border,
+  },
+  pickerCancel: {
+    fontFamily: fontFamily.regular,
+    fontSize: 17,
+    color: Colors.textSecondary,
   },
   pickerDone: {
     fontFamily: fontFamily.semibold,

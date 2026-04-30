@@ -150,10 +150,12 @@ function CurrencyPickerModal({ value, onSelect, onClose }: {
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.currencyModalOverlay}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <View style={styles.currencyModalContent}>
           <View style={styles.currencyModalHeader}>
-            <Pressable onPress={() => { onSelect(draft); onClose(); }}>
+            <Pressable onPress={onClose} hitSlop={12}>
+              <Text style={styles.currencyModalCancel}>Cancel</Text>
+            </Pressable>
+            <Pressable onPress={() => { onSelect(draft); onClose(); }} hitSlop={12}>
               <Text style={styles.currencyModalDone}>Select</Text>
             </Pressable>
           </View>
@@ -614,11 +616,16 @@ const styles = StyleSheet.create({
   },
   currencyModalHeader: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: Colors.border,
+  },
+  currencyModalCancel: {
+    fontFamily: fontFamily.regular,
+    fontSize: 17,
+    color: Colors.textSecondary,
   },
   currencyModalDone: {
     fontFamily: fontFamily.semibold,

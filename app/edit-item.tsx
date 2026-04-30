@@ -1187,10 +1187,12 @@ function NativePicker({ selectedValue, onValueChange, items }: {
         onRequestClose={() => setShowPicker(false)}
       >
         <View style={s.pickerModalOverlay}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowPicker(false)} />
           <View style={s.pickerModalContent}>
             <View style={s.pickerModalHeader}>
-              <Pressable onPress={() => { onValueChange(draft); setShowPicker(false); }}>
+              <Pressable onPress={() => setShowPicker(false)} hitSlop={12}>
+                <Text style={s.pickerModalCancel}>Cancel</Text>
+              </Pressable>
+              <Pressable onPress={() => { onValueChange(draft); setShowPicker(false); }} hitSlop={12}>
                 <Text style={s.pickerModalDone}>Select</Text>
               </Pressable>
             </View>
@@ -1314,11 +1316,16 @@ const s = StyleSheet.create({
   },
   pickerModalHeader: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: BORDER,
+  },
+  pickerModalCancel: {
+    fontFamily: fontFamily.regular,
+    fontSize: 17,
+    color: TEXT_SECONDARY,
   },
   pickerModalDone: {
     fontFamily: fontFamily.semibold,
