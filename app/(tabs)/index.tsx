@@ -610,7 +610,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.sm,
     marginTop: spacing.lg + 20,
-    marginBottom: 32,
+    marginBottom: 24,
     paddingHorizontal: spacing.md,
   },
   priceTimestamp: {
