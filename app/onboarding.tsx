@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, Pressable, TextInput, FlatList,
-  KeyboardAvoidingView, Platform, ScrollView,
+  KeyboardAvoidingView, Platform, ScrollView, Modal,
   Animated, useWindowDimensions,
 } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -256,6 +257,7 @@ export default function OnboardingScreen() {
   const [expandedCards, setExpandedCards] = useState<Set<CategoryKey>>(new Set());
   const store = useAppStore();
   const [displayCurrency, setDisplayCurrency] = useState<Currency>(store.settings.displayCurrency ?? 'USD');
+  const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
   const scrollRef = useRef<FlatList>(null);
 
   const topInset = Platform.OS === 'web' ? 67 : insets.top;
@@ -475,25 +477,63 @@ export default function OnboardingScreen() {
 
           <View style={catStyles.currencySection}>
             <Text style={catStyles.currencyLabel}>Display currency</Text>
-            <View style={catStyles.currencyChips}>
-              {CURRENCIES.map((c) => {
-                const isSelected = displayCurrency === c.code;
-                return (
-                  <Pressable
-                    key={c.code}
-                    style={[catStyles.currencyChip, isSelected && catStyles.currencyChipSelected]}
-                    onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      setDisplayCurrency(c.code);
-                    }}
-                  >
-                    <Text style={[catStyles.currencyChipText, isSelected && catStyles.currencyChipTextSelected]}>
-                      {c.symbol} {c.code}
-                    </Text>
+            {Platform.OS === 'web' ? (
+              // @ts-ignore
+              <select
+                value={displayCurrency}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setDisplayCurrency(e.target.value as Currency)}
+                style={{
+                  backgroundColor: Colors.surface,
+                  color: Colors.text,
+                  border: `1px solid ${Colors.border}`,
+                  borderRadius: 10,
+                  padding: '12px 16px',
+                  fontSize: 15,
+                  width: '100%',
+                  fontFamily: 'Inter_400Regular, sans-serif',
+                }}
+              >
+                {CURRENCIES.map(c => (
+                  <option key={c.code} value={c.code}>{c.symbol} {c.code} — {c.name}</option>
+                ))}
+              </select>
+            ) : (
+              <>
+                <Pressable
+                  style={catStyles.currencyDropdown}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setShowCurrencyPicker(true);
+                  }}
+                >
+                  <Text style={catStyles.currencyDropdownText}>
+                    {(() => { const c = CURRENCIES.find(c => c.code === displayCurrency); return c ? `${c.symbol} ${c.code} — ${c.name}` : displayCurrency; })()}
+                  </Text>
+                  <Ionicons name="chevron-down" size={18} color={Colors.textSecondary} />
+                </Pressable>
+                <Modal visible={showCurrencyPicker} transparent animationType="slide" onRequestClose={() => setShowCurrencyPicker(false)}>
+                  <Pressable style={catStyles.pickerOverlay} onPress={() => setShowCurrencyPicker(false)}>
+                    <View style={catStyles.pickerSheet}>
+                      <View style={catStyles.pickerHeader}>
+                        <Pressable onPress={() => setShowCurrencyPicker(false)}>
+                          <Text style={catStyles.pickerDone}>Done</Text>
+                        </Pressable>
+                      </View>
+                      <Picker
+                        selectedValue={displayCurrency}
+                        onValueChange={(val) => setDisplayCurrency(val as Currency)}
+                        style={{ backgroundColor: Colors.surfaceFlat }}
+                        itemStyle={{ color: Colors.text, fontSize: 18 }}
+                      >
+                        {CURRENCIES.map(c => (
+                          <Picker.Item key={c.code} label={`${c.symbol} ${c.code} — ${c.name}`} value={c.code} />
+                        ))}
+                      </Picker>
+                    </View>
                   </Pressable>
-                );
-              })}
-            </View>
+                </Modal>
+              </>
+            )}
           </View>
         </View>
 
@@ -935,29 +975,44 @@ const catStyles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.4,
   },
-  currencyChips: {
+  currencyDropdown: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  currencyChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: Colors.surface,
     borderWidth: 1,
-    borderColor: 'transparent',
+    borderColor: Colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
   },
-  currencyChipSelected: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primaryLight,
-  },
-  currencyChipText: {
+  currencyDropdownText: {
     fontFamily: fontFamily.medium,
-    fontSize: 12,
-    color: Colors.textSecondary,
+    fontSize: 15,
+    color: Colors.text,
+    flex: 1,
   },
-  currencyChipTextSelected: {
+  pickerOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  pickerSheet: {
+    backgroundColor: Colors.surfaceFlat,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+  },
+  pickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.border,
+  },
+  pickerDone: {
+    fontFamily: fontFamily.semibold,
+    fontSize: 17,
     color: Colors.primary,
   },
 });
