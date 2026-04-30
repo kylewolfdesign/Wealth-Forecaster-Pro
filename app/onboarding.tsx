@@ -258,6 +258,7 @@ export default function OnboardingScreen() {
   const store = useAppStore();
   const [displayCurrency, setDisplayCurrency] = useState<Currency>(store.settings.displayCurrency ?? 'USD');
   const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
+  const [pickerDraft, setPickerDraft] = useState<Currency>(displayCurrency);
   const scrollRef = useRef<FlatList>(null);
 
   const topInset = Platform.OS === 'web' ? 67 : insets.top;
@@ -503,6 +504,7 @@ export default function OnboardingScreen() {
                   style={catStyles.currencyDropdown}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setPickerDraft(displayCurrency);
                     setShowCurrencyPicker(true);
                   }}
                 >
@@ -512,16 +514,17 @@ export default function OnboardingScreen() {
                   <Ionicons name="chevron-down" size={18} color={Colors.textSecondary} />
                 </Pressable>
                 <Modal visible={showCurrencyPicker} transparent animationType="slide" onRequestClose={() => setShowCurrencyPicker(false)}>
-                  <Pressable style={catStyles.pickerOverlay} onPress={() => setShowCurrencyPicker(false)}>
+                  <View style={catStyles.pickerOverlay}>
+                    <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowCurrencyPicker(false)} />
                     <View style={catStyles.pickerSheet}>
                       <View style={catStyles.pickerHeader}>
-                        <Pressable onPress={() => setShowCurrencyPicker(false)}>
-                          <Text style={catStyles.pickerDone}>Done</Text>
+                        <Pressable onPress={() => { setDisplayCurrency(pickerDraft); setShowCurrencyPicker(false); }}>
+                          <Text style={catStyles.pickerDone}>Select</Text>
                         </Pressable>
                       </View>
                       <Picker
-                        selectedValue={displayCurrency}
-                        onValueChange={(val) => setDisplayCurrency(val as Currency)}
+                        selectedValue={pickerDraft}
+                        onValueChange={(val) => setPickerDraft(val as Currency)}
                         style={{ backgroundColor: Colors.surfaceFlat }}
                         itemStyle={{ color: Colors.text, fontSize: 18 }}
                       >
@@ -530,7 +533,7 @@ export default function OnboardingScreen() {
                         ))}
                       </Picker>
                     </View>
-                  </Pressable>
+                  </View>
                 </Modal>
               </>
             )}

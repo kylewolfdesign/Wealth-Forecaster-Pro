@@ -112,19 +112,21 @@ function CurrencyPickerModal({ value, onSelect, onClose }: {
   onSelect: (c: Currency) => void;
   onClose: () => void;
 }) {
+  const [draft, setDraft] = useState<Currency>(value);
+
   if (Platform.OS === 'web') {
     return (
       <View style={styles.currencyModalOverlay}>
         <View style={styles.currencyModalContent}>
           <View style={styles.currencyModalHeader}>
-            <Pressable onPress={onClose}>
-              <Text style={styles.currencyModalDone}>Done</Text>
+            <Pressable onPress={() => { onSelect(draft); onClose(); }}>
+              <Text style={styles.currencyModalDone}>Select</Text>
             </Pressable>
           </View>
           {/* @ts-ignore */}
           <select
-            value={value}
-            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => onSelect(e.target.value as Currency)}
+            value={draft}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setDraft(e.target.value as Currency)}
             style={{
               backgroundColor: Colors.surfaceFlat,
               color: Colors.text,
@@ -147,16 +149,17 @@ function CurrencyPickerModal({ value, onSelect, onClose }: {
 
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.currencyModalOverlay} onPress={onClose}>
+      <View style={styles.currencyModalOverlay}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <View style={styles.currencyModalContent}>
           <View style={styles.currencyModalHeader}>
-            <Pressable onPress={onClose}>
-              <Text style={styles.currencyModalDone}>Done</Text>
+            <Pressable onPress={() => { onSelect(draft); onClose(); }}>
+              <Text style={styles.currencyModalDone}>Select</Text>
             </Pressable>
           </View>
           <Picker
-            selectedValue={value}
-            onValueChange={(val) => onSelect(val as Currency)}
+            selectedValue={draft}
+            onValueChange={(val) => setDraft(val as Currency)}
             style={{ backgroundColor: Colors.surfaceFlat }}
             itemStyle={{ color: Colors.text, fontSize: 18 }}
           >
@@ -165,7 +168,7 @@ function CurrencyPickerModal({ value, onSelect, onClose }: {
             ))}
           </Picker>
         </View>
-      </Pressable>
+      </View>
     </Modal>
   );
 }

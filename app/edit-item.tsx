@@ -1132,7 +1132,13 @@ function NativePicker({ selectedValue, onValueChange, items }: {
   items: { label: string; value: string }[];
 }) {
   const [showPicker, setShowPicker] = useState(false);
+  const [draft, setDraft] = useState(selectedValue);
   const selectedLabel = items.find(i => i.value === selectedValue)?.label ?? selectedValue;
+
+  const handleOpen = () => {
+    setDraft(selectedValue);
+    setShowPicker(true);
+  };
 
   if (Platform.OS === 'web') {
     return (
@@ -1169,7 +1175,7 @@ function NativePicker({ selectedValue, onValueChange, items }: {
 
   return (
     <View>
-      <Pressable style={s.pickerRow} onPress={() => setShowPicker(true)}>
+      <Pressable style={s.pickerRow} onPress={handleOpen}>
         <Text style={s.pickerRowText}>{selectedLabel}</Text>
         <Ionicons name="chevron-down" size={20} color={TEXT_SECONDARY} />
       </Pressable>
@@ -1180,18 +1186,17 @@ function NativePicker({ selectedValue, onValueChange, items }: {
         animationType="slide"
         onRequestClose={() => setShowPicker(false)}
       >
-        <Pressable style={s.pickerModalOverlay} onPress={() => setShowPicker(false)}>
+        <View style={s.pickerModalOverlay}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowPicker(false)} />
           <View style={s.pickerModalContent}>
             <View style={s.pickerModalHeader}>
-              <Pressable onPress={() => setShowPicker(false)}>
-                <Text style={s.pickerModalDone}>Done</Text>
+              <Pressable onPress={() => { onValueChange(draft); setShowPicker(false); }}>
+                <Text style={s.pickerModalDone}>Select</Text>
               </Pressable>
             </View>
             <Picker
-              selectedValue={selectedValue}
-              onValueChange={(val) => {
-                onValueChange(val);
-              }}
+              selectedValue={draft}
+              onValueChange={(val) => setDraft(val)}
               style={s.nativePicker}
               itemStyle={s.nativePickerItem}
             >
@@ -1200,7 +1205,7 @@ function NativePicker({ selectedValue, onValueChange, items }: {
               ))}
             </Picker>
           </View>
-        </Pressable>
+        </View>
       </Modal>
     </View>
   );
