@@ -25,7 +25,7 @@ function setupCors(app: express.Application) {
     }
 
     if (process.env.REPLIT_DOMAINS) {
-      process.env.REPLIT_DOMAINS.split(",").forEach((d) => {
+      process.env.REPLIT_DOMAINS.split(",").forEach((d: string) => {
         origins.add(`https://${d.trim()}`);
       });
     }
@@ -259,6 +259,12 @@ function setupSession(app: express.Application) {
 
 (async () => {
   await verifyDatabaseConnection();
+
+  // TLS terminates at the platform proxy, so Express sees plain HTTP. Without
+  // this, `req.secure` is false and express-session silently refuses to send
+  // the `secure` cookie set below — login returns 200 and the user stays
+  // logged out.
+  app.set("trust proxy", 1);
 
   setupCors(app);
   setupBodyParsing(app);
