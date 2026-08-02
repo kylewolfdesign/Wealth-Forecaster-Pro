@@ -2,7 +2,7 @@
   "expo": {
     "name": "Wealth forecaster",
     "slug": "wealthforecaster",
-    "version": "1.0.4",
+    "version": "1.0.6",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "wealthforecaster",
@@ -14,11 +14,17 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.wealthforecaster.app",
-      "buildNumber": "1"
+      "bundleIdentifier": "com.kylewolfdesign.wealthforecaster",
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "runtimeVersion": {
+        "policy": "appVersion"
+      }
     },
     "android": {
-      "package": "com.wealthforecaster.app",
+      "package": "com.kylewolfdesign.wealthforecaster",
       "adaptiveIcon": {
         "backgroundColor": "#0F172A",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -42,6 +48,18 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {
+        "origin": "https://replit.com/"
+      },
+      "eas": {
+        "projectId": "1ba668a2-5be7-4aec-9534-0867669780d2"
+      }
+    },
+    "owner": "kylewolf07",
+    "updates": {
+      "url": "https://u.expo.dev/1ba668a2-5be7-4aec-9534-0867669780d2"
     }
   }
 }

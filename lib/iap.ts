@@ -1,6 +1,9 @@
 import { Platform, Alert } from 'react-native';
 import Purchases from 'react-native-purchases';
 
+/** RevenueCat entitlement identifier for the Pro subscription. */
+export const PRO_ENTITLEMENT = 'pro';
+
 export async function presentAppleCodeRedemption(): Promise<void> {
   if (Platform.OS !== 'ios') {
     Alert.alert(

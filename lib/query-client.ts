@@ -1,19 +1,27 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { DEFAULT_API_HOST } from "@/constants/config";
+
+let warnedAboutFallback = false;
 
 /**
- * Gets the base URL for the Express API server (e.g., "http://localhost:3000")
- * @returns {string} The API base URL
+ * Gets the base URL for the Express API server (e.g., "https://example.com/").
+ *
+ * Never throws: a missing `EXPO_PUBLIC_DOMAIN` falls back to `DEFAULT_API_HOST`
+ * rather than surfacing an internal variable name to the user, which is what
+ * v1.0.5 did in the login modal.
  */
 export function getApiUrl(): string {
-  let host = process.env.EXPO_PUBLIC_DOMAIN;
+  const host = process.env.EXPO_PUBLIC_DOMAIN || DEFAULT_API_HOST;
 
-  if (!host) {
-    throw new Error("EXPO_PUBLIC_DOMAIN is not set");
+  if (!process.env.EXPO_PUBLIC_DOMAIN && !warnedAboutFallback) {
+    warnedAboutFallback = true;
+    console.warn(
+      `EXPO_PUBLIC_DOMAIN is not set in this build; falling back to ${DEFAULT_API_HOST}. ` +
+        "Set it in the EAS environment for this build profile.",
+    );
   }
 
-  let url = new URL(`https://${host}`);
-
-  return url.href;
+  return new URL(`https://${host}`).href;
 }
 
 async function throwIfResNotOk(res: Response) {

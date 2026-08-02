@@ -207,10 +207,6 @@ export default function SettingsScreen() {
   const displayCurrencyInfo = CURRENCIES.find(c => c.code === displayCurrency);
 
   const handleLoadDemo = () => {
-    if (!isPro) {
-      setShowPaywall(true);
-      return;
-    }
     Alert.alert(
       'Load Demo Data',
       'This will replace your current data with sample data. Continue?',
@@ -228,10 +224,6 @@ export default function SettingsScreen() {
   };
 
   const handleClearAll = () => {
-    if (!isPro) {
-      setShowPaywall(true);
-      return;
-    }
     Alert.alert(
       'Clear All Data',
       'This will permanently delete all your data. This cannot be undone.',
@@ -337,13 +329,34 @@ export default function SettingsScreen() {
         </>
       )}
 
-      {isAppleCodeRedemptionAvailable() && (
-        <>
-          <AnimatedEntry delay={200} duration={300}>
-            <Text style={styles.sectionTitle}>Subscription</Text>
-          </AnimatedEntry>
-          <AnimatedEntry delay={200} duration={300}>
-            <Card style={styles.settingsCard}>
+      <AnimatedEntry delay={200} duration={300}>
+        <Text style={styles.sectionTitle}>Subscription</Text>
+      </AnimatedEntry>
+      <AnimatedEntry delay={200} duration={300}>
+        <Card style={styles.settingsCard}>
+          {isPro ? (
+            <View style={styles.actionRow} testID="settings-pro-active">
+              <Ionicons name="diamond" size={20} color={Colors.primary} />
+              <Text style={styles.actionText}>Wealth Forecaster Pro</Text>
+              <Text style={styles.proActiveBadge}>Active</Text>
+            </View>
+          ) : (
+            <Pressable
+              style={styles.actionRow}
+              onPress={() => setShowPaywall(true)}
+              testID="settings-upgrade-pro"
+            >
+              <Ionicons name="diamond-outline" size={20} color={Colors.primary} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.actionText}>Upgrade to Pro</Text>
+                <Text style={styles.actionSubtext}>Long-range forecasts, history & more</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={Colors.textTertiary} />
+            </Pressable>
+          )}
+          {isAppleCodeRedemptionAvailable() && (
+            <>
+              <View style={styles.rowDivider} />
               <Pressable
                 style={styles.actionRow}
                 onPress={presentAppleCodeRedemption}
@@ -352,10 +365,10 @@ export default function SettingsScreen() {
                 <Ionicons name="pricetag" size={20} color={Colors.primary} />
                 <Text style={styles.actionText}>Redeem Code</Text>
               </Pressable>
-            </Card>
-          </AnimatedEntry>
-        </>
-      )}
+            </>
+          )}
+        </Card>
+      </AnimatedEntry>
 
       <AnimatedEntry delay={225} duration={300}>
         <Text style={styles.sectionTitle}>Preferences</Text>
@@ -446,6 +459,7 @@ export default function SettingsScreen() {
         visible={showPaywall}
         onDismiss={() => setShowPaywall(false)}
         allowDismiss
+        source="settings"
         onPurchaseSuccess={() => {
           setShowPaywall(false);
           setShowPurchaseSuccess(true);
@@ -520,6 +534,18 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.medium,
     fontSize: fontSize.md,
     color: Colors.primary,
+  },
+  actionSubtext: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.xs,
+    color: Colors.textTertiary,
+    marginTop: 2,
+  },
+  proActiveBadge: {
+    fontFamily: fontFamily.semibold,
+    fontSize: fontSize.sm,
+    color: Colors.positive,
+    marginLeft: 'auto',
   },
   changePasswordForm: {
     paddingVertical: spacing.sm,

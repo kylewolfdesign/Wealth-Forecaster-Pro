@@ -7,6 +7,7 @@ import { useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '@/lib/store';
+import { track } from '@/lib/analytics';
 import { useStockPrices } from '@/hooks/useStockPrices';
 import { formatCurrency, formatDate, formatPercent } from '@/lib/format';
 import Card from '@/components/Card';
@@ -27,7 +28,10 @@ export default function HistoryScreen() {
   const [range, setRange] = useState<TimeRange>('30d');
 
   const [focusKey, setFocusKey] = useState(0);
-  useFocusEffect(useCallback(() => { setFocusKey(k => k + 1); }, []));
+  useFocusEffect(useCallback(() => {
+    setFocusKey(k => k + 1);
+    track('history_viewed');
+  }, []));
 
   const { stockSymbols, typedSymbols } = useMemo(() => {
     const syms = new Set<string>();

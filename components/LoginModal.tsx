@@ -5,6 +5,7 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/lib/auth-context';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
@@ -17,6 +18,7 @@ interface LoginModalProps {
 
 export default function LoginModal({ visible, onDismiss, onSuccess }: LoginModalProps) {
   const { login } = useAuth();
+  const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
@@ -61,20 +63,26 @@ export default function LoginModal({ visible, onDismiss, onSuccess }: LoginModal
       transparent
       animationType="fade"
       onRequestClose={onDismiss}
+      statusBarTranslucent
     >
       <KeyboardAvoidingView
         style={styles.overlay}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={styles.modal}>
-            <Pressable style={styles.closeButton} onPress={onDismiss} testID="close-login-modal">
-              <Ionicons name="close" size={22} color={Colors.textTertiary} />
-            </Pressable>
+        <View style={styles.modal}>
+          <Pressable style={styles.closeButton} onPress={onDismiss} testID="close-login-modal">
+            <Ionicons name="close" size={22} color={Colors.textTertiary} />
+          </Pressable>
 
+          <ScrollView
+            bounces={false}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[
+              styles.scrollContent,
+              { paddingBottom: spacing.xxl + insets.bottom },
+            ]}
+            keyboardShouldPersistTaps="handled"
+          >
             <View style={styles.iconCircle}>
               <Ionicons name="log-in" size={28} color={Colors.primary} />
             </View>
@@ -162,8 +170,8 @@ export default function LoginModal({ visible, onDismiss, onSuccess }: LoginModal
             <Pressable style={styles.cancelButton} onPress={onDismiss}>
               <Text style={styles.cancelText}>Cancel</Text>
             </Pressable>
-          </View>
-        </ScrollView>
+          </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     </Modal>
   );
@@ -174,20 +182,21 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.7)',
     justifyContent: 'center',
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.xxl,
-    paddingTop: spacing.xxl + 24,
   },
+  // The card is capped and scrolls internally so Log In / Cancel stay reachable
+  // when the keyboard shrinks the available height or the error box adds a row.
   modal: {
     backgroundColor: Colors.backgroundFlat,
     borderRadius: borderRadius.lg,
-    padding: spacing.xxl,
     borderWidth: 1,
     borderColor: Colors.border,
+    maxHeight: '92%',
+    overflow: 'hidden',
+  },
+  scrollContent: {
+    padding: spacing.xxl,
   },
   closeButton: {
     position: 'absolute',

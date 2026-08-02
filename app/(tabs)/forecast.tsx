@@ -21,6 +21,11 @@ import { formatCurrency } from '@/lib/format';
 import Card from '@/components/Card';
 import LineChart from '@/components/LineChart';
 import AnimatedEntry from '@/components/AnimatedEntry';
+import Paywall from '@/components/Paywall';
+import PurchaseSuccessModal from '@/components/PurchaseSuccessModal';
+import PostPurchaseAccountModal from '@/components/PostPurchaseAccountModal';
+import { useAuth } from '@/lib/auth-context';
+import { track } from '@/lib/analytics';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
 
@@ -44,19 +49,24 @@ export default function ForecastScreen() {
     otherAssets, realEstate, settings, setSettings,
     retirementAccounts, stockOptions, bonds, businesses, vehicles,
     exchangeRates,
+    isPro,
   } = useAppStore();
   const displayCurrency = settings.displayCurrency ?? 'USD';
   const fmt = (v: number) => formatCurrency(v, displayCurrency);
 
+  const { isAuthenticated } = useAuth();
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [showPurchaseSuccess, setShowPurchaseSuccess] = useState(false);
+  const [showPostPurchaseAccount, setShowPostPurchaseAccount] = useState(false);
 
-  const [selectedHorizon, setSelectedHorizon] = useState<string>('10Y');
+  const [selectedHorizon, setSelectedHorizon] = useState<string>(isPro ? '10Y' : '1Y');
   const [touchValue, setTouchValue] = useState<number | null>(null);
-  const [displayMonths, setDisplayMonths] = useState(10 * 12);
+  const [displayMonths, setDisplayMonths] = useState(isPro ? 10 * 12 : 12);
 
   const [focusKey, setFocusKey] = useState(0);
   useFocusEffect(useCallback(() => { setFocusKey(k => k + 1); }, []));
 
-  const animatedMonths = useSharedValue(10 * 12);
+  const animatedMonths = useSharedValue(isPro ? 10 * 12 : 12);
   const chartOpacity = useSharedValue(1);
   const chartScaleX = useSharedValue(1);
 
@@ -139,6 +149,11 @@ export default function ForecastScreen() {
   const handleHorizonSelect = (key: string) => {
     const horizon = TIME_HORIZONS.find((h) => h.key === key);
     if (!horizon) return;
+    if (!isPro && horizon.years > 1) {
+      setShowPaywall(true);
+      return;
+    }
+    track('forecast_viewed', { horizon: key });
     setSelectedHorizon(key);
   };
 
@@ -211,6 +226,7 @@ export default function ForecastScreen() {
         <View style={styles.tabBar}>
         {TIME_HORIZONS.map((h) => {
           const isSelected = selectedHorizon === h.key;
+          const isLocked = !isPro && h.years > 1;
           return (
             <TouchableOpacity
               key={h.key}
@@ -223,8 +239,16 @@ export default function ForecastScreen() {
               activeOpacity={0.7}
               accessibilityRole="button"
               accessibilityState={{ selected: isSelected }}
-              accessibilityLabel={`${h.label} forecast`}
+              accessibilityLabel={isLocked ? `${h.label} forecast, requires Pro` : `${h.label} forecast`}
             >
+              {isLocked && (
+                <Ionicons
+                  name="lock-closed"
+                  size={11}
+                  color={Colors.textTertiary}
+                  style={styles.tabLockIcon}
+                />
+              )}
               <Text style={[
                 styles.tabText,
                 isSelected && styles.tabTextActive,
@@ -236,6 +260,23 @@ export default function ForecastScreen() {
         })}
         </View>
       </AnimatedEntry>
+
+      {!isPro && (
+        <AnimatedEntry delay={220} duration={300}>
+          <TouchableOpacity
+            style={styles.proTeaser}
+            onPress={() => setShowPaywall(true)}
+            activeOpacity={0.8}
+            testID="forecast-pro-teaser"
+          >
+            <Ionicons name="trending-up" size={18} color={Colors.primary} />
+            <Text style={styles.proTeaserText}>
+              See your 5–50 year forecast with Pro
+            </Text>
+            <Ionicons name="chevron-forward" size={16} color={Colors.primary} />
+          </TouchableOpacity>
+        </AnimatedEntry>
+      )}
 
       <AnimatedEntry delay={250} duration={300}>
         <View style={styles.returnToggleBar}>
@@ -259,10 +300,19 @@ export default function ForecastScreen() {
             styles.returnToggle,
             settings.showRealReturns && styles.returnToggleActive,
           ]}
-          onPress={() => setSettings({ showRealReturns: true })}
+          onPress={() => {
+            if (!isPro) {
+              setShowPaywall(true);
+              return;
+            }
+            setSettings({ showRealReturns: true });
+          }}
           activeOpacity={0.7}
         >
           <View style={styles.returnToggleInner}>
+            {!isPro && (
+              <Ionicons name="lock-closed" size={12} color={Colors.textTertiary} />
+            )}
             <Text style={[
               styles.returnToggleText,
               settings.showRealReturns && styles.returnToggleTextActive,
@@ -292,16 +342,38 @@ export default function ForecastScreen() {
       <AnimatedEntry delay={300} duration={300}>
         <Card style={styles.milestoneCard}>
         <Text style={styles.cardTitle}>Projected Net Worth</Text>
-        {milestoneValues.map((m) => (
-          <View key={m.year} style={styles.milestoneRow}>
-            <Text style={styles.milestoneLabel}>
-              {m.year} {m.year === 1 ? 'Year' : 'Years'}
-            </Text>
-            <Text style={styles.milestoneValue}>
-              {m.value != null ? fmt(m.value) : '--'}
-            </Text>
-          </View>
-        ))}
+        {milestoneValues.map((m) => {
+          const isLocked = !isPro && m.year > 1;
+          if (isLocked) {
+            return (
+              <TouchableOpacity
+                key={m.year}
+                style={styles.milestoneRow}
+                onPress={() => setShowPaywall(true)}
+                activeOpacity={0.7}
+                testID={`milestone-locked-${m.year}`}
+              >
+                <Text style={styles.milestoneLabel}>
+                  {m.year} {m.year === 1 ? 'Year' : 'Years'}
+                </Text>
+                <View style={styles.milestoneLockedValue}>
+                  <Ionicons name="lock-closed" size={14} color={Colors.textTertiary} />
+                  <Text style={styles.milestoneLockedText}>Pro</Text>
+                </View>
+              </TouchableOpacity>
+            );
+          }
+          return (
+            <View key={m.year} style={styles.milestoneRow}>
+              <Text style={styles.milestoneLabel}>
+                {m.year} {m.year === 1 ? 'Year' : 'Years'}
+              </Text>
+              <Text style={styles.milestoneValue}>
+                {m.value != null ? fmt(m.value) : '--'}
+              </Text>
+            </View>
+          );
+        })}
         </Card>
       </AnimatedEntry>
 
@@ -315,6 +387,8 @@ export default function ForecastScreen() {
           value={settings.stockGrowthPct}
           onChangeText={(t) => handleSettingChange('stockGrowthPct', t)}
           color={Colors.categoryStocks}
+          locked={!isPro}
+          onLockedPress={() => setShowPaywall(true)}
         />
         <AssumptionRow
           key={`crypto-${settings.cryptoGrowthPct}`}
@@ -322,6 +396,8 @@ export default function ForecastScreen() {
           value={settings.cryptoGrowthPct}
           onChangeText={(t) => handleSettingChange('cryptoGrowthPct', t)}
           color={Colors.categoryCrypto}
+          locked={!isPro}
+          onLockedPress={() => setShowPaywall(true)}
         />
         <AssumptionRow
           key={`rsu-${settings.rsuGrowthPct}`}
@@ -329,6 +405,8 @@ export default function ForecastScreen() {
           value={settings.rsuGrowthPct}
           onChangeText={(t) => handleSettingChange('rsuGrowthPct', t)}
           color={Colors.categoryRSU}
+          locked={!isPro}
+          onLockedPress={() => setShowPaywall(true)}
         />
         <AssumptionRow
           key={`cash-${settings.cashGrowthPct}`}
@@ -336,6 +414,8 @@ export default function ForecastScreen() {
           value={settings.cashGrowthPct}
           onChangeText={(t) => handleSettingChange('cashGrowthPct', t)}
           color={Colors.categorySavings}
+          locked={!isPro}
+          onLockedPress={() => setShowPaywall(true)}
         />
         <AssumptionRow
           key={`retirement-${settings.retirementGrowthPct}`}
@@ -343,6 +423,8 @@ export default function ForecastScreen() {
           value={settings.retirementGrowthPct}
           onChangeText={(t) => handleSettingChange('retirementGrowthPct', t)}
           color={Colors.categoryRetirement}
+          locked={!isPro}
+          onLockedPress={() => setShowPaywall(true)}
         />
         <AssumptionRow
           key={`inflation-${settings.inflationPct}`}
@@ -350,19 +432,60 @@ export default function ForecastScreen() {
           value={settings.inflationPct}
           onChangeText={(t) => handleSettingChange('inflationPct', t)}
           color={Colors.textSecondary}
+          locked={!isPro}
+          onLockedPress={() => setShowPaywall(true)}
         />
         </Card>
       </AnimatedEntry>
 
+      <Paywall
+        visible={showPaywall}
+        onDismiss={() => setShowPaywall(false)}
+        allowDismiss
+        source="forecast"
+        onPurchaseSuccess={() => {
+          setShowPaywall(false);
+          setShowPurchaseSuccess(true);
+        }}
+      />
+      <PurchaseSuccessModal
+        visible={showPurchaseSuccess}
+        onDismiss={() => {
+          setShowPurchaseSuccess(false);
+          if (!isAuthenticated) {
+            setShowPostPurchaseAccount(true);
+          }
+        }}
+      />
+      <PostPurchaseAccountModal
+        visible={showPostPurchaseAccount}
+        onDismiss={() => setShowPostPurchaseAccount(false)}
+      />
     </ScrollView>
   );
 }
 
 function AssumptionRow({
-  label, value, onChangeText, color,
+  label, value, onChangeText, color, locked, onLockedPress,
 }: {
   label: string; value: number; onChangeText: (t: string) => void; color: string;
+  locked?: boolean; onLockedPress?: () => void;
 }) {
+  if (locked) {
+    return (
+      <TouchableOpacity style={aStyles.row} onPress={onLockedPress} activeOpacity={0.7}>
+        <View style={aStyles.rowLeft}>
+          <View style={[aStyles.dot, { backgroundColor: color }]} />
+          <Text style={aStyles.label}>{label}</Text>
+        </View>
+        <View style={aStyles.inputWrap}>
+          <Ionicons name="lock-closed" size={12} color={Colors.textTertiary} style={aStyles.lockIcon} />
+          <Text style={aStyles.lockedValue}>{value}</Text>
+          <Text style={aStyles.pctSign}>%</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  }
   return (
     <View style={aStyles.row}>
       <View style={aStyles.rowLeft}>
@@ -412,6 +535,15 @@ const aStyles = StyleSheet.create({
     fontSize: fontSize.md,
     color: Colors.text,
     width: 50,
+    textAlign: 'right',
+  },
+  lockIcon: {
+    marginRight: spacing.xs,
+  },
+  lockedValue: {
+    fontFamily: fontFamily.semibold,
+    fontSize: fontSize.md,
+    color: Colors.textTertiary,
     textAlign: 'right',
   },
   pctSign: {
@@ -466,6 +598,38 @@ const styles = StyleSheet.create({
   },
   tabTextActive: {
     color: Colors.white,
+  },
+  tabLockIcon: {
+    marginRight: 3,
+  },
+  proTeaser: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: 'rgba(139,92,246,0.08)',
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.xl,
+    marginTop: -spacing.md,
+  },
+  proTeaserText: {
+    fontFamily: fontFamily.semibold,
+    fontSize: fontSize.sm,
+    color: Colors.primary,
+  },
+  milestoneLockedValue: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  milestoneLockedText: {
+    fontFamily: fontFamily.semibold,
+    fontSize: fontSize.md,
+    color: Colors.textTertiary,
   },
   chartContainer: { marginBottom: spacing.lg, position: 'relative' as const },
   touchLabelContainer: {

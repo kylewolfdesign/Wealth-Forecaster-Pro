@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import Purchases from 'react-native-purchases';
 import { apiRequest, getApiUrl } from '@/lib/query-client';
 import { loadPortfolioFromServer, hydrateStoreFromServer, debouncedSaveToServer } from '@/lib/portfolio-sync';
 import { useAppStore } from '@/lib/store';
@@ -21,8 +22,31 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Link the RevenueCat customer to the app account so a purchase follows the
+// user across devices. Never let RC failures block auth (e.g. Expo Go / web
+// where the SDK isn't configured).
+function linkPurchasesIdentity(userId: string): void {
+  Purchases.logIn(userId).catch(() => {});
+}
+
+function unlinkPurchasesIdentity(): void {
+  Purchases.logOut().catch(() => {});
+}
+
+const CONNECTION_ERROR = "Can't reach the server. Check your connection and try again.";
+
 function extractErrorMessage(error: unknown, fallback: string): string {
-  const msg = error instanceof Error ? error.message : fallback;
+  if (!(error instanceof Error)) return fallback;
+  const msg = error.message;
+
+  // `throwIfResNotOk` formats server errors as "<status>: <body>". Anything
+  // without that prefix never reached the server — a dropped connection or a
+  // misconfigured build — so show a message that means something to a user
+  // instead of leaking internals like "EXPO_PUBLIC_DOMAIN is not set".
+  if (!/^\d+:\s*/.test(msg)) {
+    return CONNECTION_ERROR;
+  }
+
   const cleaned = msg.replace(/^\d+:\s*/, '');
   try {
     const parsed = JSON.parse(cleaned);
@@ -59,6 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (res.ok) {
         const data = await res.json();
         setUser(data.user);
+        if (data.user?.id) linkPurchasesIdentity(data.user.id);
         try {
           const portfolioData = await loadPortfolioFromServer();
           if (portfolioData) {
@@ -78,6 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const res = await apiRequest('POST', '/api/auth/login', { email, password, rememberMe });
       const data = await res.json();
       setUser(data.user);
+      if (data.user?.id) linkPurchasesIdentity(data.user.id);
       return { success: true };
     } catch (error: unknown) {
       return { success: false, error: extractErrorMessage(error, 'Login failed') };
@@ -89,6 +115,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const res = await apiRequest('POST', '/api/auth/register', { email, password, confirmPassword, rememberMe });
       const data = await res.json();
       setUser(data.user);
+      if (data.user?.id) linkPurchasesIdentity(data.user.id);
       return { success: true };
     } catch (error: unknown) {
       return { success: false, error: extractErrorMessage(error, 'Registration failed') };
@@ -100,6 +127,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await apiRequest('POST', '/api/auth/logout');
     } catch {
     }
+    unlinkPurchasesIdentity();
     setUser(null);
   }, []);
 

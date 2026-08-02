@@ -25,10 +25,6 @@ import DonutChart from '@/components/DonutChart';
 import TickerLogo from '@/components/TickerLogo';
 import Card from '@/components/Card';
 import AnimatedEntry from '@/components/AnimatedEntry';
-import Paywall from '@/components/Paywall';
-import PurchaseSuccessModal from '@/components/PurchaseSuccessModal';
-import PostPurchaseAccountModal from '@/components/PostPurchaseAccountModal';
-import { useAuth } from '@/lib/auth-context';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily } from '@/constants/theme';
 
@@ -99,42 +95,17 @@ export default function PortfolioScreen() {
     mortgages, otherAssets, realEstate, snapshots, addSnapshot,
     retirementAccounts, stockOptions, bonds, businesses, vehicles,
     settings, exchangeRates,
-    isPro,
   } = store;
   const displayCurrency = settings.displayCurrency ?? 'USD';
   const fmt = (v: number) => formatCurrency(v, displayCurrency);
   const cx = (amount: number, from?: Currency) =>
     convertAmount(amount, from ?? 'USD', displayCurrency, exchangeRates);
 
-  const { isAuthenticated } = useAuth();
-  const [showPaywall, setShowPaywall] = useState(false);
-  const [showPurchaseSuccess, setShowPurchaseSuccess] = useState(false);
-  const [showPostPurchaseAccount, setShowPostPurchaseAccount] = useState(false);
   const [countUpDone, setCountUpDone] = useState(false);
-  const paywallShownRef = useRef(false);
-
-  const paywallTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (paywallTimerRef.current) clearTimeout(paywallTimerRef.current);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (isPro && paywallTimerRef.current) {
-      clearTimeout(paywallTimerRef.current);
-      paywallTimerRef.current = null;
-    }
-  }, [isPro]);
 
   const handleCountUpComplete = useCallback(() => {
     setCountUpDone(true);
-    if (!isPro && !paywallShownRef.current) {
-      paywallShownRef.current = true;
-      paywallTimerRef.current = setTimeout(() => setShowPaywall(true), 5000);
-    }
-  }, [isPro]);
+  }, []);
 
 
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
@@ -260,35 +231,23 @@ export default function PortfolioScreen() {
   }, [holdings, rsuGrants, cashAccounts, otherAssets, realEstate, retirementAccounts, stockOptions, bonds, businesses, vehicles]);
 
   const handleToggle = useCallback((key: string) => {
-    if (!isPro) {
-      setShowPaywall(true);
-      return;
-    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setExpandedCategory(prev => prev === key ? null : key);
-  }, [isPro]);
+  }, []);
 
   const handleEdit = useCallback((type: string, id: string, catKey?: string) => {
-    if (!isPro) {
-      setShowPaywall(true);
-      return;
-    }
     let editType = type;
     if (catKey === 'stocks' || catKey === 'crypto') editType = 'holding';
     else if (catKey === 'cashSavings') editType = 'cash';
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push(`/edit-item?type=${editType}&id=${id}`);
-  }, [isPro]);
+  }, []);
 
   const handleAdd = useCallback((type: string, category?: string) => {
-    if (!isPro) {
-      setShowPaywall(true);
-      return;
-    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const params = category ? `type=${type}&category=${category}` : `type=${type}`;
     router.push(`/edit-item?${params}`);
-  }, [isPro]);
+  }, []);
 
   if (!onboardingComplete) {
     return <Redirect href="/onboarding" />;
@@ -566,28 +525,6 @@ export default function PortfolioScreen() {
         );
       })}
 
-      <Paywall
-        visible={showPaywall}
-        onDismiss={() => setShowPaywall(false)}
-        allowDismiss={false}
-        onPurchaseSuccess={() => {
-          setShowPaywall(false);
-          setShowPurchaseSuccess(true);
-        }}
-      />
-      <PurchaseSuccessModal
-        visible={showPurchaseSuccess}
-        onDismiss={() => {
-          setShowPurchaseSuccess(false);
-          if (!isAuthenticated) {
-            setShowPostPurchaseAccount(true);
-          }
-        }}
-      />
-      <PostPurchaseAccountModal
-        visible={showPostPurchaseAccount}
-        onDismiss={() => setShowPostPurchaseAccount(false)}
-      />
     </ScrollView>
   );
 }

@@ -10,6 +10,7 @@ import * as Haptics from 'expo-haptics';
 import * as Crypto from 'expo-crypto';
 import { Picker } from '@react-native-picker/picker';
 import { useAppStore, AppState } from '@/lib/store';
+import { track } from '@/lib/analytics';
 import { Holding, RSUGrant, CashAccount, Mortgage, OtherAsset, RealEstate, RetirementAccount, StockOption, Bond, Business, Vehicle } from '@/lib/types';
 import { computeCurrentTotals } from '@/lib/calculations';
 import { createSnapshot } from '@/lib/snapshot';
@@ -77,6 +78,9 @@ export default function EditItemScreen() {
   const isCrypto = existing && 'type' in existing ? (existing as Holding).type === 'crypto' : normalizedCategory === 'crypto';
 
   const saveAndSnapshot = () => {
+    if (!isEditing) {
+      track('item_added', { type });
+    }
     const totals = computeCurrentTotals(
       store.holdings, store.rsuGrants, store.cashAccounts,
       store.mortgages, store.otherAssets, store.realEstate,
@@ -334,7 +338,10 @@ function HoldingForm({ existing, isEditing, store, saveAndSnapshot, onAction, is
       type: isCrypto ? 'crypto' as const : 'stock' as const,
       symbol: symbol.toUpperCase().trim(),
       shares: parsedShares,
+      // The price field is auto-fetched (not user-editable), so this is a
+      // live price snapshot — kept only as the last-known offline fallback.
       manualPrice: parsedPrice,
+      priceSource: 'live',
       currency,
     };
     if (addingMore && recurringShares) {

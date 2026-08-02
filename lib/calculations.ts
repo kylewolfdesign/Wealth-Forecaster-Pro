@@ -7,7 +7,7 @@ import { getInstantPrice } from './price-service';
 import { convertAmount, DEFAULT_EXCHANGE_RATES } from './currency';
 
 export function computeHoldingValue(h: Holding): number {
-  const price = getInstantPrice(h.symbol, h.type, h.manualPrice);
+  const price = getInstantPrice(h.symbol, h.type, h.manualPrice, h.priceSource);
   return h.shares * price;
 }
 

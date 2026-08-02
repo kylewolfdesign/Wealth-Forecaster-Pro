@@ -159,28 +159,26 @@ export const priceService: PriceService = {
   },
 };
 
-export function getInstantPrice(symbol: string, type: 'stock' | 'crypto', manualPrice?: number): number {
-  if (manualPrice != null && manualPrice > 0) return manualPrice;
-
-  if (type === 'crypto') {
-    const upper = symbol.toUpperCase();
-    const cached = cryptoPriceCache.get(upper);
-    if (cached) {
-      return cached.price;
-    }
-    const coinPrices: Record<string, number> = {
-      BTC: 67500, ETH: 3450, SOL: 175, DOGE: 0.165, ADA: 0.62,
-      DOT: 7.8, XRP: 0.58, BNB: 605, LTC: 82, LINK: 18.5,
-      AVAX: 38, UNI: 12.5, ATOM: 9.2, NEAR: 7.5, APT: 9.8,
-      ARB: 1.15, OP: 2.4, SUI: 1.65,
-    };
-    return coinPrices[upper] ?? 10;
+export function getInstantPrice(
+  symbol: string,
+  type: 'stock' | 'crypto',
+  manualPrice?: number,
+  priceSource?: 'live' | 'manual',
+): number {
+  // Explicitly manual holdings are pinned to the user's entered price.
+  if (priceSource === 'manual' && manualPrice != null && manualPrice > 0) {
+    return manualPrice;
   }
 
-  const cached = stockPriceCache.get(symbol.toUpperCase());
+  // Live pricing: prefer the fetched market price, fall back to the
+  // last-known price captured at entry time. Never invent a price.
+  const upper = symbol.toUpperCase();
+  const cache = type === 'crypto' ? cryptoPriceCache : stockPriceCache;
+  const cached = cache.get(upper);
   if (cached) {
     return cached.price;
   }
 
+  if (manualPrice != null && manualPrice > 0) return manualPrice;
   return 0;
 }

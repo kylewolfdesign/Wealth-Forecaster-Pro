@@ -10,6 +10,8 @@ import Constants from 'expo-constants';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AnimatedSplash } from '@/components/AnimatedSplash';
 import { AuthProvider } from '@/lib/auth-context';
+import { initAnalytics, track } from '@/lib/analytics';
+import { PRO_ENTITLEMENT } from '@/lib/iap';
 import { queryClient } from '@/lib/query-client';
 import { useAppStore } from '@/lib/store';
 import {
@@ -48,20 +50,16 @@ function useRevenueCat() {
     try {
       Purchases.configure({ apiKey });
 
+      // Entitlement is the source of truth in BOTH directions: grant Pro when
+      // active, and revoke it when the subscription expires or is refunded.
       const listener = (info: CustomerInfo) => {
-        const hasPro = !!info.entitlements.active['pro'];
-        if (hasPro) {
-          setIsPro(true);
-        }
+        setIsPro(!!info.entitlements.active[PRO_ENTITLEMENT]);
       };
 
       Purchases.addCustomerInfoUpdateListener(listener);
 
       Purchases.getCustomerInfo().then((info) => {
-        const hasPro = !!info.entitlements.active['pro'];
-        if (hasPro) {
-          setIsPro(true);
-        }
+        setIsPro(!!info.entitlements.active[PRO_ENTITLEMENT]);
       }).catch(() => {});
 
       return () => {
@@ -102,6 +100,11 @@ export default function RootLayout() {
   const [showSplash, setShowSplash] = useState(true);
 
   useRevenueCat();
+
+  useEffect(() => {
+    initAnalytics();
+    track('app_opened');
+  }, []);
 
   useEffect(() => {
     if (fontsLoaded) {

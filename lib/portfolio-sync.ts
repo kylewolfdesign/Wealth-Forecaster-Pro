@@ -21,14 +21,16 @@ type PortfolioData = {
   snapshots: Snapshot[];
   settings: Settings;
   onboardingComplete: boolean;
-  isPro: boolean;
 };
 
+// isPro is deliberately NOT synced: entitlement state belongs to RevenueCat
+// (see useRevenueCat in app/_layout.tsx), and a stale server blob must never
+// grant or revoke Pro.
 const DATA_KEYS: (keyof PortfolioData)[] = [
   'holdings', 'rsuGrants', 'cashAccounts', 'mortgages',
   'otherAssets', 'realEstate', 'retirementAccounts',
   'stockOptions', 'bonds', 'businesses', 'vehicles',
-  'snapshots', 'settings', 'onboardingComplete', 'isPro',
+  'snapshots', 'settings', 'onboardingComplete',
 ];
 
 export function getPortfolioSnapshot(): PortfolioData {
@@ -48,7 +50,6 @@ export function getPortfolioSnapshot(): PortfolioData {
     snapshots: state.snapshots,
     settings: state.settings,
     onboardingComplete: state.onboardingComplete,
-    isPro: state.isPro,
   };
 }
 

@@ -8,6 +8,12 @@ export interface Holding {
   shares: number;
   costBasis?: number;
   manualPrice?: number;
+  /**
+   * How this holding is priced. 'live' (default): live market price, with
+   * manualPrice kept only as the last-known fallback. 'manual': pinned to
+   * manualPrice, never updated from market data.
+   */
+  priceSource?: 'live' | 'manual';
   growthOverride?: number;
   recurringShares?: number;
   recurringCadence?: 'monthly' | 'quarterly' | 'yearly';

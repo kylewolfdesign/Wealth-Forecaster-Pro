@@ -15,23 +15,67 @@ import { useAppStore } from '@/lib/store';
 import Colors from '@/constants/colors';
 import { spacing, fontSize, fontFamily, borderRadius } from '@/constants/theme';
 import { PRIVACY_POLICY_URL, TERMS_OF_USE_URL } from '@/constants/config';
-import { presentAppleCodeRedemption, isAppleCodeRedemptionAvailable } from '@/lib/iap';
+import { presentAppleCodeRedemption, isAppleCodeRedemptionAvailable, PRO_ENTITLEMENT } from '@/lib/iap';
+import { track } from '@/lib/analytics';
 
 interface PaywallProps {
   visible: boolean;
   onDismiss?: () => void;
   allowDismiss?: boolean;
   onPurchaseSuccess?: () => void;
+  /** Where this paywall was triggered from, for analytics (e.g. 'forecast', 'settings'). */
+  source?: string;
 }
 
-const TRIAL_DAYS = 3;
+type PlanKey = 'annual' | 'monthly';
 
-export default function Paywall({ visible, onDismiss, allowDismiss = false, onPurchaseSuccess }: PaywallProps) {
+interface TrialPeriod {
+  count: number;
+  unit: 'day' | 'week' | 'month' | 'year';
+}
+
+function parseTrialPeriod(intro: { price: number; periodUnit: string; periodNumberOfUnits: number } | null | undefined): TrialPeriod | null {
+  if (!intro || intro.price !== 0) return null;
+  const unit = intro.periodUnit?.toLowerCase();
+  if (unit !== 'day' && unit !== 'week' && unit !== 'month' && unit !== 'year') return null;
+  const count = intro.periodNumberOfUnits;
+  if (!count || count < 1) return null;
+  return { count, unit };
+}
+
+// Only promise a free trial when the store product actually has a zero-price
+// intro offer AND this user is eligible for it. On non-iOS platforms we make
+// no trial promise (revisit with Google Play freePhase data at Android launch).
+async function resolveTrials(pkgs: PurchasesPackage[]): Promise<Record<string, TrialPeriod>> {
+  const withIntro = pkgs.filter(p => parseTrialPeriod(p.product.introPrice));
+  if (withIntro.length === 0 || Platform.OS !== 'ios') return {};
+  try {
+    const eligibility = await Purchases.checkTrialOrIntroductoryPriceEligibility(
+      withIntro.map(p => p.product.identifier)
+    );
+    const trials: Record<string, TrialPeriod> = {};
+    for (const pkg of withIntro) {
+      const status = eligibility[pkg.product.identifier]?.status;
+      if (status === Purchases.INTRO_ELIGIBILITY_STATUS.INTRO_ELIGIBILITY_STATUS_ELIGIBLE) {
+        const trial = parseTrialPeriod(pkg.product.introPrice);
+        if (trial) trials[pkg.product.identifier] = trial;
+      }
+    }
+    return trials;
+  } catch {
+    return {};
+  }
+}
+
+export default function Paywall({ visible, onDismiss, allowDismiss = true, onPurchaseSuccess, source = 'unknown' }: PaywallProps) {
   const { setIsPro } = useAppStore();
   const isPro = useAppStore((s) => s.isPro);
   const [loading, setLoading] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [annualPkg, setAnnualPkg] = useState<PurchasesPackage | null>(null);
+  const [monthlyPkg, setMonthlyPkg] = useState<PurchasesPackage | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<PlanKey>('annual');
+  const [trials, setTrials] = useState<Record<string, TrialPeriod>>({});
   const [sdkAvailable, setSdkAvailable] = useState(true);
   const [offeringsLoading, setOfferingsLoading] = useState(false);
   const [offeringsError, setOfferingsError] = useState<string | null>(null);
@@ -82,6 +126,9 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
         100,
         withTiming(0, { duration: 400, easing: Easing.out(Easing.cubic) })
       );
+      if (!isPro) {
+        track('paywall_shown', { source });
+      }
       loadOfferings();
     } else {
       translateY.value = 600;
@@ -89,11 +136,18 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
     }
   }, [visible]);
 
+  const handleUserDismiss = () => {
+    track('paywall_dismissed', { source });
+    onDismiss?.();
+  };
+
   const loadOfferings = async (retryCount = 0) => {
     setOfferingsLoading(true);
     setOfferingsError(null);
     if (retryCount === 0) {
       setAnnualPkg(null);
+      setMonthlyPkg(null);
+      setTrials({});
     }
     try {
       const offerings = await Purchases.getOfferings();
@@ -101,9 +155,14 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
       if (offerings.current?.availablePackages?.length) {
         const packages = offerings.current.availablePackages;
         const annual = packages.find(p => p.packageType === 'ANNUAL') || null;
+        const monthly = packages.find(p => p.packageType === 'MONTHLY') || null;
         setAnnualPkg(annual);
-        if (annual) {
+        setMonthlyPkg(monthly);
+        if (!annual) setSelectedPlan(monthly ? 'monthly' : 'annual');
+        if (annual || monthly) {
           setOfferingsError(null);
+          const available = [annual, monthly].filter((p): p is PurchasesPackage => p !== null);
+          setTrials(await resolveTrials(available));
         } else {
           setOfferingsError('No subscription plans are currently available. Please try again later.');
         }
@@ -136,8 +195,11 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
     }
   };
 
-  const selectedPackage = annualPkg;
-  const packagesLoaded = annualPkg !== null;
+  const selectedPackage = selectedPlan === 'monthly' ? (monthlyPkg ?? annualPkg) : (annualPkg ?? monthlyPkg);
+  const packagesLoaded = annualPkg !== null || monthlyPkg !== null;
+  const selectedTrial: TrialPeriod | null = selectedPackage
+    ? trials[selectedPackage.product.identifier] ?? null
+    : null;
 
   const getDeviceLocale = (): string | undefined => {
     try {
@@ -173,6 +235,25 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
     if (!annualPkg) return '';
     return annualPkg.product.priceString;
   };
+
+  const getMonthlyPrice = (): string => {
+    if (!monthlyPkg) return '';
+    return monthlyPkg.product.priceString;
+  };
+
+  const getSavingsPct = (): number | null => {
+    if (!annualPkg || !monthlyPkg) return null;
+    const annualPrice = annualPkg.product.price;
+    const monthlyPrice = monthlyPkg.product.price;
+    if (!annualPrice || !monthlyPrice) return null;
+    const pct = Math.round((1 - annualPrice / (monthlyPrice * 12)) * 100);
+    return pct >= 5 ? pct : null;
+  };
+
+  const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+  const formatTrialBadge = (t: TrialPeriod) => `${t.count}-${t.unit.toUpperCase()} FREE TRIAL`;
+  const formatTrialCta = (t: TrialPeriod) => `Start ${t.count}-${capitalize(t.unit)} Free Trial`;
+  const formatTrialDuration = (t: TrialPeriod) => `${t.count} ${t.unit}${t.count === 1 ? '' : 's'}`;
 
   const formatCurrency = (amount: number, currencyCode: string): string => {
     try {
@@ -210,13 +291,16 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
       return;
     }
     setLoading(true);
+    track('purchase_started', { package: selectedPlan, source });
     try {
       await Purchases.purchasePackage(selectedPackage);
-      setIsPro(true, true);
+      setIsPro(true);
+      track('purchase_completed', { package: selectedPlan, source });
       completeUnlock();
     } catch (e: unknown) {
-      const err = e as { userCancelled?: boolean };
+      const err = e as { userCancelled?: boolean; code?: string | number };
       if (!err.userCancelled) {
+        track('purchase_failed', { code: String(err.code ?? 'unknown') });
         Alert.alert('Purchase Error', 'Something went wrong. Please try again.');
       }
     } finally {
@@ -228,8 +312,9 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
     setRestoring(true);
     try {
       const customerInfo = await Purchases.restorePurchases();
-      if (customerInfo.entitlements.active['pro']) {
-        setIsPro(true, true);
+      if (customerInfo.entitlements.active[PRO_ENTITLEMENT]) {
+        setIsPro(true);
+        track('restore_completed');
         completeUnlock();
       } else {
         Alert.alert(
@@ -257,6 +342,12 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
   const isActionDisabled = loading || restoring || !packagesLoaded;
   const annualMonthlyPrice = getAnnualMonthlyPrice();
   const annualFullPrice = getAnnualFullPrice();
+  const monthlyPrice = getMonthlyPrice();
+  const savingsPct = getSavingsPct();
+  const bothPlans = annualPkg !== null && monthlyPkg !== null;
+  const selectedPriceLine = selectedPlan === 'monthly' && monthlyPkg
+    ? `${monthlyPrice}/month, billed monthly`
+    : `${annualMonthlyPrice}/month (${annualFullPrice}/year, billed annually)`;
 
   return (
     <Modal transparent visible={visible} animationType="none" statusBarTranslucent>
@@ -266,7 +357,7 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
       >
         <Animated.View style={[styles.overlay, overlayStyle]}>
           {allowDismiss && (
-            <Pressable style={StyleSheet.absoluteFill} onPress={onDismiss} />
+            <Pressable style={StyleSheet.absoluteFill} onPress={handleUserDismiss} />
           )}
           <Animated.View style={[styles.sheet, sheetStyle]}>
             <ScrollView
@@ -277,7 +368,7 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
               <View style={styles.handle} />
 
               {allowDismiss && (
-                <Pressable style={styles.closeButton} onPress={onDismiss} hitSlop={12} testID="paywall-close">
+                <Pressable style={styles.closeButton} onPress={handleUserDismiss} hitSlop={12} testID="paywall-close">
                   <Ionicons name="close" size={24} color={Colors.textTertiary} />
                 </Pressable>
               )}
@@ -322,21 +413,62 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
                 </View>
               )}
 
-              {packagesLoaded && (
-                <View style={styles.planSummary} testID="paywall-plan-annual">
+              {packagesLoaded && selectedTrial && (
+                <View style={styles.trialBadgeRow}>
                   <View style={styles.trialBadge}>
-                    <Text style={styles.trialBadgeText}>{TRIAL_DAYS}-DAY FREE TRIAL</Text>
+                    <Text style={styles.trialBadgeText}>{formatTrialBadge(selectedTrial)}</Text>
                   </View>
-                  <Text style={styles.planSummaryTitle}>
-                    {annualPkg?.product?.title || 'Annual'}
-                  </Text>
-                  <View style={styles.planSummaryPriceRow}>
-                    <Text style={styles.planSummaryMonthly}>{annualMonthlyPrice}</Text>
-                    <Text style={styles.planSummaryPerMonth}>/month</Text>
-                  </View>
-                  <Text style={styles.planSummaryAnnual}>
-                    {annualFullPrice} billed annually
-                  </Text>
+                </View>
+              )}
+
+              {packagesLoaded && (
+                <View style={bothPlans ? styles.planRow : undefined}>
+                  {annualPkg && (
+                    <Pressable
+                      style={[
+                        bothPlans ? styles.planCard : styles.planSummary,
+                        selectedPlan === 'annual' && styles.planCardSelected,
+                      ]}
+                      onPress={() => setSelectedPlan('annual')}
+                      disabled={!bothPlans}
+                      testID="paywall-plan-annual"
+                    >
+                      {savingsPct != null && (
+                        <View style={styles.saveBadge}>
+                          <Text style={styles.saveBadgeText}>SAVE {savingsPct}%</Text>
+                        </View>
+                      )}
+                      <Text style={styles.planSummaryTitle}>Annual</Text>
+                      <View style={styles.planSummaryPriceRow}>
+                        <Text style={styles.planSummaryMonthly}>{annualMonthlyPrice}</Text>
+                        <Text style={styles.planSummaryPerMonth}>/month</Text>
+                      </View>
+                      <Text style={styles.planSummaryAnnual}>
+                        {annualFullPrice} billed annually
+                      </Text>
+                    </Pressable>
+                  )}
+                  {monthlyPkg && (
+                    <Pressable
+                      style={[
+                        bothPlans ? styles.planCard : styles.planSummary,
+                        selectedPlan === 'monthly' && bothPlans && styles.planCardSelected,
+                        !annualPkg && styles.planCardSelected,
+                      ]}
+                      onPress={() => setSelectedPlan('monthly')}
+                      disabled={!bothPlans}
+                      testID="paywall-plan-monthly"
+                    >
+                      <Text style={styles.planSummaryTitle}>Monthly</Text>
+                      <View style={styles.planSummaryPriceRow}>
+                        <Text style={styles.planSummaryMonthly}>{monthlyPrice}</Text>
+                        <Text style={styles.planSummaryPerMonth}>/month</Text>
+                      </View>
+                      <Text style={styles.planSummaryAnnual}>
+                        billed monthly
+                      </Text>
+                    </Pressable>
+                  )}
                 </View>
               )}
 
@@ -349,13 +481,17 @@ export default function Paywall({ visible, onDismiss, allowDismiss = false, onPu
                 {loading ? (
                   <ActivityIndicator color={Colors.white} />
                 ) : (
-                  <Text style={styles.ctaText}>Start {TRIAL_DAYS}-Day Free Trial</Text>
+                  <Text style={styles.ctaText}>
+                    {selectedTrial ? formatTrialCta(selectedTrial) : 'Unlock Pro'}
+                  </Text>
                 )}
               </Pressable>
 
               {packagesLoaded && (
                 <Text style={styles.trialDisclosure} testID="paywall-trial-disclosure">
-                  {TRIAL_DAYS} days free, then {annualMonthlyPrice}/month ({annualFullPrice}/year, billed annually).
+                  {selectedTrial
+                    ? `${formatTrialDuration(selectedTrial)} free, then ${selectedPriceLine}.`
+                    : `${selectedPriceLine}. Cancel anytime.`}
                 </Text>
               )}
 
@@ -499,12 +635,49 @@ const styles = StyleSheet.create({
     overflow: 'visible' as const,
     alignItems: 'center' as const,
   },
-  trialBadge: {
+  planRow: {
+    flexDirection: 'row' as const,
+    gap: spacing.md,
+    marginBottom: spacing.xl,
+  },
+  planCard: {
+    flex: 1,
+    backgroundColor: Colors.surface,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.md,
+    position: 'relative' as const,
+    overflow: 'visible' as const,
+    alignItems: 'center' as const,
+  },
+  planCardSelected: {
+    backgroundColor: 'rgba(139,92,246,0.08)',
+    borderColor: Colors.primary,
+  },
+  saveBadge: {
     position: 'absolute' as const,
     top: -10,
-    backgroundColor: Colors.positive,
+    backgroundColor: Colors.primary,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+  },
+  saveBadgeText: {
+    fontFamily: fontFamily.bold,
+    fontSize: 10,
+    color: Colors.white,
+    letterSpacing: 0.5,
+  },
+  trialBadgeRow: {
+    alignItems: 'center' as const,
+    marginBottom: spacing.md,
+  },
+  trialBadge: {
+    backgroundColor: Colors.positive,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
     borderRadius: borderRadius.sm,
   },
   trialBadgeText: {

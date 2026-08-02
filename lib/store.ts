@@ -27,7 +27,6 @@ export interface AppState {
   exchangeRatesUpdatedAt: string;
   onboardingComplete: boolean;
   isPro: boolean;
-  purchasedThisSession: boolean;
 
   addHolding: (h: Holding) => void;
   updateHolding: (id: string, h: Partial<Holding>) => void;
@@ -77,7 +76,7 @@ export interface AppState {
 
   setSettings: (s: Partial<Settings>) => void;
   setExchangeRates: (rates: Record<string, number>) => void;
-  setIsPro: (val: boolean, fromPurchase?: boolean) => void;
+  setIsPro: (val: boolean) => void;
   completeOnboarding: () => void;
   loadDemoData: () => void;
   clearAllData: () => void;
@@ -103,7 +102,6 @@ export const useAppStore = create<AppState>()(
       exchangeRatesUpdatedAt: '',
       onboardingComplete: false,
       isPro: false,
-      purchasedThisSession: false,
 
       addHolding: (h) => set((s) => ({ holdings: [...s.holdings, h] })),
       updateHolding: (id, updates) =>
@@ -204,7 +202,7 @@ export const useAppStore = create<AppState>()(
       setExchangeRates: (rates) =>
         set({ exchangeRates: rates, exchangeRatesUpdatedAt: new Date().toISOString() }),
 
-      setIsPro: (val, fromPurchase) => set({ isPro: val, ...(fromPurchase && val ? { purchasedThisSession: true } : {}) }),
+      setIsPro: (val) => set({ isPro: val }),
 
       completeOnboarding: () => set({ onboardingComplete: true }),
 
@@ -243,17 +241,14 @@ export const useAppStore = create<AppState>()(
           snapshots: [],
           settings: { ...DEFAULT_SETTINGS },
           onboardingComplete: false,
-          isPro: false,
+          // isPro deliberately untouched: entitlement state belongs to
+          // RevenueCat, not user data. Clearing data must not revoke Pro.
         }),
     }),
     {
       name: 'networth-app-storage',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 3,
-      partialize: (state) => {
-        const { purchasedThisSession, ...rest } = state;
-        return rest;
-      },
+      version: 4,
       migrate: (persistedState, version) => {
         const state = persistedState as AppState;
         if (version === 0 && Array.isArray(state.realEstate)) {
@@ -274,6 +269,16 @@ export const useAppStore = create<AppState>()(
           if (!state.settings.displayCurrency) state.settings.displayCurrency = 'USD';
           if (!state.exchangeRates) state.exchangeRates = { ...DEFAULT_EXCHANGE_RATES };
           if (!state.exchangeRatesUpdatedAt) state.exchangeRatesUpdatedAt = '';
+        }
+        if (version < 4 && Array.isArray(state.holdings)) {
+          // Historic holdings stored the entry-time fetched price as
+          // manualPrice, freezing their value forever. All prices were
+          // auto-fetched by the ticker lookup, so mark them 'live' and let
+          // manualPrice serve only as the last-known offline fallback.
+          state.holdings = state.holdings.map((h) => ({
+            ...h,
+            priceSource: h.priceSource ?? 'live',
+          }));
         }
         return state;
       },
